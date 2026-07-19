@@ -1,6 +1,11 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
 import android.content.Intent;
+import org.json.JSONObject;
+import okhttp3.ResponseBody;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
@@ -15,7 +20,8 @@ import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
 public class SettingsActivity extends AppCompatActivity {
 
     private AuthRepository authRepository;
-    private static final String CLIENT_ID = "YOUR_CLIENT_ID"; // 本来はソース管理外にすべきだがMVPとして定義
+    private static final String CLIENT_ID = "YOUR_CLIENT_ID";
+    private static final String CLIENT_SECRET = "YOUR_CLIENT_SECRET";
     private static final String REDIRECT_URI = "osmjppostalmap://oauth";
 
     @Override
@@ -88,24 +94,74 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onNewIntent(Intent intent) {
+    protected void onNewIntent(android.content.Intent intent) {
         super.onNewIntent(intent);
         handleIntent(intent, findViewById(R.id.login_status), findViewById(R.id.btn_login), 
                     findViewById(R.id.btn_user_page), findViewById(R.id.btn_logout));
     }
 
-    private void handleIntent(Intent intent, TextView loginStatus, Button btnLogin, Button btnUserPage, Button btnLogout) {
+    private void handleIntent(android.content.Intent intent, TextView loginStatus, Button btnLogin, Button btnUserPage, Button btnLogout) {
         Uri data = intent.getData();
         if (data != null && data.toString().startsWith(REDIRECT_URI)) {
             String code = data.getQueryParameter("code");
             if (code != null) {
-                // TODO: 本来はここでサーバーサイドまたはRetrofitでトークン交換を行う
-                // MVPの簡略化として、コードが取得できたら成功（デモ用）
-                authRepository.saveAccessToken("dummy_token_" + code);
-                authRepository.saveUserName("OSMユーザー");
-                updateUi(loginStatus, btnLogin, btnUserPage, btnLogout);
-                Toast.makeText(this, "ログインしました", Toast.LENGTH_SHORT).show();
+                exchangeToken(code, loginStatus, btnLogin, btnUserPage, btnLogout);
             }
         }
+    }
+
+    private void exchangeToken(String code, TextView loginStatus, Button btnLogin, Button btnUserPage, Button btnLogout) {
+        authRepository.getAuthApi().getAccessToken(
+                CLIENT_ID, CLIENT_SECRET, code, "authorization_code", REDIRECT_URI
+        ).enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                try {
+                    if (response.isSuccessful() && response.body() != null) {
+                        String json = response.body().string();
+                        JSONObject obj = new JSONObject(json);
+                        String token = obj.getString("access_token");
+                        authRepository.saveAccessToken(token);
+                        fetchUserDetails(token, loginStatus, btnLogin, btnUserPage, btnLogout);
+                    } else {
+                        Toast.makeText(SettingsActivity.this, "ログイン失敗: " + response.code(), Toast.LENGTH_SHORT).show();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                Toast.makeText(SettingsActivity.this, "ネットワークエラー", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void fetchUserDetails(String token, TextView loginStatus, Button btnLogin, Button btnUserPage, Button btnLogout) {
+        authRepository.getAuthApi().getUserDetailsJson("Bearer " + token).enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                try {
+                    if (response.isSuccessful() && response.body() != null) {
+                        String json = response.body().string();
+                        JSONObject obj = new JSONObject(json);
+                        JSONObject user = obj.getJSONObject("user");
+                        String displayName = user.getString("display_name");
+                        authRepository.saveUserName(displayName);
+                        updateUi(loginStatus, btnLogin, btnUserPage, btnLogout);
+                        Toast.makeText(SettingsActivity.this, "ログインしました: " + displayName, Toast.LENGTH_SHORT).show();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    updateUi(loginStatus, btnLogin, btnUserPage, btnLogout);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                updateUi(loginStatus, btnLogin, btnUserPage, btnLogout);
+            }
+        });
     }
 }

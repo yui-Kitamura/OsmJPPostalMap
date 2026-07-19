@@ -3,15 +3,28 @@ package pro.eng.yui.android.osmjppostalmap.data.api;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.Field;
+import retrofit2.http.FormUrlEncoded;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
 import retrofit2.http.POST;
 import retrofit2.http.PUT;
 import retrofit2.http.Path;
+import retrofit2.http.Query;
 
 public interface OsmApi {
-    @GET("user/details")
-    Call<ResponseBody> getUserDetails(@Header("Authorization") String auth);
+    @FormUrlEncoded
+    @POST("oauth2/token")
+    Call<ResponseBody> getAccessToken(
+            @Field("client_id") String clientId,
+            @Field("client_secret") String clientSecret,
+            @Field("code") String code,
+            @Field("grant_type") String grantType,
+            @Field("redirect_uri") String redirectUri
+    );
+
+    @GET("user/details.json")
+    Call<ResponseBody> getUserDetailsJson(@Header("Authorization") String auth);
 
     @PUT("changeset/create")
     Call<String> createChangeset(@Header("Authorization") String auth, @Body String xml);
