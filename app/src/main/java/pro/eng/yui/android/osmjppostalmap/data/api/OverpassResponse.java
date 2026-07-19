@@ -11,6 +11,12 @@ public class OverpassResponse {
         public long id;
         public double lat;
         public double lon;
+        public Center center;
         public Map<String, String> tags;
+    }
+
+    public static class Center {
+        public double lat;
+        public double lon;
     }
 }

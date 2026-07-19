@@ -101,7 +101,14 @@ public class PoiRepositoryImpl implements PoiRepository {
                         }
                         if (exists){ continue; }
 
-                        currentPois.add(new OsmPoi(element.id, element.lat, element.lon, element.type, element.tags));
+                        double lat = element.lat;
+                        double lon = element.lon;
+                        if ("way".equals(element.type) && element.center != null) {
+                            lat = element.center.lat;
+                            lon = element.center.lon;
+                        }
+
+                        currentPois.add(new OsmPoi(element.id, lat, lon, element.type, element.tags));
                     }
                     poisLiveData.postValue(new ArrayList<>(currentPois));
                 } else {
@@ -128,7 +135,13 @@ public class PoiRepositoryImpl implements PoiRepository {
             public void onResponse(Call<OverpassResponse> call, Response<OverpassResponse> response) {
                 if (response.isSuccessful() && response.body() != null && !response.body().elements.isEmpty()) {
                     OverpassResponse.Element element = response.body().elements.get(0);
-                    poiLiveData.postValue(new OsmPoi(element.id, element.lat, element.lon, element.type, element.tags));
+                    double lat = element.lat;
+                    double lon = element.lon;
+                    if ("way".equals(element.type) && element.center != null) {
+                        lat = element.center.lat;
+                        lon = element.center.lon;
+                    }
+                    poiLiveData.postValue(new OsmPoi(element.id, lat, lon, element.type, element.tags));
                 } else {
                     poiLiveData.postValue(null);
                 }
@@ -208,7 +221,13 @@ public class PoiRepositoryImpl implements PoiRepository {
                 if (response.isSuccessful() && response.body() != null) {
                     List<OsmPoi> pois = new ArrayList<>();
                     for (OverpassResponse.Element element : response.body().elements) {
-                        pois.add(new OsmPoi(element.id, element.lat, element.lon, element.type, element.tags));
+                        double lat = element.lat;
+                        double lon = element.lon;
+                        if ("way".equals(element.type) && element.center != null) {
+                            lat = element.center.lat;
+                            lon = element.center.lon;
+                        }
+                        pois.add(new OsmPoi(element.id, lat, lon, element.type, element.tags));
                     }
                     result.postValue(pois);
                 }
