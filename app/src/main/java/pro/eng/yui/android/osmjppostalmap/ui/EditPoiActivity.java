@@ -1,9 +1,14 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.InputType;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
+import android.graphics.drawable.LayerDrawable;
+import android.graphics.drawable.GradientDrawable;
+import androidx.core.content.ContextCompat;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TableLayout;
@@ -19,6 +24,9 @@ import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.graphics.Insets;
 import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
@@ -82,6 +90,18 @@ public class EditPoiActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_poi);
+
+        // Edge-to-Edge adjustment
+        View mainLayout = findViewById(R.id.edit_scroll_view);
+        if (mainLayout == null) {
+            mainLayout = findViewById(android.R.id.content);
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(mainLayout, (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, Math.max(systemBars.bottom, ime.bottom));
+            return insets;
+        });
 
         repository = new PoiRepositoryImpl();
         authRepository = new AuthRepository(this);
@@ -275,14 +295,63 @@ public class EditPoiActivity extends AppCompatActivity {
         EditText[] rowEditors = new EditText[3];
         for (int i = 0; i < 3; i++) {
             EditText et = new EditText(this);
-            et.setHint("00:00");
+            et.setHint("--:--");
             et.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
             et.setGravity(Gravity.CENTER);
+            
+            // 初期の見た目設定
+            applyCellStyles(et, "", false);
+
+            et.addTextChangedListener(new TextWatcher() {
+                private String originalValue = null;
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    if (originalValue == null) {
+                        originalValue = s.toString();
+                    }
+                }
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                @Override
+                public void afterTextChanged(Editable s) {
+                    boolean isModified = originalValue != null && !s.toString().equals(originalValue);
+                    applyCellStyles(et, s.toString(), isModified);
+                }
+            });
+
             row.addView(et);
             rowEditors[i] = et;
         }
         tableCollection.addView(row);
         timeRows.add(rowEditors);
+    }
+
+    private void applyCellStyles(EditText et, String value, boolean isModified) {
+        LayerDrawable bg = (LayerDrawable) ContextCompat.getDrawable(this, R.drawable.bg_edit_time_cell);
+        if (bg == null) return;
+        bg = (LayerDrawable) bg.mutate();
+
+        GradientDrawable border = (GradientDrawable) bg.findDrawableByLayerId(R.id.cell_border);
+        GradientDrawable background = (GradientDrawable) bg.findDrawableByLayerId(R.id.cell_background);
+
+        if (value.isEmpty()) {
+            // 未入力
+            background.setColor(ContextCompat.getColor(this, R.color.gray_bg));
+            et.setTextColor(ContextCompat.getColor(this, R.color.gray_light));
+            et.setHintTextColor(ContextCompat.getColor(this, R.color.gray_light));
+        } else {
+            // 入力済み
+            background.setColor(ContextCompat.getColor(this, R.color.white));
+            et.setTextColor(ContextCompat.getColor(this, R.color.black));
+        }
+
+        if (isModified) {
+            border.setColor(ContextCompat.getColor(this, R.color.blue_frame));
+        } else {
+            border.setColor(android.graphics.Color.TRANSPARENT);
+        }
+
+        et.setBackground(bg);
     }
 
     private String formatCollectionTimes() {
@@ -365,9 +434,21 @@ public class EditPoiActivity extends AppCompatActivity {
         int maxRows = Math.max(weekday.size(), Math.max(saturday.size(), holiday.size()));
         for (int i = 0; i < maxRows; i++) {
             addNewRow();
-            if (i < weekday.size()) timeRows.get(i)[0].setText(weekday.get(i).trim());
-            if (i < saturday.size()) timeRows.get(i)[1].setText(saturday.get(i).trim());
-            if (i < holiday.size()) timeRows.get(i)[2].setText(holiday.get(i).trim());
+            if (i < weekday.size()) {
+                String val = weekday.get(i).trim();
+                timeRows.get(i)[0].setText(val);
+                applyCellStyles(timeRows.get(i)[0], val, false);
+            }
+            if (i < saturday.size()) {
+                String val = saturday.get(i).trim();
+                timeRows.get(i)[1].setText(val);
+                applyCellStyles(timeRows.get(i)[1], val, false);
+            }
+            if (i < holiday.size()) {
+                String val = holiday.get(i).trim();
+                timeRows.get(i)[2].setText(val);
+                applyCellStyles(timeRows.get(i)[2], val, false);
+            }
         }
         return true;
     }
