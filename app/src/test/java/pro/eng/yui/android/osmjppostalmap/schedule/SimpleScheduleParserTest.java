@@ -291,5 +291,29 @@ public class SimpleScheduleParserTest {
         assertEquals(ScheduleResult.CurrentState.CLOSED, resultPh.getCurrentState());
         assertTrue(resultPh.getTodayStatus().contains("11:00"));
     }
+
+    /**
+     * 祝日かつ今日の収集が終わっている場合の NextEvent 取得テスト
+     * 入力条件: Mo-Fr 13:00,16:30; Sa-Su,PH 8:00;
+     */
+    @Test
+    public void testNextEventAfterHolidayFinished() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        String tag = "Mo-Fr 13:00,16:30; Sa-Su,PH 8:00;";
+        
+        // 祝日の20:00 (今日の収集 8:00 は終わっている)
+        // 2026-07-20 (月・祝)
+        ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 20, 20, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        
+        assertEquals(ScheduleResult.CurrentState.TODAY_FINISHED, result.getCurrentState());
+        assertNotNull(result.getNextEvent());
+        
+        // 翌日は 2026-07-21 (火)。祝日ではないので Mo-Fr ルールが適用され、13:00 が NextEvent になるべき
+        ZonedDateTime nextEventZdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(result.getNextEvent().getTimestamp()), ZoneId.of("Asia/Tokyo"));
+        assertEquals(21, nextEventZdt.getDayOfMonth());
+        assertEquals(13, nextEventZdt.getHour());
+        assertEquals(0, nextEventZdt.getMinute());
+    }
     
 }

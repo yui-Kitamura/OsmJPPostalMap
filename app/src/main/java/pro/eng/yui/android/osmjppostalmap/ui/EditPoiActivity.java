@@ -109,8 +109,10 @@ public class EditPoiActivity extends AppCompatActivity {
         // IntentからPOI情報を受け取る
         long id = getIntent().getLongExtra("POI_ID", 0);
         String type = getIntent().getStringExtra("POI_TYPE");
-        double lat = getIntent().getDoubleExtra("POI_LAT", 35.6812);
-        double lon = getIntent().getDoubleExtra("POI_LON", 139.7671);
+        
+        // 既存の座標があればそれを使用、なければデフォルト
+        double initialLat = getIntent().getDoubleExtra("POI_LAT", 35.6812);
+        double initialLon = getIntent().getDoubleExtra("POI_LON", 139.7671);
         
         java.util.Map<String, String> tags = new java.util.HashMap<>();
         if (getIntent().hasExtra("TAG_AMENITY")) tags.put("amenity", getIntent().getStringExtra("TAG_AMENITY"));
@@ -118,7 +120,7 @@ public class EditPoiActivity extends AppCompatActivity {
         if (getIntent().hasExtra("TAG_OPENING_HOURS")) tags.put("opening_hours", getIntent().getStringExtra("TAG_OPENING_HOURS"));
         if (getIntent().hasExtra("TAG_COLLECTION_TIMES")) tags.put("collection_times", getIntent().getStringExtra("TAG_COLLECTION_TIMES"));
 
-        targetPoi = new OsmPoi(id, lat, lon, type != null ? type : "node", tags);
+        targetPoi = new OsmPoi(id, initialLat, initialLon, type != null ? type : "node", tags);
 
         TextView title = findViewById(R.id.edit_title);
         tagInput = findViewById(R.id.edit_tag_value);
@@ -416,17 +418,50 @@ public class EditPoiActivity extends AppCompatActivity {
             for (String part : parts) {
                 part = part.trim();
                 if (part.isEmpty()) continue;
-                if (part.startsWith("Mo-Fr")) {
-                    weekday.addAll(java.util.Arrays.asList(part.substring(5).trim().split(",")));
-                } else if (part.startsWith("Sa")) {
-                    saturday.addAll(java.util.Arrays.asList(part.substring(2).trim().split(",")));
-                } else if (part.startsWith("Su,PH")) {
-                    holiday.addAll(java.util.Arrays.asList(part.substring(5).trim().split(",")));
-                } else {
-                    // 対応外のプレフィックスがある場合はパース失敗とする
-                    return false;
+                
+                String[] dayAndTime = part.split(" ", 2);
+                if (dayAndTime.length < 2) return false;
+                
+                String dayPart = dayAndTime[0].trim();
+                String timePart = dayAndTime[1].trim();
+                String[] times = timePart.split(",");
+                
+                // シンプルな曜日展開（SimpleScheduleParserの expandDays に準拠）
+                List<String> expandedDays = new ArrayList<>();
+                String[] dayTokens = dayPart.split(",");
+                for (String token : dayTokens) {
+                    token = token.trim();
+                    if (token.contains("-")) {
+                        String[] range = token.split("-");
+                        String[] allDays = {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"};
+                        int start = -1, end = -1;
+                        for (int i = 0; i < 7; i++) {
+                            if (allDays[i].equals(range[0])) start = i;
+                            if (allDays[i].equals(range[1])) end = i;
+                        }
+                        if (start != -1 && end != -1) {
+                            for (int i = start; i <= end; i++) expandedDays.add(allDays[i]);
+                        }
+                    } else {
+                        expandedDays.add(token);
+                    }
+                }
+
+                for (String day : expandedDays) {
+                    if (day.equals("Mo") || day.equals("Tu") || day.equals("We") || day.equals("Th") || day.equals("Fr")) {
+                        for (String t : times) if (!weekday.contains(t.trim())) weekday.add(t.trim());
+                    } else if (day.equals("Sa")) {
+                        for (String t : times) if (!saturday.contains(t.trim())) saturday.add(t.trim());
+                    } else if (day.equals("Su") || day.equals("PH")) {
+                        for (String t : times) if (!holiday.contains(t.trim())) holiday.add(t.trim());
+                    }
                 }
             }
+            // 各リストを昇順に並べ替え
+            java.util.Comparator<String> timeComp = (a, b) -> Integer.compare(parseMinutes(a), parseMinutes(b));
+            weekday.sort(timeComp);
+            saturday.sort(timeComp);
+            holiday.sort(timeComp);
         } catch (Exception e) {
             return false;
         }

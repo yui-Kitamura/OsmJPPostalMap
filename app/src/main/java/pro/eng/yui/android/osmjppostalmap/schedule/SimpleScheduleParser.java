@@ -129,14 +129,19 @@ public class SimpleScheduleParser implements ScheduleParser {
             
             // 明日以降のイベント検索（今日終わっている場合）
             if (nextEvent == null) {
-                DayOfWeek dayOfWeek = now.getDayOfWeek();
                 for (int i = 1; i <= 7; i++) {
-                    DayOfWeek nextDayOfWeek = dayOfWeek.plus(i);
-                    String nextDayKey = getDayKey(nextDayOfWeek);
-                    List<String> nextDayTimes = weeklyTable.get(nextDayKey);
+                    ZonedDateTime nextDay = now.plusDays(i);
+                    boolean nextDayIsHoliday = isJapanHoliday(nextDay.toLocalDate());
+                    List<String> nextDayTimes = null;
+                    
+                    if (nextDayIsHoliday && weeklyTable.containsKey("PH")) {
+                        nextDayTimes = weeklyTable.get("PH");
+                    } else {
+                        String nextDayKey = getDayKey(nextDay.getDayOfWeek());
+                        nextDayTimes = weeklyTable.get(nextDayKey);
+                    }
+
                     if (nextDayTimes != null && !nextDayTimes.isEmpty()) {
-                        ZonedDateTime nextDay = now.plusDays(i);
-                        
                         // 最初のイベントを取得
                         String firstTime = nextDayTimes.get(0);
                         String firstStartTime = firstTime.contains("-") ? firstTime.split("-")[0] : firstTime;
