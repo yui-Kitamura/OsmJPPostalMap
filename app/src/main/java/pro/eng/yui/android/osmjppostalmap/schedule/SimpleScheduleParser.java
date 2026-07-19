@@ -17,6 +17,18 @@ public class SimpleScheduleParser implements ScheduleParser {
     private static final ZoneId JST = ZoneId.of("Asia/Tokyo");
     private static final Set<LocalDate> HOLIDAYS = new HashSet<>();
     private static boolean holidaysLoaded = false;
+    private static OnHolidaysLoadedListener loadListener;
+
+    public interface OnHolidaysLoadedListener {
+        void onHolidaysLoaded();
+    }
+
+    public static void setOnHolidaysLoadedListener(OnHolidaysLoadedListener listener) {
+        loadListener = listener;
+        if (holidaysLoaded && loadListener != null) {
+            loadListener.onHolidaysLoaded();
+        }
+    }
 
     public static void initializeHolidays() {
         if (holidaysLoaded) return;
@@ -55,6 +67,9 @@ public class SimpleScheduleParser implements ScheduleParser {
                         }
                     }
                     holidaysLoaded = true;
+                    if (loadListener != null) {
+                        loadListener.onHolidaysLoaded();
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();

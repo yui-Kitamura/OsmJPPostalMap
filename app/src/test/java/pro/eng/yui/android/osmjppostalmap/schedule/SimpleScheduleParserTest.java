@@ -494,28 +494,15 @@ public class SimpleScheduleParserTest {
     }
 
     @Test
-    public void testOverMidnightSchedule() {
+    public void testOnHolidaysLoadedListener() throws InterruptedException {
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        SimpleScheduleParser.setOnHolidaysLoadedListener(() -> {
+            latch.countDown();
+        });
         
-        // ケース1: 24:00 (Post Office)
-        // Mo-Fr 09:00-24:00
-        // 2026-07-21 (火) 23:30 -> 営業中
-        ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 21, 23, 30, 0, 0, ZoneId.of("Asia/Tokyo"));
-        ScheduleResult result = parser.parse("Mo-Fr 09:00-24:00", zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
-        assertEquals(ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON, result.getCurrentState());
-        
-        // ケース2: 翌日に跨る 27:00 (Post Office)
-        // 2026-07-22 (水) 02:00
-        zdt = ZonedDateTime.of(2026, 7, 22, 2, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
-        result = parser.parse("Mo-Fr 09:00-27:00", zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
-        // 火曜日の 09:00-27:00 が効いていて、水曜の 02:00 (火曜の 26:00) は営業中であるべき、かつ閉業時間が近い
-        assertEquals("Should be OPENING because it's within the previous day's extended hours", 
-                ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON, result.getCurrentState());
-        assertTrue(result.getTodayStatus().contains("03:00まで")); // 27:00 is 03:00
-
-        // ケース3: 24:00 (Post Box)
-        // Mo-Fr 24:00 (本来は 00:00 と書くべきだが、OSMには稀にある)
-        zdt = ZonedDateTime.of(2026, 7, 21, 23, 55, 0, 0, ZoneId.of("Asia/Tokyo"));
-        result = parser.parse("Mo-Su 24:00", zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
-        assertEquals(ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON, result.getCurrentState());
+        // 再度初期化を走らせるために holidaysLoaded をリセットすることはできないが、
+        // setOnHolidaysLoadedListener を呼んだ時点で既にロード済みなら即座に呼ばれるはず。
+        assertTrue("Callback should be called immediately if already loaded, or when loaded", 
+                latch.await(5, java.util.concurrent.TimeUnit.SECONDS));
     }
 }

@@ -64,6 +64,14 @@ public class MainActivity extends AppCompatActivity {
         Configuration.getInstance().load(this, getSharedPreferences("osmdroid", MODE_PRIVATE));
         
         setContentView(R.layout.activity_main);
+        SimpleScheduleParser.setOnHolidaysLoadedListener(() -> {
+            runOnUiThread(() -> {
+                View filterButton = findViewById(R.id.filter_button);
+                if (filterButton != null) {
+                    filterButton.invalidate();
+                }
+            });
+        });
         new Thread(SimpleScheduleParser::initializeHolidays).start();
 
         // Edge-to-Edge adjustment
