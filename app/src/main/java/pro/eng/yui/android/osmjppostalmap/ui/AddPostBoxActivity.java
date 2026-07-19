@@ -99,6 +99,10 @@ public class AddPostBoxActivity extends AppCompatActivity {
         repository = new PoiRepositoryImpl();
 
         map = findViewById(R.id.add_map);
+        map.setOnTouchListener((v, event) -> {
+            v.getParent().requestDisallowInterceptTouchEvent(true);
+            return false;
+        });
         RadioGroup radioShape = findViewById(R.id.radio_shape);
         TextInputEditText inputBranch = findViewById(R.id.input_branch);
         TextInputEditText inputNote = findViewById(R.id.input_note);
@@ -140,6 +144,7 @@ public class AddPostBoxActivity extends AppCompatActivity {
         marker.setDraggable(false); // 中心固定にするためドラッグ不可にする
         marker.setTitle("設置位置");
         marker.setInfoWindow(null); // 中心固定なのでInfoWindowは不要または自動表示されないようにする
+        marker.setOnMarkerClickListener((m, mv) -> true); // タッチイベントを消費して地図に伝搬させない（ドラッグ無効化を補完）
         map.getOverlays().add(marker);
 
         map.addMapListener(new MapListener() {

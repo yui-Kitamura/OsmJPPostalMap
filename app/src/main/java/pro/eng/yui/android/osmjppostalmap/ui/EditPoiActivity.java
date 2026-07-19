@@ -134,6 +134,10 @@ public class EditPoiActivity extends AppCompatActivity {
         Button btnCopyToSat = findViewById(R.id.btn_copy_to_sat);
         Button btnCopyToSun = findViewById(R.id.btn_copy_to_sun);
         map = findViewById(R.id.edit_map);
+        map.setOnTouchListener((v, event) -> {
+            v.getParent().requestDisallowInterceptTouchEvent(true);
+            return false;
+        });
         Button btnSave = findViewById(R.id.btn_save);
 
         String amenity = targetPoi.getTag("amenity");
@@ -212,6 +216,7 @@ public class EditPoiActivity extends AppCompatActivity {
         marker.setDraggable(false);
         marker.setTitle("位置を調整");
         marker.setInfoWindow(null);
+        marker.setOnMarkerClickListener((m, mv) -> true);
         map.getOverlays().add(marker);
 
         map.addMapListener(new MapListener() {
