@@ -1,7 +1,13 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
 import android.os.Bundle;
+import android.text.InputType;
+import android.view.Gravity;
+import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TableLayout;
+import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -19,11 +25,20 @@ import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
 import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
+
 public class EditPoiActivity extends AppCompatActivity {
 
     private MapView map;
     private Marker marker;
     private TextInputEditText tagInput;
+    private TableLayout tableCollection;
+    private TextView textFallback;
+    private View layoutFallback;
+    private final List<EditText[]> timeRows = new ArrayList<>();
+    private static final Pattern TIME_PATTERN = Pattern.compile("^([01]?[0-9]|2[0-3]):[0-5][0-9]$");
     private PoiRepository repository;
     private AuthRepository authRepository;
     private OsmPoi targetPoi;
@@ -87,15 +102,82 @@ public class EditPoiActivity extends AppCompatActivity {
 
         TextView title = findViewById(R.id.edit_title);
         tagInput = findViewById(R.id.edit_tag_value);
+        View tagLayout = findViewById(R.id.edit_tag_layout);
+        View collectionLayout = findViewById(R.id.layout_collection_edit);
+        tableCollection = findViewById(R.id.table_collection);
+        layoutFallback = findViewById(R.id.layout_fallback);
+        textFallback = findViewById(R.id.text_fallback_value);
+        View btnForceEdit = findViewById(R.id.btn_force_edit);
+        Button btnAddRow = findViewById(R.id.btn_add_row);
+        Button btnCopyToSat = findViewById(R.id.btn_copy_to_sat);
+        Button btnCopyToSun = findViewById(R.id.btn_copy_to_sun);
         map = findViewById(R.id.edit_map);
         Button btnSave = findViewById(R.id.btn_save);
 
         String amenity = targetPoi.getTag("amenity");
         boolean isPostBox = "post_box".equals(amenity);
         title.setText(isPostBox ? "郵便ポストの編集" : "郵便局の編集");
-        
-        String tagName = isPostBox ? "collection_times" : "opening_hours";
-        tagInput.setText(targetPoi.getTag(tagName));
+
+        if (isPostBox) {
+            String currentTimes = targetPoi.getTag("collection_times");
+            if (currentTimes != null && !currentTimes.isEmpty()) {
+                boolean parsed = parseAndFillCollectionTimes(currentTimes);
+                if (!parsed) {
+                    collectionLayout.setVisibility(View.GONE);
+                    layoutFallback.setVisibility(View.VISIBLE);
+                    textFallback.setText("解析できない形式のため直接編集できません:\n" + currentTimes);
+                } else {
+                    collectionLayout.setVisibility(View.VISIBLE);
+                    layoutFallback.setVisibility(View.GONE);
+                }
+            } else {
+                collectionLayout.setVisibility(View.VISIBLE);
+                layoutFallback.setVisibility(View.GONE);
+            }
+            tagLayout.setVisibility(View.GONE);
+            
+            btnForceEdit.setOnClickListener(v -> {
+                layoutFallback.setVisibility(View.GONE);
+                collectionLayout.setVisibility(View.VISIBLE);
+                // 必要最低限の行を確保
+                if (timeRows.isEmpty()) {
+                    for (int i = 0; i < 3; i++) addNewRow();
+                }
+            });
+            
+            if (layoutFallback.getVisibility() != View.VISIBLE) {
+                // 既存データが少ない、または無い場合のために最低3行は確保
+                while (timeRows.size() < 3) {
+                    addNewRow();
+                }
+            }
+            
+            btnAddRow.setOnClickListener(v -> addNewRow());
+            btnCopyToSat.setOnClickListener(v -> {
+                for (EditText[] row : timeRows) {
+                    row[1].setText(row[0].getText());
+                }
+            });
+            btnCopyToSun.setOnClickListener(v -> {
+                for (EditText[] row : timeRows) {
+                    row[2].setText(row[1].getText());
+                }
+            });
+        } else {
+            String hours = targetPoi.getTag("opening_hours");
+            tagInput.setText(hours);
+            
+            // 営業時間も同様にフォールバックからの強制編集を可能にする
+            // 現在は単純なテキスト入力だが、将来的にパースを導入した場合に備える
+            collectionLayout.setVisibility(View.GONE);
+            layoutFallback.setVisibility(View.GONE);
+            tagLayout.setVisibility(View.VISIBLE);
+
+            btnForceEdit.setOnClickListener(v -> {
+                layoutFallback.setVisibility(View.GONE);
+                tagLayout.setVisibility(View.VISIBLE);
+            });
+        }
 
         // 地図の初期化
         map.setMultiTouchControls(true);
@@ -144,10 +226,25 @@ public class EditPoiActivity extends AppCompatActivity {
     private void saveChanges() {
         // タグの更新と位置の更新をリポジトリ経由で行う
         String amenity = targetPoi.getTag("amenity");
-        String tagName = "post_box".equals(amenity) ? "collection_times" : "opening_hours";
-        String newValue = tagInput.getText() != null ? tagInput.getText().toString() : "";
+        boolean isPostBox = "post_box".equals(amenity);
         
-        targetPoi.getTags().put(tagName, newValue);
+        if (isPostBox) {
+            if (layoutFallback.getVisibility() == View.VISIBLE) {
+                // パース失敗時（フォールバック表示中）は時刻タグを更新しない（位置のみ更新）
+                // 既に targetPoi.getTags() には元の値が入っている
+            } else {
+                String collection = formatCollectionTimes();
+                if (collection == null) return;
+                targetPoi.getTags().put("collection_times", collection);
+            }
+        } else {
+            if (layoutFallback.getVisibility() == View.VISIBLE) {
+                // パース失敗時（フォールバック表示中）は営業時間タグを更新しない
+            } else {
+                String newValue = tagInput.getText() != null ? tagInput.getText().toString() : "";
+                targetPoi.getTags().put("opening_hours", newValue);
+            }
+        }
         
         // 移動後の位置を取得
         GeoPoint pos = marker.getPosition();
@@ -171,5 +268,107 @@ public class EditPoiActivity extends AppCompatActivity {
                 Toast.makeText(EditPoiActivity.this, "保存エラー: " + message, Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void addNewRow() {
+        TableRow row = new TableRow(this);
+        EditText[] rowEditors = new EditText[3];
+        for (int i = 0; i < 3; i++) {
+            EditText et = new EditText(this);
+            et.setHint("00:00");
+            et.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
+            et.setGravity(Gravity.CENTER);
+            row.addView(et);
+            rowEditors[i] = et;
+        }
+        tableCollection.addView(row);
+        timeRows.add(rowEditors);
+    }
+
+    private String formatCollectionTimes() {
+        List<String> weekday = new ArrayList<>();
+        List<String> saturday = new ArrayList<>();
+        List<String> holiday = new ArrayList<>();
+
+        for (int col = 0; col < 3; col++) {
+            List<String> targetList = (col == 0) ? weekday : (col == 1) ? saturday : holiday;
+            int lastMinutes = -1;
+            for (int r = 0; r < timeRows.size(); r++) {
+                String val = timeRows.get(r)[col].getText().toString().trim();
+                if (val.isEmpty()) continue;
+
+                if (!TIME_PATTERN.matcher(val).matches()) {
+                    Toast.makeText(this, "無効な時刻形式です: " + val, Toast.LENGTH_SHORT).show();
+                    return null;
+                }
+
+                int minutes = parseMinutes(val);
+                if (minutes <= lastMinutes) {
+                    Toast.makeText(this, "時刻は昇順で入力してください", Toast.LENGTH_SHORT).show();
+                    return null;
+                }
+                targetList.add(val);
+                lastMinutes = minutes;
+            }
+        }
+
+        if (weekday.isEmpty() && saturday.isEmpty() && holiday.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        if (!weekday.isEmpty()) {
+            sb.append("Mo-Fr ").append(String.join(",", weekday));
+        }
+        if (!saturday.isEmpty()) {
+            if (sb.length() > 0) sb.append("; ");
+            sb.append("Sa ").append(String.join(",", saturday));
+        }
+        if (!holiday.isEmpty()) {
+            if (sb.length() > 0) sb.append("; ");
+            sb.append("Su,PH ").append(String.join(",", holiday));
+        }
+
+        return sb.toString();
+    }
+
+    private int parseMinutes(String time) {
+        String[] parts = time.split(":");
+        return Integer.parseInt(parts[0]) * 60 + Integer.parseInt(parts[1]);
+    }
+
+    private boolean parseAndFillCollectionTimes(String tag) {
+        String[] parts = tag.split(";");
+        List<String> weekday = new ArrayList<>();
+        List<String> saturday = new ArrayList<>();
+        List<String> holiday = new ArrayList<>();
+
+        try {
+            for (String part : parts) {
+                part = part.trim();
+                if (part.isEmpty()) continue;
+                if (part.startsWith("Mo-Fr")) {
+                    weekday.addAll(java.util.Arrays.asList(part.substring(5).trim().split(",")));
+                } else if (part.startsWith("Sa")) {
+                    saturday.addAll(java.util.Arrays.asList(part.substring(2).trim().split(",")));
+                } else if (part.startsWith("Su,PH")) {
+                    holiday.addAll(java.util.Arrays.asList(part.substring(5).trim().split(",")));
+                } else {
+                    // 対応外のプレフィックスがある場合はパース失敗とする
+                    return false;
+                }
+            }
+        } catch (Exception e) {
+            return false;
+        }
+
+        int maxRows = Math.max(weekday.size(), Math.max(saturday.size(), holiday.size()));
+        for (int i = 0; i < maxRows; i++) {
+            addNewRow();
+            if (i < weekday.size()) timeRows.get(i)[0].setText(weekday.get(i).trim());
+            if (i < saturday.size()) timeRows.get(i)[1].setText(saturday.get(i).trim());
+            if (i < holiday.size()) timeRows.get(i)[2].setText(holiday.get(i).trim());
+        }
+        return true;
     }
 }

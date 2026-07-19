@@ -17,12 +17,19 @@
             android:textStyle="bold"
             android:layout_marginBottom="16dp" />
 
+        <org.osmdroid.views.MapView
+            android:id="@+id/edit_map"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_marginBottom="16dp" />
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/edit_tag_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="営業時間 / 収集時刻"
-            android:layout_marginBottom="16dp">
+            android:hint="営業時間"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/edit_tag_value"
@@ -31,17 +38,78 @@
                 android:inputType="textMultiLine" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="位置編集 (地図を長押しして移動)"
-            android:layout_marginBottom="8dp" />
-
-        <org.osmdroid.views.MapView
-            android:id="@+id/edit_map"
+        <LinearLayout
+            android:id="@+id/layout_collection_edit"
             android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:layout_marginBottom="16dp" />
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TableLayout
+                android:id="@+id/table_collection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:stretchColumns="0,1,2"
+                android:layout_marginBottom="8dp">
+                <TableRow>
+                    <TextView android:text="平日" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="土曜" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="日祝" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                </TableRow>
+                <TableRow>
+                    <Button
+                        android:id="@+id/btn_copy_to_sat"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:text="→土曜"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:textSize="12sp" />
+                    <Button
+                        android:id="@+id/btn_copy_to_sun"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:text="→日祝"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:textSize="12sp" />
+                    <View android:layout_width="0dp" android:layout_height="0dp" />
+                </TableRow>
+            </TableLayout>
+
+            <Button
+                android:id="@+id/btn_add_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="行を追加"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_marginBottom="16dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layout_fallback"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="#EEEEEE"
+            android:padding="8dp"
+            android:visibility="gone"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:id="@+id/text_fallback_value"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="解析できない形式のため直接編集できません" />
+
+            <ImageButton
+                android:id="@+id/btn_force_edit"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@android:drawable/ic_menu_edit"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="強制的に編集する" />
+        </LinearLayout>
 
         <Button
             android:id="@+id/btn_save"
