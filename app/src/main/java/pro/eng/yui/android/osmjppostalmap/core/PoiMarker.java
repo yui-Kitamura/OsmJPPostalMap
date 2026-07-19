@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
 
+import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
 
@@ -19,6 +20,7 @@ public class PoiMarker extends Marker {
     private final Paint ringPaint;
     private final Paint bgPaint;
     private final Paint symbolPaint;
+    private static final float SIZE = 40f;
 
     public enum PoiType {
         POST_OFFICE, POST_BOX
@@ -39,6 +41,9 @@ public class PoiMarker extends Marker {
         symbolPaint.setColor(0xFFFFFFFF);
         symbolPaint.setTextSize(30f);
         symbolPaint.setTextAlign(Paint.Align.CENTER);
+
+        // ヒットテスト用の範囲を設定
+        setAnchor(org.osmdroid.views.overlay.Marker.ANCHOR_CENTER, org.osmdroid.views.overlay.Marker.ANCHOR_CENTER);
     }
 
     public ScheduleResult getSchedule() {
@@ -50,13 +55,31 @@ public class PoiMarker extends Marker {
     }
 
     @Override
+    public boolean onSingleTapConfirmed(android.view.MotionEvent event, MapView mapView) {
+        // デフォルトのヒットテストがアイコン画像の有無に依存するため、自前で判定
+        android.graphics.Point screenPos = mapView.getProjection().toPixels(getPosition(), null);
+        
+        float dx = event.getX() - screenPos.x;
+        float dy = event.getY() - screenPos.y;
+        
+        // タップ判定を厳密にするため、サイズに合わせて調整
+        if (dx*dx + dy*dy <= SIZE * SIZE * 1.5f) { 
+            if (mOnMarkerClickListener != null) {
+                return mOnMarkerClickListener.onMarkerClick(this, mapView);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    @Override
     public void draw(Canvas canvas, MapView mapView, boolean shadow) {
         if (shadow) return;
 
         android.graphics.Point screenPos = new android.graphics.Point();
         mapView.getProjection().toPixels(getPosition(), screenPos);
 
-        float size = 40f;
+        float size = SIZE;
         RectF rect = new RectF(screenPos.x - size, screenPos.y - size, screenPos.x + size, screenPos.y + size);
 
         // 背景
@@ -71,7 +94,7 @@ public class PoiMarker extends Marker {
         if (schedule != null && schedule.getCurrentState() == ScheduleResult.CurrentState.UNKNOWN) {
             symbol = "?";
         }
-        canvas.drawText(symbol, screenPos.x, screenPos.y + 10f, symbolPaint);
+        canvas.drawText(symbol, screenPos.x, screenPos.y + (symbolPaint.getTextSize() / 3), symbolPaint);
 
         // 外周リング
         if (schedule != null && schedule.getCurrentState() != ScheduleResult.CurrentState.UNKNOWN) {

@@ -17,8 +17,16 @@ import pro.eng.yui.android.osmjppostalmap.R;
 
 import android.view.View;
 import android.content.Intent;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.graphics.Insets;
@@ -32,6 +40,9 @@ public class MainActivity extends AppCompatActivity {
     private MainViewModel viewModel;
     private RecyclerView searchResultsList;
     private pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository authRepository;
+    private LocationManager locationManager;
+    private Location lastLocation;
+    private static final int PERMISSION_REQUEST_LOCATION = 100;
 
     private double lastZoomLevel = 17.0;
     private final android.os.Handler debounceHandler = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -58,6 +69,8 @@ public class MainActivity extends AppCompatActivity {
         searchResultsList = findViewById(R.id.search_results);
         searchResultsList.setLayoutManager(new LinearLayoutManager(this));
 
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+
         SearchView searchView = findViewById(R.id.search_view);
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
@@ -83,6 +96,8 @@ public class MainActivity extends AppCompatActivity {
         GeoPoint startPoint = new GeoPoint(35.68238, 139.76556); // 東京駅前郵便局
         map.getController().setZoom(17.0);
         map.getController().setCenter(startPoint);
+
+        requestLocationPermissions();
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
         
@@ -147,6 +162,15 @@ public class MainActivity extends AppCompatActivity {
 
         viewModel.getFilterOpenOnly().observe(this, active -> {
             filterButton.setFilterActive(active != null && active);
+        });
+
+        // GPS Button
+        findViewById(R.id.gps_button).setOnClickListener(v -> {
+            if (lastLocation != null) {
+                map.getController().animateTo(new GeoPoint(lastLocation.getLatitude(), lastLocation.getLongitude()));
+            } else {
+                Toast.makeText(this, "現在地を取得中です...", Toast.LENGTH_SHORT).show();
+            }
         });
 
         // Add PostBox Button
@@ -270,6 +294,63 @@ public class MainActivity extends AppCompatActivity {
         }
         org.osmdroid.util.BoundingBox box = map.getBoundingBox();
         viewModel.fetchPois(box.getLatSouth(), box.getLonWest(), box.getLatNorth(), box.getLonEast());
+    }
+
+    private void requestLocationPermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST_LOCATION);
+        } else {
+            startLocationUpdates();
+        }
+    }
+
+    private void startLocationUpdates() {
+        try {
+            if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
+                Location loc = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                if (loc != null) {
+                    updateCurrentLocation(loc);
+                    // 初期表示を現在地に
+                    map.getController().setCenter(new GeoPoint(loc.getLatitude(), loc.getLongitude()));
+                }
+            }
+            if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 10, locationListener);
+                Location loc = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                if (loc != null && lastLocation == null) {
+                    updateCurrentLocation(loc);
+                    // 初期表示を現在地に
+                    map.getController().setCenter(new GeoPoint(loc.getLatitude(), loc.getLongitude()));
+                }
+            }
+        } catch (SecurityException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private final LocationListener locationListener = new LocationListener() {
+        @Override
+        public void onLocationChanged(@NonNull Location location) {
+            updateCurrentLocation(location);
+        }
+        @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
+        @Override public void onProviderEnabled(@NonNull String provider) {}
+        @Override public void onProviderDisabled(@NonNull String provider) {}
+    };
+
+    private void updateCurrentLocation(Location location) {
+        lastLocation = location;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_LOCATION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startLocationUpdates();
+            }
+        }
     }
 
     private final android.os.Handler updateHandler = new android.os.Handler(android.os.Looper.getMainLooper());
