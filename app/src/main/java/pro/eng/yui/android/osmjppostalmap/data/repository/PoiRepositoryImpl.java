@@ -79,16 +79,8 @@ public class PoiRepositoryImpl implements PoiRepository {
                                 break;
                             }
                         }
-                        if (exists) continue;
+                        if (exists){ continue; }
 
-                        // 郵便局のフィルタリング
-                        if ("post_office".equals(element.tags.get("amenity")) || 
-                            (element.tags.get("name") != null && element.tags.get("name").contains("郵便局"))) {
-                            String operator = element.tags.get("operator");
-                            if (operator != null && !operator.contains("日本郵便") && !operator.equals("Japan Post")) {
-                                continue;
-                            }
-                        }
                         currentPois.add(new OsmPoi(element.id, element.lat, element.lon, element.type, element.tags));
                     }
                     poisLiveData.postValue(new ArrayList<>(currentPois));
