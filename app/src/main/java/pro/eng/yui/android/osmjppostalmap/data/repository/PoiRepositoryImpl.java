@@ -58,7 +58,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                 "  nw(area.a)[\"amenity\"=\"post_office\"][!\"operator\"](%f,%f,%f,%f);" +
                 "  nw(area.a)[\"amenity\"=\"post_office\"][\"operator\"=\"日本郵便\"](%f,%f,%f,%f);" +
                 ");" +
-                "out body center;",
+                "out body center qt;",
                 minLat, minLon, maxLat, maxLon,
                 minLat, minLon, maxLat, maxLon,
                 minLat, minLon, maxLat, maxLon,
@@ -102,7 +102,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     @Override
     public LiveData<OsmPoi> getPoi(long id, String type) {
         MutableLiveData<OsmPoi> poiLiveData = new MutableLiveData<>();
-        String query = String.format(Locale.US, "[out:json][timeout:25]; %s(%d); out body center;", type, id);
+        String query = String.format(Locale.US, "[out:json][timeout:25]; %s(%d); out body center qt;", type, id);
 
         overpassApi.query(query).enqueue(new Callback<OverpassResponse>() {
             @Override
@@ -178,7 +178,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                 query, query, query);
         }
 
-        String fullQuery = "[out:json][timeout:25];(" + osmQuery + ");out body center;";
+        String fullQuery = "[out:json][timeout:25];(" + osmQuery + ");out body center qt;";
 
         overpassApi.query(fullQuery).enqueue(new Callback<OverpassResponse>() {
             @Override
