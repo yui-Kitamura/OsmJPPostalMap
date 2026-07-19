@@ -35,6 +35,10 @@ import androidx.core.graphics.Insets;
 import androidx.appcompat.widget.SearchView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
+import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
+import pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser;
+import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -42,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
     private org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay locationOverlay;
     private MainViewModel viewModel;
     private RecyclerView searchResultsList;
-    private pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository authRepository;
+    private AuthRepository authRepository;
     private LocationManager locationManager;
     private Location lastLocation;
     private static final int PERMISSION_REQUEST_LOCATION = 100;
@@ -55,12 +59,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        authRepository = new pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository(this);
+        authRepository = new AuthRepository(this);
         // osmdroid configuration
         Configuration.getInstance().load(this, getSharedPreferences("osmdroid", MODE_PRIVATE));
         
         setContentView(R.layout.activity_main);
-        new Thread(pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser::initializeHolidays).start();
+        new Thread(SimpleScheduleParser::initializeHolidays).start();
 
         // Edge-to-Edge adjustment
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_layout), (v, insets) -> {
@@ -136,19 +140,19 @@ public class MainActivity extends AppCompatActivity {
             
             java.util.ArrayList<PoiMarker> markers = new java.util.ArrayList<>();
             for (OsmPoi poi : pois) {
-                pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity amenity = 
+                ScheduleParser.Amenity amenity = 
                         "post_office".equals(poi.getTag("amenity")) ? 
-                        pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_OFFICE : 
-                        pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_BOX;
+                        ScheduleParser.Amenity.POST_OFFICE : 
+                        ScheduleParser.Amenity.POST_BOX;
                 
-                PoiMarker.PoiType type = (amenity == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_OFFICE) ? 
+                PoiMarker.PoiType type = (amenity == ScheduleParser.Amenity.POST_OFFICE) ? 
                         PoiMarker.PoiType.POST_OFFICE : PoiMarker.PoiType.POST_BOX;
                 PoiMarker marker = new PoiMarker(map, type);
                 marker.setPosition(new GeoPoint(poi.getLat(), poi.getLon()));
                 
-                String tag = (amenity == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_OFFICE) ? 
+                String tag = (amenity == ScheduleParser.Amenity.POST_OFFICE) ? 
                         "opening_hours" : "collection_times";
-                marker.setSchedule(new pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser()
+                marker.setSchedule(new SimpleScheduleParser()
                         .parse(poi.getTag(tag), System.currentTimeMillis(), amenity));
                 
                 marker.setOnMarkerClickListener((m, mapView) -> {
@@ -452,7 +456,7 @@ public class MainActivity extends AppCompatActivity {
         updateHandler.removeCallbacks(updateRunnable);
     }
 
-    private int getPriorityForSorting(pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult schedule) {
+    private int getPriorityForSorting(ScheduleResult schedule) {
         if (schedule == null) return 0;
         switch (schedule.getCurrentState()) {
             case OPENING_BUT_EVENT_SOON: return 100;
