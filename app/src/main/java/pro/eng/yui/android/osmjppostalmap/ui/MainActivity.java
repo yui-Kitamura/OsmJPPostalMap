@@ -21,6 +21,7 @@ import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
 import pro.eng.yui.android.osmjppostalmap.R;
 
 import android.view.View;
+import android.content.Intent;
 import android.widget.TextView;
 import android.widget.ImageButton;
 import android.widget.Toast;
@@ -38,11 +39,14 @@ public class MainActivity extends AppCompatActivity {
     private MapView map;
     private MainViewModel viewModel;
     private RecyclerView searchResultsList;
+    private SearchView searchView;
+    private pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository authRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
+        authRepository = new pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository(this);
         // osmdroid configuration
         Configuration.getInstance().load(this, getSharedPreferences("osmdroid", MODE_PRIVATE));
         
@@ -90,6 +94,7 @@ public class MainActivity extends AppCompatActivity {
         // Observe Filtered POIs
         viewModel.getFilteredPois().observe(this, pois -> {
             map.getOverlays().clear();
+            viewModel.updateAccessToken(authRepository.getAccessToken());
             for (OsmPoi poi : pois) {
                 PoiMarker.PoiType type = "post_office".equals(poi.getTag("amenity")) ? 
                         PoiMarker.PoiType.POST_OFFICE : PoiMarker.PoiType.POST_BOX;
@@ -112,8 +117,8 @@ public class MainActivity extends AppCompatActivity {
         // Menu Button
         ImageButton menuButton = findViewById(R.id.menu_button);
         menuButton.setOnClickListener(v -> {
-            Toast.makeText(this, "設定画面（実装予定）", Toast.LENGTH_SHORT).show();
-            // TODO: Intent to SettingsActivity
+            Intent intent = new Intent(this, SettingsActivity.class);
+            startActivity(intent);
         });
 
         // Search Button
@@ -130,6 +135,21 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Filter Button
+        ImageButton filterButton = findViewById(R.id.filter_button);
+        filterButton.setOnClickListener(v -> {
+            boolean currentFilter = viewModel.getFilterOpenOnly().getValue() != null && viewModel.getFilterOpenOnly().getValue();
+            viewModel.setFilterOpenOnly(!currentFilter);
+            filterButton.setColorFilter(currentFilter ? 0 : 0xFF00FF00); // 簡易的な状態表示
+            Toast.makeText(this, currentFilter ? "フィルタ解除" : "営業中・収集残りありのみ表示", Toast.LENGTH_SHORT).show();
+        });
+
+        // Add PostBox Button
+        findViewById(R.id.add_postbox_button).setOnClickListener(v -> {
+            Intent intent = new Intent(this, AddPostBoxActivity.class);
+            startActivity(intent);
+        });
+
         // Error Bar
         TextView errorBar = findViewById(R.id.error_bar);
         viewModel.getErrorMessage().observe(this, msg -> {
@@ -138,6 +158,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 errorBar.setText(msg);
                 errorBar.setVisibility(View.VISIBLE);
+                errorBar.postDelayed(() -> errorBar.setVisibility(View.GONE), 5000);
             }
         });
 
@@ -225,6 +246,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void run() {
             if (map != null) {
+                updatePois(); // POI情報も1分ごとに更新（状態変更のため）
                 map.invalidate(); // 再描画をトリガーしてリングを更新
             }
             updateHandler.postDelayed(this, 60000); // 1分ごとに実行

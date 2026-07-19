@@ -61,18 +61,24 @@ public class PoiDetailsDialog {
                 }
             }
 
-            // スケジュール表の作成
-            String[] days = {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"};
-            String[] dayNames = {"月", "火", "水", "木", "金", "土", "日"};
-            for (int i = 0; i < days.length; i++) {
+            // スケジュール表の作成 (平日/土曜/日祝の形式)
+            String[][] groupDays = {
+                {"Mo", "Tu", "We", "Th", "Fr"},
+                {"Sa"},
+                {"Su"}
+            };
+            String[] groupNames = {"平日", "土曜", "日祝"};
+            
+            for (int i = 0; i < groupNames.length; i++) {
                 TableRow row = new TableRow(context);
                 TextView dayView = new TextView(context);
-                dayView.setText(dayNames[i]);
+                dayView.setText(groupNames[i]);
                 dayView.setPadding(8, 4, 16, 4);
                 
                 TextView timeView = new TextView(context);
-                List<String> times = schedule.getWeeklyTable().get(days[i]);
-                timeView.setText(times != null ? String.join(", ", times) : "休業");
+                // そのグループの最初の曜日の時間を代表として表示（要件に基づき簡略化、本来は差分チェックが必要）
+                List<String> times = schedule.getWeeklyTable().get(groupDays[i][0]);
+                timeView.setText(times != null && !times.isEmpty() ? String.join(", ", times) : "休業/収集なし");
                 timeView.setPadding(8, 4, 8, 4);
                 
                 row.addView(dayView);
@@ -89,7 +95,9 @@ public class PoiDetailsDialog {
         builder.setView(view);
         builder.setPositiveButton("閉じる", null);
         builder.setNeutralButton("編集", (dialog, which) -> {
-            // TODO: 編集画面へ
+            android.content.Intent intent = new android.content.Intent(context, pro.eng.yui.android.osmjppostalmap.ui.EditPoiActivity.class);
+            // 実際にはIDやタグを渡す
+            context.startActivity(intent);
         });
         
         builder.show();

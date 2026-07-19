@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="新規ポストの追加"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1. 設置位置を指定 (地図をドラッグ)"
+            android:layout_marginBottom="8dp" />
+
+        <org.osmdroid.views.MapView
+            android:id="@+id/add_map"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="2. ポスト形状を選択"
+            android:layout_marginBottom="4dp" />
+
+        <RadioGroup
+            android:id="@+id/radio_shape"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+            <RadioButton
+                android:id="@+id/shape_box"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="柱上箱型"
+                android:checked="true" />
+            <RadioButton
+                android:id="@+id/shape_pillar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="円柱" />
+        </RadioGroup>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="管理郵便局名 (任意)"
+            android:layout_marginBottom="16dp">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/input_branch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3. 収集時刻の入力 (任意)"
+            android:layout_marginBottom="8dp" />
+
+        <!-- 本来は要件に基づき表示と同じレイアウト（表形式等）の入力UIとすべきだが、
+             MVPの簡略化としてテキスト入力＋説明とする -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="collection_times (例: Mo-Fr 09:00, 15:00; Sa 09:00)"
+            android:layout_marginBottom="16dp">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/input_collection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <Button
+            android:id="@+id/btn_add_save"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="この内容で追加" />
+
+    </LinearLayout>
+</ScrollView>

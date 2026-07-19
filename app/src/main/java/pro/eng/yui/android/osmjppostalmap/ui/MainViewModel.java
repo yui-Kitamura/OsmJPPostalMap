@@ -26,6 +26,10 @@ public class MainViewModel extends ViewModel {
         filterOpenOnly.observeForever(filter -> applyFilter());
     }
 
+    public LiveData<Boolean> getFilterOpenOnly() {
+        return filterOpenOnly;
+    }
+
     public LiveData<List<OsmPoi>> getPois() {
         return repository.getPois(35.68, 139.76, 35.69, 139.77);
     }
@@ -69,6 +73,12 @@ public class MainViewModel extends ViewModel {
 
     public void fetchPois(double minLat, double minLon, double maxLat, double maxLon) {
         repository.getPois(minLat, minLon, maxLat, maxLon);
+    }
+
+    public void updateAccessToken(String token) {
+        if (repository instanceof PoiRepositoryImpl) {
+            ((PoiRepositoryImpl) repository).setAccessToken(token);
+        }
     }
 
     public void search(String query) {

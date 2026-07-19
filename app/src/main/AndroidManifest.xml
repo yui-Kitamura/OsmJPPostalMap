@@ -26,6 +26,27 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ui.SettingsActivity"
+            android:label="設定"
+            android:launchMode="singleTop"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="osmjppostalmap" android:host="oauth" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.EditPoiActivity"
+            android:label="要素の編集" />
+
+        <activity
+            android:name=".ui.AddPostBoxActivity"
+            android:label="ポストの追加" />
     </application>
 
 </manifest>
