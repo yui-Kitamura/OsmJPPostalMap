@@ -1,0 +1,28 @@
+package eng.pro.yui.android.osmjppostalmap.data.api;
+
+import okhttp3.ResponseBody;
+import retrofit2.Call;
+import retrofit2.http.Body;
+import retrofit2.http.GET;
+import retrofit2.http.Header;
+import retrofit2.http.POST;
+import retrofit2.http.PUT;
+import retrofit2.http.Path;
+import retrofit2.http.Query;
+
+public interface OsmApi {
+    @GET("user/details")
+    Call<ResponseBody> getUserDetails(@Header("Authorization") String auth);
+
+    @PUT("changeset/create")
+    Call<String> createChangeset(@Header("Authorization") String auth, @Body String xml);
+
+    @POST("changeset/{id}/close")
+    Call<Void> closeChangeset(@Header("Authorization") String auth, @Path("id") long id);
+
+    @GET("{type}/{id}")
+    Call<ResponseBody> getElement(@Path("type") String type, @Path("id") long id);
+
+    @PUT("{type}/{id}")
+    Call<String> updateElement(@Header("Authorization") String auth, @Path("type") String type, @Path("id") long id, @Body String xml);
+}
