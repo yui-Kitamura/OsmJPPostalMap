@@ -77,7 +77,7 @@ public class PoiDetailsDialog {
             String[][] groupDays = {
                 {"Mo", "Tu", "We", "Th", "Fr"},
                 {"Sa"},
-                {"Su"}
+                {"Su", "PH"}
             };
             String[] groupNames = {"平日", "土曜", "日祝"};
             
@@ -88,8 +88,12 @@ public class PoiDetailsDialog {
                 dayView.setPadding(8, 4, 16, 4);
                 
                 TextView timeView = new TextView(context);
-                // そのグループの最初の曜日の時間を代表として表示（要件に基づき簡略化、本来は差分チェックが必要）
-                List<String> times = schedule.getWeeklyTable().get(groupDays[i][0]);
+                // そのグループの時間を取得（代表する曜日またはPHから）
+                List<String> times = null;
+                for (String day : groupDays[i]) {
+                    times = schedule.getWeeklyTable().get(day);
+                    if (times != null && !times.isEmpty()) break;
+                }
                 timeView.setText(times != null && !times.isEmpty() ? String.join(", ", times) : "休業/収集なし");
                 timeView.setPadding(8, 4, 8, 4);
                 

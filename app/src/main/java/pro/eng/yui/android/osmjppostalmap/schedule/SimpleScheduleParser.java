@@ -15,6 +15,18 @@ import static de.focus_shift.jollyday.core.HolidayCalendar.JAPAN;
 public class SimpleScheduleParser implements ScheduleParser {
 
     private static final ZoneId JST = ZoneId.of("Asia/Tokyo");
+    private static HolidayManager holidayManager;
+
+    private static synchronized HolidayManager getHolidayManager() {
+        if (holidayManager == null) {
+            try {
+                holidayManager = HolidayManager.getInstance(ManagerParameters.create(JAPAN));
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        return holidayManager;
+    }
 
     @Override
     public ScheduleResult parse(String tagValue, long currentTime, Amenity amenity) {
@@ -134,8 +146,10 @@ public class SimpleScheduleParser implements ScheduleParser {
                     boolean nextDayIsHoliday = isJapanHoliday(nextDay.toLocalDate());
                     List<String> nextDayTimes = null;
                     
-                    if (nextDayIsHoliday && weeklyTable.containsKey("PH")) {
-                        nextDayTimes = weeklyTable.get("PH");
+                    if (nextDayIsHoliday) {
+                        if (weeklyTable.containsKey("PH")) {
+                            nextDayTimes = weeklyTable.get("PH");
+                        }
                     } else {
                         String nextDayKey = getDayKey(nextDay.getDayOfWeek());
                         nextDayTimes = weeklyTable.get(nextDayKey);
@@ -187,12 +201,17 @@ public class SimpleScheduleParser implements ScheduleParser {
     }
 
     private boolean isJapanHoliday(LocalDate date) {
-        try {
-            HolidayManager manager = HolidayManager.getInstance(ManagerParameters.create(JAPAN));
-            return manager.isHoliday(date);
-        } catch (Exception ignore) {
-            // 失敗した場合は祝日なしとして扱う
+        HolidayManager manager = getHolidayManager();
+        if (manager != null) {
+            try {
+                return manager.isHoliday(date);
+            } catch (Exception ignore) {
+            }
         }
+        // Fallback: Check if it's Sunday (many holiday schedules match Sunday)
+        // However, OSM PH specifically means public holiday. 
+        // If we can't detect holiday, we might be better off returning false and 
+        // using day-of-week than guessing.
         return false;
     }
 

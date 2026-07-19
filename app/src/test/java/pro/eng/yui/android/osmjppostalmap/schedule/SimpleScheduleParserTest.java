@@ -389,4 +389,19 @@ public class SimpleScheduleParserTest {
         assertFalse("Should NOT contain 10:00 (Monday time) on holiday", result.getTodayStatus().contains("10:00"));
     }
 
+    @Test
+    public void testHolidayNoPHShouldBeUnknown() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        // PH の指定がないが Mo はある場合
+        String tag = "Mo-Fr 10:00; Sa 11:00; Su 12:00;";
+
+        // 2026-07-20 (月・祝)
+        ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 20, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+
+        // PHがないので、祝日判定されると UNKNOWN になるべき
+        assertEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
+        assertEquals("祝日のため不明", result.getTodayStatus());
+    }
+
 }

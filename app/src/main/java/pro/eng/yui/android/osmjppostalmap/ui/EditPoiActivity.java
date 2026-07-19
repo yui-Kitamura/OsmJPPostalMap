@@ -478,8 +478,25 @@ public class EditPoiActivity extends AppCompatActivity {
             List<String> monSchedule = dailySchedules.get("Mo");
 
             // 日曜と祝日が同じかチェック（UI上は「日祝」列にまとめているため）
-            if (!dailySchedules.get("Su").equals(holidayTimes)) {
-                return false;
+            boolean hasPH = false;
+            for (String part : parts) if (part.contains("PH")) hasPH = true;
+
+            if (hasPH) {
+                if (!dailySchedules.get("Su").equals(holidayTimes)) {
+                    return false;
+                }
+            } else {
+                // PHがない場合、警告を表示する準備をする
+                findViewById(R.id.layout_holiday_warning).setVisibility(View.VISIBLE);
+                TextView header = findViewById(R.id.header_sun_ph);
+                if (header != null) header.setTextColor(android.graphics.Color.RED);
+                
+                findViewById(R.id.btn_apply_sun_to_ph).setOnClickListener(v -> {
+                    findViewById(R.id.layout_holiday_warning).setVisibility(View.GONE);
+                    if (header != null) header.setTextColor(android.graphics.Color.BLACK);
+                    // 保存時にPHが含まれるようにするフラグなどは不要。
+                    // formatCollectionTimes で holiday (列2) が空でなければ PH を出力するようにすれば良い。
+                });
             }
 
             // 火〜金のスケジュールが月曜日と一致するか確認
@@ -491,7 +508,7 @@ public class EditPoiActivity extends AppCompatActivity {
 
             List<String> weekday = monSchedule;
             List<String> saturday = dailySchedules.get("Sa");
-            List<String> holiday = holidayTimes;
+            List<String> holiday = hasPH ? holidayTimes : dailySchedules.get("Su");
 
             int maxRows = Math.max(weekday.size(), Math.max(saturday.size(), holiday.size()));
             for (int i = 0; i < maxRows; i++) {
