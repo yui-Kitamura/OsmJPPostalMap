@@ -39,6 +39,7 @@ import androidx.recyclerview.widget.RecyclerView;
 public class MainActivity extends AppCompatActivity {
 
     private MapView map;
+    private org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay locationOverlay;
     private MainViewModel viewModel;
     private RecyclerView searchResultsList;
     private pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository authRepository;
@@ -68,6 +69,11 @@ public class MainActivity extends AppCompatActivity {
         });
 
         map = findViewById(R.id.map);
+        locationOverlay = new org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay(
+                new org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider(this), map);
+        locationOverlay.enableMyLocation();
+        map.getOverlays().add(locationOverlay);
+
         searchResultsList = findViewById(R.id.search_results);
         searchResultsList.setLayoutManager(new LinearLayoutManager(this));
 
@@ -105,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
         
         // Observe Filtered POIs
         viewModel.getFilteredPois().observe(this, pois -> {
-            map.getOverlays().clear();
+            map.getOverlays().removeIf(overlay -> overlay instanceof PoiMarker);
             viewModel.updateAccessToken(authRepository.getAccessToken());
             for (OsmPoi poi : pois) {
                 pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity amenity = 
@@ -354,6 +360,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateCurrentLocation(Location location) {
         lastLocation = location;
+        if (locationOverlay != null && location != null) {
+            // MyLocationNewOverlay handles its own location updates if provider is active,
+            // but we can ensure it has the latest data.
+            map.invalidate();
+        }
     }
 
     @Override
@@ -386,6 +397,9 @@ public class MainActivity extends AppCompatActivity {
     public void onResume() {
         super.onResume();
         map.onResume();
+        if (locationOverlay != null) {
+            locationOverlay.enableMyLocation();
+        }
         updateHandler.post(updateRunnable);
     }
 
@@ -393,6 +407,9 @@ public class MainActivity extends AppCompatActivity {
     public void onPause() {
         super.onPause();
         map.onPause();
+        if (locationOverlay != null) {
+            locationOverlay.disableMyLocation();
+        }
         updateHandler.removeCallbacks(updateRunnable);
     }
 }
