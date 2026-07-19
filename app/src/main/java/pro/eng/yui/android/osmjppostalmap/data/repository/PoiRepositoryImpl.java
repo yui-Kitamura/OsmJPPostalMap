@@ -29,6 +29,8 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final MutableLiveData<List<OsmPoi>> poisLiveData = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<String> errorLiveData = new MutableLiveData<>();
     private String accessToken;
+    private static long lastFetchTime = 0;
+    private static final long MIN_INTERVAL_MS = 3000;
 
     public PoiRepositoryImpl() {
         this(null);
@@ -78,6 +80,12 @@ public class PoiRepositoryImpl implements PoiRepository {
                 minLat, minLon, maxLat, maxLon,
                 minLat, minLon, maxLat, maxLon,
                 minLat, minLon, maxLat, maxLon);
+
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastFetchTime < MIN_INTERVAL_MS) {
+            return poisLiveData;
+        }
+        lastFetchTime = currentTime;
 
         overpassApi.query(query).enqueue(new Callback<OverpassResponse>() {
             @Override
@@ -130,6 +138,12 @@ public class PoiRepositoryImpl implements PoiRepository {
     public LiveData<OsmPoi> getPoi(long id, String type) {
         MutableLiveData<OsmPoi> poiLiveData = new MutableLiveData<>();
         String query = String.format(Locale.US, "[out:json][timeout:25]; %s(%d); out body center qt;", type, id);
+
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastFetchTime < MIN_INTERVAL_MS) {
+            return poiLiveData;
+        }
+        lastFetchTime = currentTime;
 
         overpassApi.query(query).enqueue(new Callback<OverpassResponse>() {
             @Override
@@ -368,6 +382,13 @@ public class PoiRepositoryImpl implements PoiRepository {
         }
 
         String fullQuery = "[out:json][timeout:25];(" + osmQuery + ");out body center qt;";
+
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastFetchTime < MIN_INTERVAL_MS) {
+            result.postValue(new ArrayList<>());
+            return result;
+        }
+        lastFetchTime = currentTime;
 
         overpassApi.query(fullQuery).enqueue(new Callback<OverpassResponse>() {
             @Override
