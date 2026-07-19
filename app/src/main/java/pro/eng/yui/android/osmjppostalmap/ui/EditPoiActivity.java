@@ -33,9 +33,19 @@ public class EditPoiActivity extends AppCompatActivity {
         repository = new PoiRepositoryImpl();
         authRepository = new AuthRepository(this);
 
-        // 仮の実装: IntentからPOI情報を受け取る想定
-        // 実際にはViewModelなどを介して渡すのが良い
-        targetPoi = new OsmPoi(0, 35.6812, 139.7671, "node", new java.util.HashMap<>());
+        // IntentからPOI情報を受け取る
+        long id = getIntent().getLongExtra("POI_ID", 0);
+        String type = getIntent().getStringExtra("POI_TYPE");
+        double lat = getIntent().getDoubleExtra("POI_LAT", 35.6812);
+        double lon = getIntent().getDoubleExtra("POI_LON", 139.7671);
+        
+        java.util.Map<String, String> tags = new java.util.HashMap<>();
+        if (getIntent().hasExtra("TAG_AMENITY")) tags.put("amenity", getIntent().getStringExtra("TAG_AMENITY"));
+        if (getIntent().hasExtra("TAG_NAME")) tags.put("name", getIntent().getStringExtra("TAG_NAME"));
+        if (getIntent().hasExtra("TAG_OPENING_HOURS")) tags.put("opening_hours", getIntent().getStringExtra("TAG_OPENING_HOURS"));
+        if (getIntent().hasExtra("TAG_COLLECTION_TIMES")) tags.put("collection_times", getIntent().getStringExtra("TAG_COLLECTION_TIMES"));
+
+        targetPoi = new OsmPoi(id, lat, lon, type != null ? type : "node", tags);
 
         TextView title = findViewById(R.id.edit_title);
         tagInput = findViewById(R.id.edit_tag_value);

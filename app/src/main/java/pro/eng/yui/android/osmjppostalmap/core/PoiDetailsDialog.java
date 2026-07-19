@@ -44,7 +44,9 @@ public class PoiDetailsDialog {
                 
                 long remainingMillis = schedule.getNextEvent().getTimestamp() - System.currentTimeMillis();
                 long remainingMinutes = remainingMillis / 60000;
-                String diffStr = (remainingMinutes / 60) + ":" + String.format(Locale.US, "%02d", (remainingMinutes % 60)) + "後";
+                long h = remainingMinutes / 60;
+                long m = remainingMinutes % 60;
+                String diffStr = (h > 0 ? h + "時間" : "") + m + "分後";
 
                 if (isPostBox) {
                     long now = System.currentTimeMillis();
@@ -60,13 +62,15 @@ public class PoiDetailsDialog {
                         msg += "\n逃した場合 " + fPrefix + " " + followTime;
                     }
                     nextEventText.setText(msg);
+                    nextEventText.setVisibility(View.VISIBLE);
                 } else {
-                    String prefix = "次回イベント: ";
-                    if (schedule.getNextEvent().getTimestamp() > getEndOfToday()) {
-                        prefix = "明日の営業開始: ";
-                    }
-                    nextEventText.setText(prefix + timeStr);
+                    nextEventText.setVisibility(View.GONE);
                 }
+            } else if (!isPostBox) {
+                nextEventText.setVisibility(View.GONE);
+            } else {
+                nextEventText.setVisibility(View.VISIBLE); // ポストでイベントなしの場合、空文字か何かを表示
+                nextEventText.setText("");
             }
 
             // スケジュール表の作成 (平日/土曜/日祝の形式)
@@ -104,7 +108,16 @@ public class PoiDetailsDialog {
         builder.setPositiveButton("閉じる", null);
         builder.setNeutralButton("編集", (dialog, which) -> {
             android.content.Intent intent = new android.content.Intent(context, pro.eng.yui.android.osmjppostalmap.ui.EditPoiActivity.class);
-            // 実際にはIDやタグを渡す
+            intent.putExtra("POI_ID", poi.getId());
+            intent.putExtra("POI_TYPE", poi.getType());
+            intent.putExtra("POI_LAT", poi.getLat());
+            intent.putExtra("POI_LON", poi.getLon());
+            // タグは量が多い可能性があるが、MVPの編集対象タグに絞るか、Serializable/Parcelableが必要
+            // ここでは簡易的に amenity と編集対象タグのみ渡す
+            intent.putExtra("TAG_AMENITY", poi.getTag("amenity"));
+            intent.putExtra("TAG_NAME", poi.getTag("name"));
+            intent.putExtra("TAG_OPENING_HOURS", poi.getTag("opening_hours"));
+            intent.putExtra("TAG_COLLECTION_TIMES", poi.getTag("collection_times"));
             context.startActivity(intent);
         });
         

@@ -17,7 +17,7 @@ public class SimpleScheduleParser implements ScheduleParser {
     private static final ZoneId JST = ZoneId.of("Asia/Tokyo");
 
     @Override
-    public ScheduleResult parse(String tagValue, long currentTime) {
+    public ScheduleResult parse(String tagValue, long currentTime, Amenity amenity) {
         if (tagValue == null || tagValue.isEmpty()) {
             return new ScheduleResult(null, null, "不明", ScheduleResult.CurrentState.UNKNOWN, new HashMap<>(), tagValue);
         }
@@ -73,7 +73,7 @@ public class SimpleScheduleParser implements ScheduleParser {
                 long currentMinutes = now.getHour() * 60 + now.getMinute();
                 
                 for (String timeRange : todayTimes) {
-                    if (timeRange.contains("-")) {
+                    if (amenity == Amenity.POST_OFFICE || timeRange.contains("-")) {
                         // 営業時間形式: 09:00-17:00
                         String[] range = timeRange.split("-");
                         int start = parseMinutes(range[0]);
@@ -99,8 +99,11 @@ public class SimpleScheduleParser implements ScheduleParser {
                             if (nextEvent == null || nextEvent.getType() != ScheduleResult.EventType.COLLECTION) {
                                 if (nextEvent == null) {
                                     nextEvent = createEvent(now, collectionTime, ScheduleResult.EventType.COLLECTION);
-                                    state = (collectionTime - currentMinutes <= 60) ? 
-                                            ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON : ScheduleResult.CurrentState.OPENING;
+                                    if (collectionTime - currentMinutes <= 60) {
+                                        state = ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON;
+                                    } else {
+                                        state = ScheduleResult.CurrentState.CLOSED;
+                                    }
                                     todayStatus = "次回収集 " + timeRange;
                                 } else if (followingEvent == null) {
                                     followingEvent = createEvent(now, collectionTime, ScheduleResult.EventType.COLLECTION);
@@ -113,8 +116,8 @@ public class SimpleScheduleParser implements ScheduleParser {
                     }
                 }
                 
-                if (nextEvent == null && state == ScheduleResult.CurrentState.CLOSED) {
-                    if (!isCollectionOnly(todayTimes)) {
+                        if (nextEvent == null && state == ScheduleResult.CurrentState.CLOSED) {
+                    if (amenity == Amenity.POST_OFFICE) {
                          state = ScheduleResult.CurrentState.TODAY_FINISHED;
                          todayStatus = "本日の営業は終了しました";
                     } else {
@@ -138,7 +141,7 @@ public class SimpleScheduleParser implements ScheduleParser {
                         String firstTime = nextDayTimes.get(0);
                         String firstStartTime = firstTime.contains("-") ? firstTime.split("-")[0] : firstTime;
                         int minutes = parseMinutes(firstStartTime);
-                        nextEvent = createEvent(nextDay, minutes, isCollectionOnly(nextDayTimes) ? 
+                        nextEvent = createEvent(nextDay, minutes, amenity == Amenity.POST_BOX ? 
                                 ScheduleResult.EventType.COLLECTION : ScheduleResult.EventType.OPEN);
                         
                         // 2つ目のイベントがあれば取得
@@ -146,7 +149,7 @@ public class SimpleScheduleParser implements ScheduleParser {
                             String secondTime = nextDayTimes.get(1);
                             String secondStartTime = secondTime.contains("-") ? secondTime.split("-")[0] : secondTime;
                             int m2 = parseMinutes(secondStartTime);
-                            followingEvent = createEvent(nextDay, m2, isCollectionOnly(nextDayTimes) ? 
+                            followingEvent = createEvent(nextDay, m2, amenity == Amenity.POST_BOX ? 
                                     ScheduleResult.EventType.COLLECTION : ScheduleResult.EventType.OPEN);
                         }
                         break;
@@ -243,30 +246,31 @@ public class SimpleScheduleParser implements ScheduleParser {
 
     private List<String> expandDays(String dayRange) {
         List<String> result = new ArrayList<>();
-        if (dayRange.equals("PH")) {
-            result.add("PH");
-            return result;
-        }
         String[] allDays = {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"};
         
-        if (dayRange.contains("-")) {
-            String[] startEnd = dayRange.split("-");
-            int startIdx = -1, endIdx = -1;
-            for (int i = 0; i < allDays.length; i++) {
-                if (allDays[i].equals(startEnd[0])) startIdx = i;
-                if (allDays[i].equals(startEnd[1])) endIdx = i;
-            }
-            if (startIdx != -1 && endIdx != -1) {
-                for (int i = startIdx; i <= endIdx; i++) {
-                    result.add(allDays[i]);
+        // まずカンマで分割
+        String[] parts = dayRange.split(",");
+        for (String part : parts) {
+            part = part.trim();
+            if (part.equals("PH")) {
+                result.add("PH");
+            } else if (part.contains("-")) {
+                // ハイフン指定の展開
+                String[] startEnd = part.split("-");
+                int startIdx = -1, endIdx = -1;
+                for (int i = 0; i < allDays.length; i++) {
+                    if (allDays[i].equals(startEnd[0])) startIdx = i;
+                    if (allDays[i].equals(startEnd[1])) endIdx = i;
                 }
+                if (startIdx != -1 && endIdx != -1) {
+                    for (int i = startIdx; i <= endIdx; i++) {
+                        result.add(allDays[i]);
+                    }
+                }
+            } else {
+                // 単一の曜日指定
+                result.add(part);
             }
-        } else if (dayRange.contains(",")) {
-            for (String d : dayRange.split(",")) {
-                result.add(d.trim());
-            }
-        } else {
-            result.add(dayRange);
         }
         return result;
     }

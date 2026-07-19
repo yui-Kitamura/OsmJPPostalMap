@@ -14,11 +14,11 @@ public class SimpleScheduleParserTest {
     @Test
     public void testEmptyTagReturnsUnknown() {
         SimpleScheduleParser parser = new SimpleScheduleParser();
-        ScheduleResult result = parser.parse(null, System.currentTimeMillis());
+        ScheduleResult result = parser.parse(null, System.currentTimeMillis(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
         assertEquals("不明", result.getTodayStatus());
 
-        result = parser.parse("", System.currentTimeMillis());
+        result = parser.parse("", System.currentTimeMillis(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
     }
 
@@ -31,7 +31,7 @@ public class SimpleScheduleParserTest {
         SimpleScheduleParser parser = new SimpleScheduleParser();
         // Mo-Fr 09:00-17:00 形式
         ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 21, 12, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
-        ScheduleResult result = parser.parse("Mo-Su 00:00-24:00", zdt.toInstant().toEpochMilli());
+        ScheduleResult result = parser.parse("Mo-Su 00:00-24:00", zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
         assertNotEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
     }
 
@@ -43,7 +43,7 @@ public class SimpleScheduleParserTest {
     public void testTwentyFourSevenReturnsOpen() {
         SimpleScheduleParser parser = new SimpleScheduleParser();
         ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 20, 12, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
-        ScheduleResult result = parser.parse("24/7", zdt.toInstant().toEpochMilli());
+        ScheduleResult result = parser.parse("24/7", zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.OPENING, result.getCurrentState());
     }
 
@@ -65,17 +65,17 @@ public class SimpleScheduleParserTest {
         final String input = "10:00-19:00";
         ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 21, 12, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
         
-        ScheduleResult result = parser.parse(input, zdt.toInstant().toEpochMilli());
+        ScheduleResult result = parser.parse(input, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.OPENING, result.getCurrentState());
 
         // 19:00:00に判定したときはTODAY_FINISHED
         zdt = zdt.withHour(19).withMinute(0);
-        result = parser.parse(input, zdt.toInstant().toEpochMilli());
+        result = parser.parse(input, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.TODAY_FINISHED, result.getCurrentState());
         
         // ただし祝日はUNKNOWN表示
         zdt = ZonedDateTime.of(2026, 7, 20, 12, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
-        result = parser.parse(input, zdt.toInstant().toEpochMilli());
+        result = parser.parse(input, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
     }
 
@@ -96,12 +96,12 @@ public class SimpleScheduleParserTest {
         ScheduleResult result;
 
         ZonedDateTime zdt = ZonedDateTime.of(2024, 7, 20, 12, 0, 0, 0, ZoneId.of("Asia/Tokyo")); //土曜
-        result = parser.parse(input, zdt.toInstant().toEpochMilli());
+        result = parser.parse(input, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
         
         // ただし該当曜日でも祝日の場合はUNKNOWN
         zdt = ZonedDateTime.of(2026, 7, 20, 12, 0, 0, 0, ZoneId.of("Asia/Tokyo")); //祝日月曜
-        result = parser.parse(input, zdt.toInstant().toEpochMilli());
+        result = parser.parse(input, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
     }
 
@@ -117,7 +117,7 @@ public class SimpleScheduleParserTest {
 
         ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 20, 12, 0, 0, 0, ZoneId.of("Asia/Tokyo")); // Monday, Holiday
         
-        ScheduleResult result = parser.parse("Mo-Su 09:00-18:00", zdt.toInstant().toEpochMilli());
+        ScheduleResult result = parser.parse("Mo-Su 09:00-18:00", zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
     }
 
@@ -129,7 +129,7 @@ public class SimpleScheduleParserTest {
     @Test
     public void testUnparseableReturnsUnknown() {
         SimpleScheduleParser parser = new SimpleScheduleParser();
-        ScheduleResult result = parser.parse("Invalid Tag Value", System.currentTimeMillis());
+        ScheduleResult result = parser.parse("Invalid Tag Value", System.currentTimeMillis(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
     }
 
@@ -149,12 +149,12 @@ public class SimpleScheduleParserTest {
         ZonedDateTime zdt = ZonedDateTime.of(2024, 7, 16, 11, 30, 0, 0, ZoneId.of("Asia/Tokyo")); // Tuesday, 11:30
 
         // 休憩開始(12:00)が近い
-        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli());
+        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON, result.getCurrentState());
 
         // 休憩時間内 (12:30) -> 開店前扱い
         zdt = zdt.withHour(12).withMinute(30);
-        result = parser.parse(tag, zdt.toInstant().toEpochMilli());
+        result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON, result.getCurrentState());
         assertTrue(result.getTodayStatus().contains("営業開始前 13:00"));
     }
@@ -175,20 +175,20 @@ public class SimpleScheduleParserTest {
         String tag = "10:00,13:30,19:00;";
         ZonedDateTime zdt = ZonedDateTime.of(2024, 7, 16, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo")); // Tuesday, 9:00
 
-        // 9:00 -> 次回 10:00
-        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli());
+        // 9:00 -> 次回 10:00 (1時間以内なので SOON)
+        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
         assertEquals(ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON, result.getCurrentState());
         assertTrue(result.getTodayStatus().contains("10:00"));
 
-        // 11:00 -> 次回 13:30
+        // 11:00 -> 次回 13:30 (1時間以上あるので CLOSED)
         zdt = zdt.withHour(11);
-        result = parser.parse(tag, zdt.toInstant().toEpochMilli());
-        assertEquals(ScheduleResult.CurrentState.OPENING, result.getCurrentState());
+        result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        assertEquals(ScheduleResult.CurrentState.CLOSED, result.getCurrentState());
         assertTrue(result.getTodayStatus().contains("13:30"));
 
         // 20:00 -> 本日の収集終了
         zdt = zdt.withHour(20);
-        result = parser.parse(tag, zdt.toInstant().toEpochMilli());
+        result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
         assertEquals(ScheduleResult.CurrentState.TODAY_FINISHED, result.getCurrentState());
         assertTrue(result.getTodayStatus().contains("終了"));
     }
@@ -204,7 +204,7 @@ public class SimpleScheduleParserTest {
         String tag = "ALL 10:00-19:00";
         ZonedDateTime zdt = ZonedDateTime.of(2024, 7, 16, 12, 0, 0, 0, ZoneId.of("Asia/Tokyo")); // Tuesday, 12:00
 
-        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli());
+        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
     }
 
@@ -223,7 +223,7 @@ public class SimpleScheduleParserTest {
         String tag = "Mo-Su 10:00-19:00";
         ZonedDateTime zdt = ZonedDateTime.of(2024, 7, 16, 20, 0, 0, 0, ZoneId.of("Asia/Tokyo")); // Tuesday, 20:00
 
-        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli());
+        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.TODAY_FINISHED, result.getCurrentState());
         assertNotNull(result.getNextEvent());
         
@@ -248,7 +248,7 @@ public class SimpleScheduleParserTest {
         String tag = "Mo-Su 10:00,13:30,19:00";
         ZonedDateTime zdt = ZonedDateTime.of(2024, 7, 16, 20, 0, 0, 0, ZoneId.of("Asia/Tokyo")); // Tuesday, 20:00
 
-        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli());
+        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
         assertEquals(ScheduleResult.CurrentState.TODAY_FINISHED, result.getCurrentState());
         assertNotNull(result.getNextEvent());
         assertEquals(ScheduleResult.EventType.COLLECTION, result.getNextEvent().getType());
@@ -256,6 +256,40 @@ public class SimpleScheduleParserTest {
         ZonedDateTime nextEventZdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(result.getNextEvent().getTimestamp()), ZoneId.of("Asia/Tokyo"));
         assertEquals(17, nextEventZdt.getDayOfMonth()); // Wednesday
         assertEquals(10, nextEventZdt.getHour());
+    }
+
+    /**
+     * 混在する曜日指定のケース
+     * 入力条件: Mo-Fr 10:00; Sa-Su,PH 11:00;
+     */
+    @Test
+    public void testMixedDaySpec() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        String tag = "Mo-Fr 10:00; Sa-Su,PH 11:00;";
+        
+        // 土曜日のチェック
+        ZonedDateTime zdtSa = ZonedDateTime.of(2026, 7, 18, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult resultSa = parser.parse(tag, zdtSa.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        // 9:00 -> 11:00 は2時間あるので CLOSED
+        assertEquals(ScheduleResult.CurrentState.CLOSED, resultSa.getCurrentState());
+        assertTrue(resultSa.getTodayStatus().contains("11:00"));
+
+        // 10:30 になれば SOON
+        zdtSa = zdtSa.withHour(10).withMinute(30);
+        resultSa = parser.parse(tag, zdtSa.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        assertEquals(ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON, resultSa.getCurrentState());
+
+        // 日曜日のチェック (9:00 -> 11:00 は CLOSED)
+        ZonedDateTime zdtSu = ZonedDateTime.of(2026, 7, 19, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult resultSu = parser.parse(tag, zdtSu.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        assertEquals(ScheduleResult.CurrentState.CLOSED, resultSu.getCurrentState());
+        assertTrue(resultSu.getTodayStatus().contains("11:00"));
+
+        // 祝日のチェック (2026-07-20 は海の日で祝日) (9:00 -> 11:00 は CLOSED)
+        ZonedDateTime zdtPh = ZonedDateTime.of(2026, 7, 20, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult resultPh = parser.parse(tag, zdtPh.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        assertEquals(ScheduleResult.CurrentState.CLOSED, resultPh.getCurrentState());
+        assertTrue(resultPh.getTodayStatus().contains("11:00"));
     }
     
 }

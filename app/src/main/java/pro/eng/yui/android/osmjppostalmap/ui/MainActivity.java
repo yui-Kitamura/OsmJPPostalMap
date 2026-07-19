@@ -106,14 +106,20 @@ public class MainActivity extends AppCompatActivity {
             map.getOverlays().clear();
             viewModel.updateAccessToken(authRepository.getAccessToken());
             for (OsmPoi poi : pois) {
-                PoiMarker.PoiType type = "post_office".equals(poi.getTag("amenity")) ? 
+                pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity amenity = 
+                        "post_office".equals(poi.getTag("amenity")) ? 
+                        pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_OFFICE : 
+                        pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_BOX;
+                
+                PoiMarker.PoiType type = (amenity == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_OFFICE) ? 
                         PoiMarker.PoiType.POST_OFFICE : PoiMarker.PoiType.POST_BOX;
                 PoiMarker marker = new PoiMarker(map, type);
                 marker.setPosition(new GeoPoint(poi.getLat(), poi.getLon()));
                 
-                String tag = type == PoiMarker.PoiType.POST_OFFICE ? "opening_hours" : "collection_times";
+                String tag = (amenity == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_OFFICE) ? 
+                        "opening_hours" : "collection_times";
                 marker.setSchedule(new pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser()
-                        .parse(poi.getTag(tag), System.currentTimeMillis()));
+                        .parse(poi.getTag(tag), System.currentTimeMillis(), amenity));
                 
                 marker.setOnMarkerClickListener((m, mapView) -> {
                     PoiDetailsDialog.show(this, poi, ((PoiMarker)m).getSchedule());

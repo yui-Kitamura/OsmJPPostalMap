@@ -59,10 +59,16 @@ public class MainViewModel extends ViewModel {
         long now = System.currentTimeMillis();
 
         for (OsmPoi poi : allPois) {
-            String amenity = poi.getTag("amenity");
-            String tag = "post_office".equals(amenity) ? "opening_hours" : "collection_times";
+            String amenityStr = poi.getTag("amenity");
+            pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity amenity = 
+                "post_office".equals(amenityStr) ? 
+                pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_OFFICE : 
+                pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_BOX;
+            
+            String tag = (amenity == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_OFFICE) ? 
+                "opening_hours" : "collection_times";
             pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult res = 
-                parser.parse(poi.getTag(tag), now);
+                parser.parse(poi.getTag(tag), now, amenity);
             
             if (res.getCurrentState() == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult.CurrentState.OPENING ||
                 res.getCurrentState() == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
