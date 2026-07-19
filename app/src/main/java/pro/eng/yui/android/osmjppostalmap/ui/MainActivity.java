@@ -1,17 +1,12 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
 import org.osmdroid.config.Configuration;
-import org.osmdroid.events.MapListener;
-import org.osmdroid.events.ScrollEvent;
-import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.tileprovider.tilesource.XYTileSource;
-import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 
@@ -23,7 +18,6 @@ import pro.eng.yui.android.osmjppostalmap.R;
 import android.view.View;
 import android.content.Intent;
 import android.widget.TextView;
-import android.widget.ImageButton;
 import android.widget.Toast;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -32,14 +26,11 @@ import androidx.appcompat.widget.SearchView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.util.ArrayList;
-
 public class MainActivity extends AppCompatActivity {
 
     private MapView map;
     private MainViewModel viewModel;
     private RecyclerView searchResultsList;
-    private SearchView searchView;
     private pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository authRepository;
 
     @Override
