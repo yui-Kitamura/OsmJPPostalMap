@@ -82,7 +82,7 @@ public class SimpleScheduleParser implements ScheduleParser {
                         if (currentMinutes < start) {
                             if (nextEvent == null) {
                                 nextEvent = createEvent(now, start, ScheduleResult.EventType.OPEN);
-                                state = ScheduleResult.CurrentState.CLOSING_OPEN_SOON; 
+                                state = ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON; 
                                 todayStatus = "営業開始前 " + range[0];
                             }
                         } else if (currentMinutes < end) {

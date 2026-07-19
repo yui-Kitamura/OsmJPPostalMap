@@ -137,7 +137,7 @@ public class SimpleScheduleParserTest {
      * 出力期待値:
      * <ul>
      *   <li>11:30 -> {@link ScheduleResult.CurrentState#OPENING_BUT_EVENT_SOON} (休憩開始が近い)</li>
-     *   <li>12:30 -> {@link ScheduleResult.CurrentState#CLOSING_OPEN_SOON} (休憩時間内)</li>
+     *   <li>12:30 -> {@link ScheduleResult.CurrentState#CLOSING_BUT_OPEN_SOON} (休憩時間内)</li>
      * </ul>
      */
     @Test
@@ -153,7 +153,7 @@ public class SimpleScheduleParserTest {
         // 休憩時間内 (12:30) -> 開店前扱い
         zdt = zdt.withHour(12).withMinute(30);
         result = parser.parse(tag, zdt.toInstant().toEpochMilli());
-        assertEquals(ScheduleResult.CurrentState.CLOSING_OPEN_SOON, result.getCurrentState());
+        assertEquals(ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON, result.getCurrentState());
         assertTrue(result.getTodayStatus().contains("営業開始前 13:00"));
     }
 

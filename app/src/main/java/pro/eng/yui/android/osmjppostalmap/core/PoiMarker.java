@@ -87,7 +87,7 @@ public class PoiMarker extends Marker {
                 sweepAngle = (remainingMinutes / 60f) * 360f;
             }
             
-            if (schedule.getCurrentState() == ScheduleResult.CurrentState.CLOSING_OPEN_SOON && schedule.getNextEvent() != null) {
+            if (schedule.getCurrentState() == ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON && schedule.getNextEvent() != null) {
                 // 営業開始前：緑ドットを短針の位置に配置
                 canvas.drawArc(rect, -90f, 360f, false, ringPaint); // 灰がかった緑のリング（updateRingPaintで設定）
                 
@@ -124,7 +124,7 @@ public class PoiMarker extends Marker {
             case TODAY_FINISHED:
                 ringPaint.setColor(0xFF808080); // グレー
                 break;
-            case CLOSING_OPEN_SOON:
+            case CLOSING_BUT_OPEN_SOON:
                 ringPaint.setColor(0xFF556B2F); // 灰がかった緑 (DarkOliveGreen)
                 break;
             case UNKNOWN:
