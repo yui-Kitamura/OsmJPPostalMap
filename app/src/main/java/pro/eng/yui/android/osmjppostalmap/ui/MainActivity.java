@@ -132,6 +132,8 @@ public class MainActivity extends AppCompatActivity {
         viewModel.getFilteredPois().observe(this, pois -> {
             map.getOverlays().removeIf(overlay -> overlay instanceof PoiMarker);
             viewModel.updateAccessToken(authRepository.getAccessToken());
+            
+            java.util.ArrayList<PoiMarker> markers = new java.util.ArrayList<>();
             for (OsmPoi poi : pois) {
                 pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity amenity = 
                         "post_office".equals(poi.getTag("amenity")) ? 
@@ -152,8 +154,25 @@ public class MainActivity extends AppCompatActivity {
                     PoiDetailsDialog.show(this, poi, ((PoiMarker)m).getSchedule());
                     return true;
                 });
-                map.getOverlays().add(marker);
+                markers.add(marker);
             }
+
+            // 優先度順にソート（重なり順を制御）
+            // 優先度の低いものから順に追加することで、優先度の高いものが上に描画される
+            markers.sort((a, b) -> {
+                int pA = getPriorityForSorting(a.getSchedule());
+                int pB = getPriorityForSorting(b.getSchedule());
+                if (pA != pB) {
+                    return Integer.compare(pA, pB); // 優先度昇順
+                }
+                // 同一ステータスの場合はイベント時刻が近い方を優先（後に描画）
+                if (a.getSchedule().getNextEvent() != null && b.getSchedule().getNextEvent() != null) {
+                    return Long.compare(b.getSchedule().getNextEvent().getTimestamp(), a.getSchedule().getNextEvent().getTimestamp());
+                }
+                return 0;
+            });
+
+            map.getOverlays().addAll(markers);
             map.invalidate();
         });
 
@@ -430,5 +449,18 @@ public class MainActivity extends AppCompatActivity {
             locationOverlay.disableMyLocation();
         }
         updateHandler.removeCallbacks(updateRunnable);
+    }
+
+    private int getPriorityForSorting(pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult schedule) {
+        if (schedule == null) return 0;
+        switch (schedule.getCurrentState()) {
+            case OPENING_BUT_EVENT_SOON: return 100;
+            case OPENING: return 80;
+            case CLOSING_BUT_OPEN_SOON: return 60;
+            case CLOSED: return 40;
+            case TODAY_FINISHED: return 20;
+            case UNKNOWN:
+            default: return 0;
+        }
     }
 }
