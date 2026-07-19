@@ -102,7 +102,7 @@ public class SimpleScheduleParser implements ScheduleParser {
                                     if (collectionTime - currentMinutes <= 60) {
                                         state = ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON;
                                     } else {
-                                        state = ScheduleResult.CurrentState.CLOSED;
+                                        state = ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON;
                                     }
                                     todayStatus = "次回収集 " + timeRange;
                                 } else if (followingEvent == null) {

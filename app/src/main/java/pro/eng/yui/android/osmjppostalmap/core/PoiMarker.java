@@ -107,8 +107,16 @@ public class PoiMarker extends Marker {
                 sweepAngle = (remainingMinutes / 60f) * 360f;
             }
             
+            boolean showDot = false;
             if (schedule.getCurrentState() == ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON && schedule.getNextEvent() != null) {
-                // 営業開始前：緑ドットを短針の位置に配置
+                showDot = true;
+            } else if (poiType == PoiType.POST_BOX && schedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON && schedule.getNextEvent() != null) {
+                // ポストの場合、収集間際(OPENING_BUT_EVENT_SOON)でもドットを表示したい
+                showDot = true;
+            }
+
+            if (showDot) {
+                // 営業開始前または収集前：緑ドットを短針の位置に配置
                 canvas.drawArc(ringRect, -90f, 360f, false, ringPaint); // 灰がかった緑のリング
                 
                 java.util.Calendar cal = java.util.Calendar.getInstance();
@@ -146,13 +154,17 @@ public class PoiMarker extends Marker {
                 ringPaint.setColor(0xFFFFA500); // 橙
                 break;
             case CLOSED:
-                ringPaint.setColor(0xFFFF0000); // 赤
+                ringPaint.setColor(0xFF808080); // グレー (赤から変更)
                 break;
             case TODAY_FINISHED:
                 ringPaint.setColor(0xFF808080); // グレー
                 break;
             case CLOSING_BUT_OPEN_SOON:
-                ringPaint.setColor(0xFF556B2F); // 灰がかった緑 (DarkOliveGreen)
+                if (poiType == PoiType.POST_BOX) {
+                    ringPaint.setColor(0xFF808080); // ポストの収集待ちはグレー
+                } else {
+                    ringPaint.setColor(0xFF556B2F); // 郵便局の営業開始前は灰がかった緑
+                }
                 break;
             case UNKNOWN:
                 ringPaint.setColor(0x00000000); // 透明

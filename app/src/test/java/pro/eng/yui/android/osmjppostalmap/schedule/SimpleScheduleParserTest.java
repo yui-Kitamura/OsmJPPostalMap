@@ -180,10 +180,10 @@ public class SimpleScheduleParserTest {
         assertEquals(ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON, result.getCurrentState());
         assertTrue(result.getTodayStatus().contains("10:00"));
 
-        // 11:00 -> 次回 13:30 (1時間以上あるので CLOSED)
+        // 11:00 -> 次回 13:30
         zdt = zdt.withHour(11);
         result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
-        assertEquals(ScheduleResult.CurrentState.CLOSED, result.getCurrentState());
+        assertEquals(ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON, result.getCurrentState());
         assertTrue(result.getTodayStatus().contains("13:30"));
 
         // 20:00 -> 本日の収集終了
@@ -271,7 +271,7 @@ public class SimpleScheduleParserTest {
         ZonedDateTime zdtSa = ZonedDateTime.of(2026, 7, 18, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
         ScheduleResult resultSa = parser.parse(tag, zdtSa.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
         // 9:00 -> 11:00 は2時間あるので CLOSED
-        assertEquals(ScheduleResult.CurrentState.CLOSED, resultSa.getCurrentState());
+        assertEquals(ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON, resultSa.getCurrentState());
         assertTrue(resultSa.getTodayStatus().contains("11:00"));
 
         // 10:30 になれば SOON
@@ -315,6 +315,8 @@ public class SimpleScheduleParserTest {
         assertEquals(13, nextEventZdt.getHour());
         assertEquals(0, nextEventZdt.getMinute());
     }
+    
+    
     /**
      * ユーザー提示のケース: Mo-Th 10:00; Fr 10:30; Sa-Su,PH 11:00;
      */
@@ -343,5 +345,33 @@ public class SimpleScheduleParserTest {
         ScheduleResult resultPh = parser.parse(tag, zdtPh.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
         assertTrue("Holiday should have 11:00", resultPh.getTodayStatus().contains("11:00"));
     }
-    
+
+    /**
+     * 今日が祝日でまだ時間が到来していないパターンのテスト
+     * <p>
+     * 入力条件: Sa-Su,PH 11:00, 祝日 9:00
+     * 出力期待値:
+     * <ul>
+     *   <li>9:00 -> {@link ScheduleResult.CurrentState#CLOSED} (11:00まで2時間あり)</li>
+     *   <li>10:30 -> {@link ScheduleResult.CurrentState#OPENING_BUT_EVENT_SOON} (11:00まで30分)</li>
+     * </ul>
+     */
+    @Test
+    public void testHolidayBeforeEventTime() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        String tag = "Sa-Su,PH 11:00;";
+
+        // 祝日 (2026-07-20) の 9:00 (11:00まで2時間あり)
+        ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 20, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        assertEquals(ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON, result.getCurrentState());
+        assertTrue(result.getTodayStatus().contains("11:00"));
+
+        // 祝日 (2026-07-20) の 10:30 (11:00まで30分)
+        zdt = zdt.withHour(10).withMinute(30);
+        result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        assertEquals(ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON, result.getCurrentState());
+        assertTrue(result.getTodayStatus().contains("11:00"));
+    }
+
 }
