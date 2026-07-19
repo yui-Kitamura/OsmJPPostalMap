@@ -32,6 +32,8 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          OSM_CLIENT_ID: ${{ secrets.OSM_CLIENT_ID }}
+          OSM_CLIENT_SECRET: ${{ secrets.OSM_CLIENT_SECRET }}
 
       - name: Build App Bundle
         if: github.event_name == 'release'
@@ -41,6 +43,8 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          OSM_CLIENT_ID: ${{ secrets.OSM_CLIENT_ID }}
+          OSM_CLIENT_SECRET: ${{ secrets.OSM_CLIENT_SECRET }}
 
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v7.0.1

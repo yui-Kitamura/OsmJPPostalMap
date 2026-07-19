@@ -15,13 +15,14 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import pro.eng.yui.android.osmjppostalmap.R;
+import pro.eng.yui.android.osmjppostalmap.BuildConfig;
 import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
 
 public class SettingsActivity extends AppCompatActivity {
 
     private AuthRepository authRepository;
-    private static final String CLIENT_ID = "YOUR_CLIENT_ID";
-    private static final String CLIENT_SECRET = ""; // パブリッククライアントの場合は空で可
+    private static final String CLIENT_ID = BuildConfig.OSM_CLIENT_ID;
+    private static final String CLIENT_SECRET = BuildConfig.OSM_CLIENT_SECRET;
     private static final String REDIRECT_URI = "osmjppostalmap://oauth";
 
     @Override
@@ -111,8 +112,8 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void exchangeToken(String code, TextView loginStatus, Button btnLogin, Button btnUserPage, Button btnLogout) {
-        if ("YOUR_CLIENT_ID".equals(CLIENT_ID)) {
-            Toast.makeText(this, "CLIENT_ID が設定されていません。SettingsActivity を修正してください。", Toast.LENGTH_LONG).show();
+        if (CLIENT_ID == null || CLIENT_ID.isEmpty()) {
+            Toast.makeText(this, "CLIENT_ID が設定されていません。ビルド設定を確認してください。", Toast.LENGTH_LONG).show();
             return;
         }
 

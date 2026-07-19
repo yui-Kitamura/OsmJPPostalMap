@@ -19,6 +19,13 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "VERSION_NAME", "\"${versionName}\""
+
+        // OSM OAuth credentials from environment variables or local.properties
+        def osmClientId = System.getenv("OSM_CLIENT_ID") ?: project.findProperty("OSM_CLIENT_ID") ?: ""
+        def osmClientSecret = System.getenv("OSM_CLIENT_SECRET") ?: project.findProperty("OSM_CLIENT_SECRET") ?: ""
+
+        buildConfigField "String", "OSM_CLIENT_ID", "\"${osmClientId}\""
+        buildConfigField "String", "OSM_CLIENT_SECRET", "\"${osmClientSecret}\""
     }
 
     buildFeatures {
