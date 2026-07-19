@@ -116,6 +116,20 @@ public class MainActivity extends AppCompatActivity {
             // TODO: Intent to SettingsActivity
         });
 
+        // Search Button
+        View searchCard = findViewById(R.id.search_card);
+        ImageButton searchButton = findViewById(R.id.search_button);
+        searchButton.setOnClickListener(v -> {
+            if (searchCard.getVisibility() == View.VISIBLE) {
+                searchCard.setVisibility(View.GONE);
+                searchResultsList.setVisibility(View.GONE);
+                searchView.clearFocus();
+            } else {
+                searchCard.setVisibility(View.VISIBLE);
+                searchView.requestFocus();
+            }
+        });
+
         // Error Bar
         TextView errorBar = findViewById(R.id.error_bar);
         viewModel.getErrorMessage().observe(this, msg -> {
@@ -138,6 +152,7 @@ public class MainActivity extends AppCompatActivity {
                 map.getController().animateTo(new GeoPoint(poi.getLat(), poi.getLon()));
                 map.getController().setZoom(18.0);
                 searchResultsList.setVisibility(View.GONE);
+                searchCard.setVisibility(View.GONE);
                 searchView.clearFocus();
             }));
         });
