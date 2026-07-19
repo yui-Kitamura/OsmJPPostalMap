@@ -7,6 +7,9 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
+import org.osmdroid.events.MapListener;
+import org.osmdroid.events.ScrollEvent;
+import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
@@ -24,6 +27,41 @@ public class EditPoiActivity extends AppCompatActivity {
     private PoiRepository repository;
     private AuthRepository authRepository;
     private OsmPoi targetPoi;
+
+    private static class ReticleMarker extends Marker {
+        private final android.graphics.Paint paint;
+
+        public ReticleMarker(MapView mapView) {
+            super(mapView);
+            paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            paint.setColor(0xFFFF0000); // 赤
+            paint.setStyle(android.graphics.Paint.Style.STROKE);
+            paint.setStrokeWidth(5f);
+        }
+
+        @Override
+        public void draw(android.graphics.Canvas canvas, MapView mapView, boolean shadow) {
+            if (shadow) return;
+            android.graphics.Point screenPos = new android.graphics.Point();
+            mapView.getProjection().toPixels(getPosition(), screenPos);
+
+            float radius = 40f;
+            float centerGap = 10f;
+
+            // 円を描画
+            canvas.drawCircle(screenPos.x, screenPos.y, radius, paint);
+
+            // 十字を描画 (中心は空白)
+            // 上
+            canvas.drawLine(screenPos.x, screenPos.y - radius, screenPos.x, screenPos.y - centerGap, paint);
+            // 下
+            canvas.drawLine(screenPos.x, screenPos.y + centerGap, screenPos.x, screenPos.y + radius, paint);
+            // 左
+            canvas.drawLine(screenPos.x - radius, screenPos.y, screenPos.x - centerGap, screenPos.y, paint);
+            // 右
+            canvas.drawLine(screenPos.x + centerGap, screenPos.y, screenPos.x + radius, screenPos.y, paint);
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,11 +103,26 @@ public class EditPoiActivity extends AppCompatActivity {
         map.getController().setZoom(19.0);
         map.getController().setCenter(startPoint);
 
-        marker = new Marker(map);
+        marker = new ReticleMarker(map);
         marker.setPosition(startPoint);
-        marker.setDraggable(true);
-        marker.setTitle("位置をドラッグして移動");
+        marker.setDraggable(false);
+        marker.setTitle("位置を調整");
+        marker.setInfoWindow(null);
         map.getOverlays().add(marker);
+
+        map.addMapListener(new MapListener() {
+            @Override
+            public boolean onScroll(ScrollEvent event) {
+                marker.setPosition((GeoPoint) map.getMapCenter());
+                return true;
+            }
+
+            @Override
+            public boolean onZoom(ZoomEvent event) {
+                marker.setPosition((GeoPoint) map.getMapCenter());
+                return true;
+            }
+        });
 
         btnSave.setOnClickListener(v -> {
             if (!authRepository.isLoggedIn()) {
@@ -90,8 +143,33 @@ public class EditPoiActivity extends AppCompatActivity {
 
     private void saveChanges() {
         // タグの更新と位置の更新をリポジトリ経由で行う
-        // 実際には新しいOsmPoiオブジェクトを作成して渡す
-        Toast.makeText(this, "保存しました（モック）", Toast.LENGTH_SHORT).show();
-        finish();
+        String amenity = targetPoi.getTag("amenity");
+        String tagName = "post_box".equals(amenity) ? "collection_times" : "opening_hours";
+        String newValue = tagInput.getText() != null ? tagInput.getText().toString() : "";
+        
+        targetPoi.getTags().put(tagName, newValue);
+        
+        // 移動後の位置を取得
+        GeoPoint pos = marker.getPosition();
+        OsmPoi updatedPoi = new OsmPoi(
+                targetPoi.getId(),
+                pos.getLatitude(),
+                pos.getLongitude(),
+                targetPoi.getType(),
+                targetPoi.getTags()
+        );
+
+        repository.savePoi(updatedPoi, "update " + (updatedPoi.getTag("name") != null ? updatedPoi.getTag("name") : updatedPoi.getType()), new PoiRepository.PoiSaveCallback() {
+            @Override
+            public void onSuccess() {
+                Toast.makeText(EditPoiActivity.this, "保存しました", Toast.LENGTH_SHORT).show();
+                finish();
+            }
+
+            @Override
+            public void onError(String message) {
+                Toast.makeText(EditPoiActivity.this, "保存エラー: " + message, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }
