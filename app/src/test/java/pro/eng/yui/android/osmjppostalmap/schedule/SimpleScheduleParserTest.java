@@ -282,13 +282,13 @@ public class SimpleScheduleParserTest {
         // 日曜日のチェック (9:00 -> 11:00 は CLOSED)
         ZonedDateTime zdtSu = ZonedDateTime.of(2026, 7, 19, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
         ScheduleResult resultSu = parser.parse(tag, zdtSu.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
-        assertEquals(ScheduleResult.CurrentState.CLOSED, resultSu.getCurrentState());
+        assertEquals(ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON, resultSu.getCurrentState());
         assertTrue(resultSu.getTodayStatus().contains("11:00"));
 
         // 祝日のチェック (2026-07-20 は海の日で祝日) (9:00 -> 11:00 は CLOSED)
         ZonedDateTime zdtPh = ZonedDateTime.of(2026, 7, 20, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
         ScheduleResult resultPh = parser.parse(tag, zdtPh.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
-        assertEquals(ScheduleResult.CurrentState.CLOSED, resultPh.getCurrentState());
+        assertEquals(ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON, resultPh.getCurrentState());
         assertTrue(resultPh.getTodayStatus().contains("11:00"));
     }
 
@@ -372,6 +372,21 @@ public class SimpleScheduleParserTest {
         result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
         assertEquals(ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON, result.getCurrentState());
         assertTrue(result.getTodayStatus().contains("11:00"));
+    }
+
+    @Test
+    public void testReproductionHolidayIssue() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        // 平日は 10:00, 祝日は 11:00 のスケジュール
+        String tag = "Mo-Fr 10:00; Sa-Su,PH 11:00;";
+
+        // 2026-07-20 02:58 (月・祝)
+        ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 20, 2, 58, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+
+        // 祝日なので 11:00 が採用されるべき
+        assertTrue("Should contain 11:00 on holiday", result.getTodayStatus().contains("11:00"));
+        assertFalse("Should NOT contain 10:00 (Monday time) on holiday", result.getTodayStatus().contains("10:00"));
     }
 
 }
