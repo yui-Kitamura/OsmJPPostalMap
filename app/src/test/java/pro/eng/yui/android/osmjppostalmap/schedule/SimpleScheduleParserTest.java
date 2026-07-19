@@ -30,7 +30,8 @@ public class SimpleScheduleParserTest {
     public void testValidTagReturnsNotUnknown() {
         SimpleScheduleParser parser = new SimpleScheduleParser();
         // Mo-Fr 09:00-17:00 形式
-        ScheduleResult result = parser.parse("Mo-Su 00:00-24:00", System.currentTimeMillis());
+        ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 21, 12, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult result = parser.parse("Mo-Su 00:00-24:00", zdt.toInstant().toEpochMilli());
         assertNotEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
     }
 
@@ -41,7 +42,8 @@ public class SimpleScheduleParserTest {
     @Test
     public void testTwentyFourSevenReturnsOpen() {
         SimpleScheduleParser parser = new SimpleScheduleParser();
-        ScheduleResult result = parser.parse("24/7", System.currentTimeMillis());
+        ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 20, 12, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult result = parser.parse("24/7", zdt.toInstant().toEpochMilli());
         assertEquals(ScheduleResult.CurrentState.OPENING, result.getCurrentState());
     }
 
