@@ -100,8 +100,27 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public LiveData<OsmPoi> getPoi(long id, String type) {
-        // TODO: 実装
-        return new MutableLiveData<>();
+        MutableLiveData<OsmPoi> poiLiveData = new MutableLiveData<>();
+        String query = String.format(Locale.US, "[out:json][timeout:25]; %s(%d); out body center;", type, id);
+
+        overpassApi.query(query).enqueue(new Callback<OverpassResponse>() {
+            @Override
+            public void onResponse(Call<OverpassResponse> call, Response<OverpassResponse> response) {
+                if (response.isSuccessful() && response.body() != null && !response.body().elements.isEmpty()) {
+                    OverpassResponse.Element element = response.body().elements.get(0);
+                    poiLiveData.postValue(new OsmPoi(element.id, element.lat, element.lon, element.type, element.tags));
+                } else {
+                    poiLiveData.postValue(null);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<OverpassResponse> call, Throwable t) {
+                poiLiveData.postValue(null);
+            }
+        });
+
+        return poiLiveData;
     }
 
     @Override
