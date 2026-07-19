@@ -71,6 +71,25 @@ public class MainActivity extends AppCompatActivity {
         map = findViewById(R.id.map);
         locationOverlay = new org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay(
                 new org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider(this), map);
+        
+        // Use a simple blue circle for current location instead of the default person icon
+        android.graphics.Bitmap personBitmap = android.graphics.Bitmap.createBitmap(48, 48, android.graphics.Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas canvas = new android.graphics.Canvas(personBitmap);
+        android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(0x330000FF); // Semi-transparent blue for the outer ring
+        canvas.drawCircle(24, 24, 24, paint);
+        paint.setColor(0xFFFFFFFF); // White border
+        paint.setStyle(android.graphics.Paint.Style.STROKE);
+        paint.setStrokeWidth(2);
+        canvas.drawCircle(24, 24, 10, paint);
+        paint.setColor(0xFF4285F4); // Google Maps blue
+        paint.setStyle(android.graphics.Paint.Style.FILL);
+        canvas.drawCircle(24, 24, 10, paint);
+        
+        locationOverlay.setPersonIcon(personBitmap);
+        locationOverlay.setDirectionIcon(personBitmap);
+        locationOverlay.setPersonHotspot(24, 24);
+
         locationOverlay.enableMyLocation();
         map.getOverlays().add(locationOverlay);
 
