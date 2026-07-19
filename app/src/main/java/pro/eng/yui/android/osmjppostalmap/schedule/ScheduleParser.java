@@ -1,4 +1,4 @@
-package eng.pro.yui.android.osmjppostalmap.schedule;
+package pro.eng.yui.android.osmjppostalmap.schedule;
 
 /**
  * 営業中や収集時刻の解析を行うインターフェース

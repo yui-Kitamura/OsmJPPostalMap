@@ -1,4 +1,4 @@
-package eng.pro.yui.android.osmjppostalmap.data.repository;
+package pro.eng.yui.android.osmjppostalmap.data.repository;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -7,10 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import eng.pro.yui.android.osmjppostalmap.data.api.OverpassApi;
-import eng.pro.yui.android.osmjppostalmap.data.api.OverpassResponse;
-import eng.pro.yui.android.osmjppostalmap.domain.model.OsmPoi;
-import eng.pro.yui.android.osmjppostalmap.domain.repository.PoiRepository;
+import pro.eng.yui.android.osmjppostalmap.data.api.OverpassApi;
+import pro.eng.yui.android.osmjppostalmap.data.api.OverpassResponse;
+import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
+import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;

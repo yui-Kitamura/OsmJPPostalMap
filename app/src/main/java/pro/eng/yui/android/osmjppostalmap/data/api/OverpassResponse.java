@@ -1,4 +1,4 @@
-package eng.pro.yui.android.osmjppostalmap.data.api;
+package pro.eng.yui.android.osmjppostalmap.data.api;
 
 import java.util.List;
 import java.util.Map;

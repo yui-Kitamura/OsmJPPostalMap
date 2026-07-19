@@ -1,8 +1,8 @@
-package eng.pro.yui.android.osmjppostalmap.domain.repository;
+package pro.eng.yui.android.osmjppostalmap.domain.repository;
 
 import androidx.lifecycle.LiveData;
 import java.util.List;
-import eng.pro.yui.android.osmjppostalmap.domain.model.OsmPoi;
+import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
 
 /**
  * POIデータの取得と保存を担当するリポジトリインターフェース

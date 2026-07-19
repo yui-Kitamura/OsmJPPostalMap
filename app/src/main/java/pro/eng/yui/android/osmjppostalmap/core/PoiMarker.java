@@ -1,4 +1,4 @@
-package eng.pro.yui.android.osmjppostalmap.core;
+package pro.eng.yui.android.osmjppostalmap.core;
 
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -9,7 +9,7 @@ import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
 
-import eng.pro.yui.android.osmjppostalmap.schedule.ScheduleResult;
+import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
 
 /**
  * 郵便局とポストのカスタムマーカー

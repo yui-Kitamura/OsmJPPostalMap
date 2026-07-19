@@ -1,4 +1,4 @@
-package eng.pro.yui.android.osmjppostalmap.core;
+package pro.eng.yui.android.osmjppostalmap.core;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -7,9 +7,9 @@ import android.widget.TextView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import eng.pro.yui.android.osmjppostalmap.R;
-import eng.pro.yui.android.osmjppostalmap.domain.model.OsmPoi;
-import eng.pro.yui.android.osmjppostalmap.schedule.ScheduleResult;
+import pro.eng.yui.android.osmjppostalmap.R;
+import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
+import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
 
 public class PoiDetailsDialog {
 

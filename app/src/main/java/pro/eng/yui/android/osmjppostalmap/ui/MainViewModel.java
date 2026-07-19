@@ -1,4 +1,4 @@
-package eng.pro.yui.android.osmjppostalmap.ui;
+package pro.eng.yui.android.osmjppostalmap.ui;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -6,9 +6,9 @@ import androidx.lifecycle.ViewModel;
 
 import java.util.List;
 
-import eng.pro.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
-import eng.pro.yui.android.osmjppostalmap.domain.model.OsmPoi;
-import eng.pro.yui.android.osmjppostalmap.domain.repository.PoiRepository;
+import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
+import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
+import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 
 public class MainViewModel extends ViewModel {
 

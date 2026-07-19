@@ -1,4 +1,4 @@
-package eng.pro.yui.android.osmjppostalmap.data.api;
+package pro.eng.yui.android.osmjppostalmap.data.api;
 
 import retrofit2.Call;
 import retrofit2.http.GET;

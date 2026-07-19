@@ -1,4 +1,4 @@
-package eng.pro.yui.android.osmjppostalmap.domain.model;
+package pro.eng.yui.android.osmjppostalmap.domain.model;
 
 import java.util.Map;
 

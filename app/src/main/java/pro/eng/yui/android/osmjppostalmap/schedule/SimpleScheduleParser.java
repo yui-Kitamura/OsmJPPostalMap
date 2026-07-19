@@ -1,4 +1,4 @@
-package eng.pro.yui.android.osmjppostalmap.schedule;
+package pro.eng.yui.android.osmjppostalmap.schedule;
 
 import java.util.ArrayList;
 import java.util.Calendar;

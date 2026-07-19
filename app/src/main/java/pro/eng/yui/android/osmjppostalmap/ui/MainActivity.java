@@ -1,4 +1,4 @@
-package eng.pro.yui.android.osmjppostalmap.ui;
+package pro.eng.yui.android.osmjppostalmap.ui;
 
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -15,10 +15,10 @@ import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 
-import eng.pro.yui.android.osmjppostalmap.core.PoiDetailsDialog;
-import eng.pro.yui.android.osmjppostalmap.core.PoiMarker;
-import eng.pro.yui.android.osmjppostalmap.domain.model.OsmPoi;
-import eng.pro.yui.android.osmjppostalmap.R;
+import pro.eng.yui.android.osmjppostalmap.core.PoiDetailsDialog;
+import pro.eng.yui.android.osmjppostalmap.core.PoiMarker;
+import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
+import pro.eng.yui.android.osmjppostalmap.R;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
                 
                 // 解析 (本来はViewModelで行うべき)
                 String tag = type == PoiMarker.PoiType.POST_OFFICE ? "opening_hours" : "collection_times";
-                marker.setSchedule(new eng.pro.yui.android.osmjppostalmap.schedule.SimpleScheduleParser()
+                marker.setSchedule(new pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser()
                         .parse(poi.getTag(tag), System.currentTimeMillis()));
                 
                 marker.setOnMarkerClickListener((m, mapView) -> {

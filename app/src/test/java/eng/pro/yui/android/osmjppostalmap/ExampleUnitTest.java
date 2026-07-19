@@ -1,4 +1,4 @@
-package eng.pro.yui.android.osmjppostalmap;
+package pro.eng.yui.android.osmjppostalmap;
 
 import org.junit.Test;
 
