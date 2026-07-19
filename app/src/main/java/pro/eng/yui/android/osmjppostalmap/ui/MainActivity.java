@@ -127,14 +127,16 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // Filter Button
-        View filterButton = findViewById(R.id.filter_button);
+        ClockFilterButton filterButton = findViewById(R.id.filter_button);
         filterButton.setOnClickListener(v -> {
             boolean currentFilter = viewModel.getFilterOpenOnly().getValue() != null && viewModel.getFilterOpenOnly().getValue();
             viewModel.setFilterOpenOnly(!currentFilter);
-            if (v instanceof android.widget.ImageView) {
-                ((android.widget.ImageView) v).setColorFilter(currentFilter ? 0 : 0xFF00FF00); // 簡易的な状態表示
-            }
+            filterButton.setFilterActive(!currentFilter);
             Toast.makeText(this, currentFilter ? "フィルタ解除" : "営業中・収集残りありのみ表示", Toast.LENGTH_SHORT).show();
+        });
+
+        viewModel.getFilterOpenOnly().observe(this, active -> {
+            filterButton.setFilterActive(active != null && active);
         });
 
         // Add PostBox Button
@@ -241,6 +243,10 @@ public class MainActivity extends AppCompatActivity {
             if (map != null) {
                 updatePois(); // POI情報も1分ごとに更新（状態変更のため）
                 map.invalidate(); // 再描画をトリガーしてリングを更新
+            }
+            View filterButton = findViewById(R.id.filter_button);
+            if (filterButton != null) {
+                filterButton.invalidate();
             }
             updateHandler.postDelayed(this, 60000); // 1分ごとに実行
         }
