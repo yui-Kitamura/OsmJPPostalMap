@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository authRepository;
 
     private double lastZoomLevel = 17.0;
-    private final android.os.Handler debounceHandler = new android.os.Handler();
+    private final android.os.Handler debounceHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable debounceRunnable = null;
 
     @Override
@@ -186,12 +186,17 @@ public class MainActivity extends AppCompatActivity {
         map.addMapListener(new org.osmdroid.events.MapListener() {
             @Override
             public boolean onScroll(org.osmdroid.events.ScrollEvent event) {
-                scheduleUpdatePois();
+                if (map.isLayoutOccurred()) {
+                    scheduleUpdatePois();
+                }
                 return true;
             }
 
             @Override
             public boolean onZoom(org.osmdroid.events.ZoomEvent event) {
+                if (!map.isLayoutOccurred()) {
+                    return true;
+                }
                 double currentZoom = event.getZoomLevel();
                 if (currentZoom > lastZoomLevel) {
                     // ズームイン時は処理しない
@@ -257,11 +262,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updatePois() {
+        if (map == null || !map.isLayoutOccurred()) {
+            return;
+        }
         org.osmdroid.util.BoundingBox box = map.getBoundingBox();
         viewModel.fetchPois(box.getLatSouth(), box.getLonWest(), box.getLatNorth(), box.getLonEast());
     }
 
-    private final android.os.Handler updateHandler = new android.os.Handler();
+    private final android.os.Handler updateHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable updateRunnable = new Runnable() {
         @Override
         public void run() {
