@@ -49,13 +49,13 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public LiveData<List<OsmPoi>> getPois(double minLat, double minLon, double maxLat, double maxLon) {
-        String query = String.format(Locale.US,
-                "[out:json][timeout:25];" +
+        String query = String.format(Locale.JAPAN,
+        "[out:json][timeout:25];" +
+                "area[\"boundary\"=\"administrative\"][\"admin_level\"=\"2\"][\"name\"=\"日本\"]->.a;" +
                 "(" +
-                "  node[\"amenity\"=\"post_box\"](%f,%f,%f,%f);" +
-                "  node[\"amenity\"=\"post_office\"](%f,%f,%f,%f);" +
-                "  way[\"amenity\"=\"post_office\"](%f,%f,%f,%f);" +
-                "  node[\"name\"~\"郵便局\"](%f,%f,%f,%f);" + // 名称検索用
+                "  node(area.a)[\"amenity\"=\"post_box\"](%f,%f,%f,%f);" +
+                "  nw(area.a)[\"amenity\"=\"post_office\"][!\"operator\"](%f,%f,%f,%f);" +
+                "  nw(area.a)[\"amenity\"=\"post_office\"][\"operator\"=\"日本郵便\"](%f,%f,%f,%f);" +
                 ");" +
                 "out body center;",
                 minLat, minLon, maxLat, maxLon,
