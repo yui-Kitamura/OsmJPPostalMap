@@ -10,6 +10,8 @@ import org.osmdroid.tileprovider.tilesource.XYTileSource;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 
+import java.util.List;
+
 import pro.eng.yui.android.osmjppostalmap.core.PoiDetailsDialog;
 import pro.eng.yui.android.osmjppostalmap.core.PoiMarker;
 import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
@@ -232,8 +234,13 @@ public class MainActivity extends AppCompatActivity {
                 }
                 double currentZoom = event.getZoomLevel();
                 if (currentZoom > lastZoomLevel) {
-                    // ズームイン時は処理しない
+                    // ズームイン時
                     lastZoomLevel = currentZoom;
+                    // 表示中のPOIがない場合は再取得を試みる
+                    List<OsmPoi> currentPois = viewModel.getFilteredPois().getValue();
+                    if (currentPois == null || currentPois.isEmpty()) {
+                        scheduleUpdatePois();
+                    }
                     return true;
                 }
                 lastZoomLevel = currentZoom;
