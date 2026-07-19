@@ -315,5 +315,33 @@ public class SimpleScheduleParserTest {
         assertEquals(13, nextEventZdt.getHour());
         assertEquals(0, nextEventZdt.getMinute());
     }
+    /**
+     * ユーザー提示のケース: Mo-Th 10:00; Fr 10:30; Sa-Su,PH 11:00;
+     */
+    @Test
+    public void testUserCaseMoThFrSaSuPH() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        String tag = "Mo-Th 10:00; Fr 10:30; Sa-Su,PH 11:00;";
+        
+        // 月曜日 (Mo)
+        ZonedDateTime zdtMo = ZonedDateTime.of(2026, 7, 13, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult resultMo = parser.parse(tag, zdtMo.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        assertTrue("Monday should have 10:00", resultMo.getTodayStatus().contains("10:00"));
+
+        // 金曜日 (Fr)
+        ZonedDateTime zdtFr = ZonedDateTime.of(2026, 7, 17, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult resultFr = parser.parse(tag, zdtFr.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        assertTrue("Friday should have 10:30", resultFr.getTodayStatus().contains("10:30"));
+
+        // 土曜日 (Sa)
+        ZonedDateTime zdtSa = ZonedDateTime.of(2026, 7, 18, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult resultSa = parser.parse(tag, zdtSa.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        assertTrue("Saturday should have 11:00", resultSa.getTodayStatus().contains("11:00"));
+
+        // 祝日 (2026-07-20 PH)
+        ZonedDateTime zdtPh = ZonedDateTime.of(2026, 7, 20, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult resultPh = parser.parse(tag, zdtPh.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        assertTrue("Holiday should have 11:00", resultPh.getTodayStatus().contains("11:00"));
+    }
     
 }

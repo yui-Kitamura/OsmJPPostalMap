@@ -410,9 +410,11 @@ public class EditPoiActivity extends AppCompatActivity {
 
     private boolean parseAndFillCollectionTimes(String tag) {
         String[] parts = tag.split(";");
-        List<String> weekday = new ArrayList<>();
-        List<String> saturday = new ArrayList<>();
-        List<String> holiday = new ArrayList<>();
+        // 各曜日のスケジュールを個別に保持
+        java.util.Map<String, List<String>> dailySchedules = new java.util.HashMap<>();
+        String[] allDays = {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"};
+        for (String d : allDays) dailySchedules.put(d, new ArrayList<>());
+        List<String> holidayTimes = new ArrayList<>();
 
         try {
             for (String part : parts) {
@@ -426,14 +428,14 @@ public class EditPoiActivity extends AppCompatActivity {
                 String timePart = dayAndTime[1].trim();
                 String[] times = timePart.split(",");
                 
-                // シンプルな曜日展開（SimpleScheduleParserの expandDays に準拠）
                 List<String> expandedDays = new ArrayList<>();
                 String[] dayTokens = dayPart.split(",");
                 for (String token : dayTokens) {
                     token = token.trim();
-                    if (token.contains("-")) {
+                    if (token.equals("PH")) {
+                        expandedDays.add("PH");
+                    } else if (token.contains("-")) {
                         String[] range = token.split("-");
-                        String[] allDays = {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"};
                         int start = -1, end = -1;
                         for (int i = 0; i < 7; i++) {
                             if (allDays[i].equals(range[0])) start = i;
@@ -448,42 +450,65 @@ public class EditPoiActivity extends AppCompatActivity {
                 }
 
                 for (String day : expandedDays) {
-                    if (day.equals("Mo") || day.equals("Tu") || day.equals("We") || day.equals("Th") || day.equals("Fr")) {
-                        for (String t : times) if (!weekday.contains(t.trim())) weekday.add(t.trim());
-                    } else if (day.equals("Sa")) {
-                        for (String t : times) if (!saturday.contains(t.trim())) saturday.add(t.trim());
-                    } else if (day.equals("Su") || day.equals("PH")) {
-                        for (String t : times) if (!holiday.contains(t.trim())) holiday.add(t.trim());
+                    List<String> targetList;
+                    if (day.equals("PH")) {
+                        targetList = holidayTimes;
+                    } else {
+                        targetList = dailySchedules.get(day);
+                    }
+                    
+                    if (targetList != null) {
+                        for (String t : times) {
+                            String trimmedTime = t.trim();
+                            if (!targetList.contains(trimmedTime)) targetList.add(trimmedTime);
+                        }
                     }
                 }
             }
             // 各リストを昇順に並べ替え
             java.util.Comparator<String> timeComp = (a, b) -> Integer.compare(parseMinutes(a), parseMinutes(b));
-            weekday.sort(timeComp);
-            saturday.sort(timeComp);
-            holiday.sort(timeComp);
+            for (List<String> list : dailySchedules.values()) list.sort(timeComp);
+            holidayTimes.sort(timeComp);
+
+            List<String> monSchedule = dailySchedules.get("Mo");
+
+            // 日曜と祝日が同じかチェック（UI上は「日祝」列にまとめているため）
+            if (!dailySchedules.get("Su").equals(holidayTimes)) {
+                return false;
+            }
+
+            // 火〜金のスケジュールが月曜日と一致するか確認
+            for (String day : new String[]{"Tu", "We", "Th", "Fr"}) {
+                if (!monSchedule.equals(dailySchedules.get(day))) {
+                    return false;
+                }
+            }
+
+            List<String> weekday = monSchedule;
+            List<String> saturday = dailySchedules.get("Sa");
+            List<String> holiday = holidayTimes;
+
+            int maxRows = Math.max(weekday.size(), Math.max(saturday.size(), holiday.size()));
+            for (int i = 0; i < maxRows; i++) {
+                addNewRow();
+                if (i < weekday.size()) {
+                    String val = weekday.get(i).trim();
+                    timeRows.get(i)[0].setText(val);
+                    applyCellStyles(timeRows.get(i)[0], val, false);
+                }
+                if (i < saturday.size()) {
+                    String val = saturday.get(i).trim();
+                    timeRows.get(i)[1].setText(val);
+                    applyCellStyles(timeRows.get(i)[1], val, false);
+                }
+                if (i < holiday.size()) {
+                    String val = holiday.get(i).trim();
+                    timeRows.get(i)[2].setText(val);
+                    applyCellStyles(timeRows.get(i)[2], val, false);
+                }
+            }
         } catch (Exception e) {
             return false;
-        }
-
-        int maxRows = Math.max(weekday.size(), Math.max(saturday.size(), holiday.size()));
-        for (int i = 0; i < maxRows; i++) {
-            addNewRow();
-            if (i < weekday.size()) {
-                String val = weekday.get(i).trim();
-                timeRows.get(i)[0].setText(val);
-                applyCellStyles(timeRows.get(i)[0], val, false);
-            }
-            if (i < saturday.size()) {
-                String val = saturday.get(i).trim();
-                timeRows.get(i)[1].setText(val);
-                applyCellStyles(timeRows.get(i)[1], val, false);
-            }
-            if (i < holiday.size()) {
-                String val = holiday.get(i).trim();
-                timeRows.get(i)[2].setText(val);
-                applyCellStyles(timeRows.get(i)[2], val, false);
-            }
         }
         return true;
     }
