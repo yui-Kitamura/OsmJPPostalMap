@@ -26,6 +26,41 @@ public class AddPostBoxActivity extends AppCompatActivity {
     private AuthRepository authRepository;
     private PoiRepository repository;
 
+    private static class ReticleMarker extends Marker {
+        private final android.graphics.Paint paint;
+
+        public ReticleMarker(MapView mapView) {
+            super(mapView);
+            paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            paint.setColor(0xFFFF0000); // 赤
+            paint.setStyle(android.graphics.Paint.Style.STROKE);
+            paint.setStrokeWidth(5f);
+        }
+
+        @Override
+        public void draw(android.graphics.Canvas canvas, MapView mapView, boolean shadow) {
+            if (shadow) return;
+            android.graphics.Point screenPos = new android.graphics.Point();
+            mapView.getProjection().toPixels(getPosition(), screenPos);
+
+            float radius = 40f;
+            float centerGap = 10f;
+
+            // 円を描画
+            canvas.drawCircle(screenPos.x, screenPos.y, radius, paint);
+
+            // 十字を描画 (中心は空白)
+            // 上
+            canvas.drawLine(screenPos.x, screenPos.y - radius, screenPos.x, screenPos.y - centerGap, paint);
+            // 下
+            canvas.drawLine(screenPos.x, screenPos.y + centerGap, screenPos.x, screenPos.y + radius, paint);
+            // 左
+            canvas.drawLine(screenPos.x - radius, screenPos.y, screenPos.x - centerGap, screenPos.y, paint);
+            // 右
+            canvas.drawLine(screenPos.x + centerGap, screenPos.y, screenPos.x + radius, screenPos.y, paint);
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -40,13 +75,15 @@ public class AddPostBoxActivity extends AppCompatActivity {
         TextInputEditText inputCollection = findViewById(R.id.input_collection);
         Button btnSave = findViewById(R.id.btn_add_save);
 
-        // 地図の初期化 (現在地付近を想定)
+        // 地図の初期化 (MainActivityからの遷移時はその中心座標を使用)
         map.setMultiTouchControls(true);
-        GeoPoint startPoint = new GeoPoint(35.6812, 139.7671);
+        double lat = getIntent().getDoubleExtra("LATITUDE", 35.6812);
+        double lon = getIntent().getDoubleExtra("LONGITUDE", 139.7671);
+        GeoPoint startPoint = new GeoPoint(lat, lon);
         map.getController().setZoom(18.0);
         map.getController().setCenter(startPoint);
 
-        marker = new Marker(map);
+        marker = new ReticleMarker(map);
         marker.setPosition(startPoint);
         marker.setDraggable(false); // 中心固定にするためドラッグ不可にする
         marker.setTitle("設置位置");

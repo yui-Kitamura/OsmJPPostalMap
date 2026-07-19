@@ -20,7 +20,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="1. 設置位置を指定 (地図をドラッグ)"
+            android:text="1. 地図"
             android:layout_marginBottom="8dp" />
 
         <org.osmdroid.views.MapView
@@ -32,7 +32,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="2. ポスト形状を選択"
+            android:text="2. 形状"
             android:layout_marginBottom="4dp" />
 
         <RadioGroup
@@ -54,10 +54,16 @@
                 android:text="円柱" />
         </RadioGroup>
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3. 収集局名"
+            android:layout_marginBottom="4dp" />
+
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="管理郵便局名 (任意)"
+            android:hint="収集局名 (任意)"
             android:layout_marginBottom="16dp">
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/input_branch"
@@ -68,11 +74,9 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="3. 収集時刻の入力 (任意)"
+            android:text="4. 時刻入力"
             android:layout_marginBottom="8dp" />
 
-        <!-- 本来は要件に基づき表示と同じレイアウト（表形式等）の入力UIとすべきだが、
-             MVPの簡略化としてテキスト入力＋説明とする -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

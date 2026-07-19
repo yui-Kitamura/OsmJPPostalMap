@@ -152,6 +152,9 @@ public class MainActivity extends AppCompatActivity {
         // Add PostBox Button
         findViewById(R.id.add_postbox_button).setOnClickListener(v -> {
             Intent intent = new Intent(this, AddPostBoxActivity.class);
+            org.osmdroid.api.IGeoPoint center = map.getMapCenter();
+            intent.putExtra("LATITUDE", center.getLatitude());
+            intent.putExtra("LONGITUDE", center.getLongitude());
             startActivity(intent);
         });
 
