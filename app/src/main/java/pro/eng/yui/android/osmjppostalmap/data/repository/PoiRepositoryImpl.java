@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import pro.eng.yui.android.osmjppostalmap.BuildConfig;
 import pro.eng.yui.android.osmjppostalmap.data.api.OsmApi;
 import pro.eng.yui.android.osmjppostalmap.data.api.OverpassApi;
 import pro.eng.yui.android.osmjppostalmap.data.api.OverpassResponse;
@@ -209,13 +210,26 @@ public class PoiRepositoryImpl implements PoiRepository {
     @Override
     public void addNote(double lat, double lon, String text, PoiSaveCallback callback) {
         // 地図メモ (Note) の最終行に署名を追加
-        String finalNote = text + "\ncreated by OSM JP Postal Map Android v1.0";
+        String finalNote = text + "\ncreated by OSM JP Postal Map Android v" + BuildConfig.VERSION_NAME;
         
         // OSM Notes API (匿名投稿可能)
         // https://wiki.openstreetmap.org/wiki/API_v0.6#Map_Notes_API
         // POST /api/0.6/notes?lat=...&lon=...&text=...
         
-        // MVPの簡略化として、成功をシミュレート
-        callback.onSuccess();
+        osmApi.createNote(lat, lon, finalNote).enqueue(new Callback<okhttp3.ResponseBody>() {
+            @Override
+            public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
+                if (response.isSuccessful()) {
+                    callback.onSuccess();
+                } else {
+                    callback.onError("Noteの作成に失敗しました: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<okhttp3.ResponseBody> call, Throwable t) {
+                callback.onError("通信エラーが発生しました: " + t.getMessage());
+            }
+        });
     }
 }

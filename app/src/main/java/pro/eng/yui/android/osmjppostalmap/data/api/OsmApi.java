@@ -24,4 +24,7 @@ public interface OsmApi {
 
     @PUT("{type}/{id}")
     Call<String> updateElement(@Header("Authorization") String auth, @Path("type") String type, @Path("id") long id, @Body String xml);
+
+    @POST("notes")
+    Call<ResponseBody> createNote(@retrofit2.http.Query("lat") double lat, @retrofit2.http.Query("lon") double lon, @retrofit2.http.Query("text") String text);
 }
