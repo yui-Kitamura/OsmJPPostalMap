@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import pro.eng.yui.android.osmjppostalmap.BuildConfig;
 import pro.eng.yui.android.osmjppostalmap.data.api.OsmApi;
 import pro.eng.yui.android.osmjppostalmap.data.api.OverpassApi;
@@ -33,14 +35,27 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     public PoiRepositoryImpl(String accessToken) {
         this.accessToken = accessToken;
+
+        OkHttpClient client = new OkHttpClient.Builder()
+                .addInterceptor(chain -> {
+                    Request request = chain.request().newBuilder()
+                            .header("User-Agent", "OsmJPPostalMap/" + BuildConfig.VERSION_NAME)
+                            .header("Accept", "application/json")
+                            .build();
+                    return chain.proceed(request);
+                })
+                .build();
+
         Retrofit overpassRetrofit = new Retrofit.Builder()
                 .baseUrl("https://overpass-api.de/api/")
+                .client(client)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
         this.overpassApi = overpassRetrofit.create(OverpassApi.class);
 
         Retrofit osmRetrofit = new Retrofit.Builder()
                 .baseUrl("https://www.openstreetmap.org/api/0.6/")
+                .client(client)
                 .build();
         this.osmApi = osmRetrofit.create(OsmApi.class);
     }
