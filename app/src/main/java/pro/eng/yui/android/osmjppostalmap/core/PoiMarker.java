@@ -89,19 +89,16 @@ public class PoiMarker extends Marker {
             canvas.drawCircle(screenPos.x, screenPos.y, size, bgPaint);
         }
 
-        // 〒 記号
-        String symbol = "〒";
-        if (schedule != null && schedule.getCurrentState() == ScheduleResult.CurrentState.UNKNOWN) {
-            symbol = "?";
-        }
-        canvas.drawText(symbol, screenPos.x, screenPos.y + (symbolPaint.getTextSize() / 3), symbolPaint);
-
         // 外周リング
         if (schedule != null && schedule.getCurrentState() != ScheduleResult.CurrentState.UNKNOWN) {
             updateRingPaint(schedule);
             float sweepAngle = 360f;
             long now = System.currentTimeMillis();
             
+            // リングを少し外側に描画
+            float ringSize = size + (ringPaint.getStrokeWidth() / 2) - 1f;
+            RectF ringRect = new RectF(screenPos.x - ringSize, screenPos.y - ringSize, screenPos.x + ringSize, screenPos.y + ringSize);
+
             if (schedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON && schedule.getNextEvent() != null) {
                 long remainingMillis = schedule.getNextEvent().getTimestamp() - now;
                 float remainingMinutes = remainingMillis / 60000f;
@@ -112,7 +109,7 @@ public class PoiMarker extends Marker {
             
             if (schedule.getCurrentState() == ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON && schedule.getNextEvent() != null) {
                 // 営業開始前：緑ドットを短針の位置に配置
-                canvas.drawArc(rect, -90f, 360f, false, ringPaint); // 灰がかった緑のリング（updateRingPaintで設定）
+                canvas.drawArc(ringRect, -90f, 360f, false, ringPaint); // 灰がかった緑のリング
                 
                 java.util.Calendar cal = java.util.Calendar.getInstance();
                 cal.setTimeInMillis(schedule.getNextEvent().getTimestamp());
@@ -124,13 +121,20 @@ public class PoiMarker extends Marker {
                 dotPaint.setColor(0xFF00FF00); // 明るい緑
                 dotPaint.setStyle(Paint.Style.FILL);
                 
-                float dotX = (float) (screenPos.x + size * Math.cos(Math.toRadians(angle)));
-                float dotY = (float) (screenPos.y + size * Math.sin(Math.toRadians(angle)));
+                float dotX = (float) (screenPos.x + ringSize * Math.cos(Math.toRadians(angle)));
+                float dotY = (float) (screenPos.y + ringSize * Math.sin(Math.toRadians(angle)));
                 canvas.drawCircle(dotX, dotY, 6f, dotPaint);
             } else {
-                canvas.drawArc(rect, -90f, sweepAngle, false, ringPaint);
+                canvas.drawArc(ringRect, -90f, sweepAngle, false, ringPaint);
             }
         }
+
+        // 〒 記号
+        String symbol = "〒";
+        if (schedule != null && schedule.getCurrentState() == ScheduleResult.CurrentState.UNKNOWN) {
+            symbol = "?";
+        }
+        canvas.drawText(symbol, screenPos.x, screenPos.y + (symbolPaint.getTextSize() / 3), symbolPaint);
     }
 
     private void updateRingPaint(ScheduleResult schedule) {
