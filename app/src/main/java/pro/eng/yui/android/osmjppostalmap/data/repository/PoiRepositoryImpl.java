@@ -155,7 +155,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     @Override
-    public void addPostBox(double lat, double lon, String shape, String branch, String collectionTimes, PoiSaveCallback callback) {
+    public void addPostBox(double lat, double lon, String shape, String branch, String collectionTimes, String note, PoiSaveCallback callback) {
         if (accessToken == null) {
             callback.onError("ログインが必要です");
             return;
@@ -172,6 +172,9 @@ public class PoiRepositoryImpl implements PoiRepository {
         }
         if (collectionTimes != null && !collectionTimes.isEmpty()) {
             xml.append("<tag k=\"collection_times\" v=\"").append(collectionTimes).append("\"/>");
+        }
+        if (note != null && !note.isEmpty()) {
+            xml.append("<tag k=\"note\" v=\"").append(note).append("\"/>");
         }
         xml.append("</node>");
         xml.append("</osm>");

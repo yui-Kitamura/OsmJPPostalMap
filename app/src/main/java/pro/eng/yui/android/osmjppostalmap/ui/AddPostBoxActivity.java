@@ -1,9 +1,14 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
 import android.os.Bundle;
+import android.text.InputType;
+import android.view.Gravity;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.TableLayout;
+import android.widget.TableRow;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -19,12 +24,20 @@ import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
+
 public class AddPostBoxActivity extends AppCompatActivity {
 
     private MapView map;
     private Marker marker;
     private AuthRepository authRepository;
     private PoiRepository repository;
+
+    private TableLayout tableCollection;
+    private final List<EditText[]> timeRows = new ArrayList<>();
+    private static final Pattern TIME_PATTERN = Pattern.compile("^([01]?[0-9]|2[0-3]):[0-5][0-9]$");
 
     private static class ReticleMarker extends Marker {
         private final android.graphics.Paint paint;
@@ -72,8 +85,31 @@ public class AddPostBoxActivity extends AppCompatActivity {
         map = findViewById(R.id.add_map);
         RadioGroup radioShape = findViewById(R.id.radio_shape);
         TextInputEditText inputBranch = findViewById(R.id.input_branch);
-        TextInputEditText inputCollection = findViewById(R.id.input_collection);
+        TextInputEditText inputNote = findViewById(R.id.input_note);
+        tableCollection = findViewById(R.id.table_collection);
+        Button btnAddRow = findViewById(R.id.btn_add_row);
+        Button btnCopyToSat = findViewById(R.id.btn_copy_to_sat);
+        Button btnCopyToSun = findViewById(R.id.btn_copy_to_sun);
         Button btnSave = findViewById(R.id.btn_add_save);
+
+        // 既定3行追加
+        for (int i = 0; i < 3; i++) {
+            addNewRow();
+        }
+
+        btnAddRow.setOnClickListener(v -> addNewRow());
+
+        btnCopyToSat.setOnClickListener(v -> {
+            for (EditText[] row : timeRows) {
+                row[1].setText(row[0].getText());
+            }
+        });
+
+        btnCopyToSun.setOnClickListener(v -> {
+            for (EditText[] row : timeRows) {
+                row[2].setText(row[1].getText());
+            }
+        });
 
         // 地図の初期化 (MainActivityからの遷移時はその中心座標を使用)
         map.setMultiTouchControls(true);
@@ -112,14 +148,20 @@ public class AddPostBoxActivity extends AppCompatActivity {
 
             String shape = ((RadioButton)findViewById(radioShape.getCheckedRadioButtonId())).getText().toString();
             String branch = inputBranch.getText() != null ? inputBranch.getText().toString() : "";
-            String collection = inputCollection.getText() != null ? inputCollection.getText().toString() : "";
+            String note = inputNote.getText() != null ? inputNote.getText().toString() : "";
+            String collection = formatCollectionTimes();
+
+            if (collection == null) {
+                // バリデーションエラーは formatCollectionTimes 内で通知済み
+                return;
+            }
 
             new MaterialAlertDialogBuilder(this)
                 .setTitle("ポストの追加")
                 .setMessage("OSMに新しいポストを追加しますか？")
                 .setPositiveButton("追加", (dialog, which) -> {
                     GeoPoint pos = marker.getPosition();
-                    repository.addPostBox(pos.getLatitude(), pos.getLongitude(), shape, branch, collection, new PoiRepository.PoiSaveCallback() {
+                    repository.addPostBox(pos.getLatitude(), pos.getLongitude(), shape, branch, collection, note, new PoiRepository.PoiSaveCallback() {
                         @Override
                         public void onSuccess() {
                             Toast.makeText(AddPostBoxActivity.this, "追加しました", Toast.LENGTH_SHORT).show();
@@ -134,5 +176,72 @@ public class AddPostBoxActivity extends AppCompatActivity {
                 .setNegativeButton("キャンセル", null)
                 .show();
         });
+    }
+
+    private void addNewRow() {
+        TableRow row = new TableRow(this);
+        EditText[] rowEditors = new EditText[3];
+        for (int i = 0; i < 3; i++) {
+            EditText et = new EditText(this);
+            et.setHint("00:00");
+            et.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
+            et.setGravity(Gravity.CENTER);
+            row.addView(et);
+            rowEditors[i] = et;
+        }
+        tableCollection.addView(row);
+        timeRows.add(rowEditors);
+    }
+
+    private String formatCollectionTimes() {
+        List<String> weekday = new ArrayList<>();
+        List<String> saturday = new ArrayList<>();
+        List<String> holiday = new ArrayList<>();
+
+        for (int col = 0; col < 3; col++) {
+            List<String> targetList = (col == 0) ? weekday : (col == 1) ? saturday : holiday;
+            int lastMinutes = -1;
+            for (int r = 0; r < timeRows.size(); r++) {
+                String val = timeRows.get(r)[col].getText().toString().trim();
+                if (val.isEmpty()) continue;
+
+                if (!TIME_PATTERN.matcher(val).matches()) {
+                    Toast.makeText(this, "無効な時刻形式です: " + val, Toast.LENGTH_SHORT).show();
+                    return null;
+                }
+
+                int minutes = parseMinutes(val);
+                if (minutes <= lastMinutes) {
+                    Toast.makeText(this, "時刻は昇順で入力してください", Toast.LENGTH_SHORT).show();
+                    return null;
+                }
+                targetList.add(val);
+                lastMinutes = minutes;
+            }
+        }
+
+        if (weekday.isEmpty() && saturday.isEmpty() && holiday.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        if (!weekday.isEmpty()) {
+            sb.append("Mo-Fr ").append(String.join(",", weekday));
+        }
+        if (!saturday.isEmpty()) {
+            if (sb.length() > 0) sb.append("; ");
+            sb.append("Sa ").append(String.join(",", saturday));
+        }
+        if (!holiday.isEmpty()) {
+            if (sb.length() > 0) sb.append("; ");
+            sb.append("Su,PH ").append(String.join(",", holiday));
+        }
+
+        return sb.toString();
+    }
+
+    private int parseMinutes(String time) {
+        String[] parts = time.split(":");
+        return Integer.parseInt(parts[0]) * 60 + Integer.parseInt(parts[1]);
     }
 }

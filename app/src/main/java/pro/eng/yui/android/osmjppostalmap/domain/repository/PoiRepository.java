@@ -26,7 +26,7 @@ public interface PoiRepository {
     /**
      * 新規ポストを追加する
      */
-    void addPostBox(double lat, double lon, String shape, String branch, String collectionTimes, PoiSaveCallback callback);
+    void addPostBox(double lat, double lon, String shape, String branch, String collectionTimes, String note, PoiSaveCallback callback);
 
     /**
      * 地図メモ（Note）を追加する

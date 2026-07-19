@@ -77,13 +77,52 @@
             android:text="4. 時刻入力"
             android:layout_marginBottom="8dp" />
 
+        <TableLayout
+            android:id="@+id/table_collection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:stretchColumns="0,1,2"
+            android:layout_marginBottom="8dp">
+            <TableRow>
+                <TextView android:text="平日" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                <TextView android:text="土曜" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                <TextView android:text="日祝" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+            </TableRow>
+            <TableRow>
+                <Button
+                    android:id="@+id/btn_copy_to_sat"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="→土曜"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:textSize="12sp" />
+                <Button
+                    android:id="@+id/btn_copy_to_sun"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="→日祝"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:textSize="12sp" />
+                <View android:layout_width="0dp" android:layout_height="0dp" />
+            </TableRow>
+            <!-- 行はプログラムから動的に追加する -->
+        </TableLayout>
+
+        <Button
+            android:id="@+id/btn_add_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="行を追加"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_marginBottom="16dp" />
+
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="collection_times (例: Mo-Fr 09:00, 15:00; Sa 09:00)"
+            android:hint="特殊な収集パターン (任意)"
             android:layout_marginBottom="16dp">
             <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/input_collection"
+                android:id="@+id/input_note"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
         </com.google.android.material.textfield.TextInputLayout>
