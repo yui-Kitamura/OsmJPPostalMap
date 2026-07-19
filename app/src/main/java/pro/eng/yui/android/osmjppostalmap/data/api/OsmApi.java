@@ -22,6 +22,9 @@ public interface OsmApi {
     @GET("{type}/{id}")
     Call<ResponseBody> getElement(@Path("type") String type, @Path("id") long id);
 
+    @POST("{type}/create")
+    Call<String> createElement(@Header("Authorization") String auth, @Path("type") String type, @Body String xml);
+
     @PUT("{type}/{id}")
     Call<String> updateElement(@Header("Authorization") String auth, @Path("type") String type, @Path("id") long id, @Body String xml);
 

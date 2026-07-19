@@ -6,6 +6,7 @@ import androidx.lifecycle.MutableLiveData;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -162,9 +163,122 @@ public class PoiRepositoryImpl implements PoiRepository {
             callback.onError("ログインが必要です");
             return;
         }
-        // MVPの簡略化として、成功をシミュレート
-        // 実際には changeset/create -> node/update -> changeset/close を行う
-        callback.onSuccess();
+
+        String auth = "Bearer " + accessToken;
+
+        // 1. Create Changeset
+        String changesetXml = "<osm><changeset>" +
+                "<tag k=\"created_by\" v=\"OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME + "\"/>" +
+                "<tag k=\"comment\" v=\"" + comment + "\"/>" +
+                "</changeset></osm>";
+
+        osmApi.createChangeset(auth, changesetXml).enqueue(new Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    long changesetId = Long.parseLong(response.body().trim());
+                    updatePoiInternal(auth, changesetId, poi, callback);
+                } else {
+                    callback.onError("Changesetの作成に失敗しました: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+                callback.onError("通信エラー: " + t.getMessage());
+            }
+        });
+    }
+
+    private void updatePoiInternal(String auth, long changesetId, OsmPoi poi, PoiSaveCallback callback) {
+        // XML生成 (OSM API v0.6 形式)
+        StringBuilder xml = new StringBuilder();
+        xml.append("<osm>");
+        xml.append("<").append(poi.getType()).append(" id=\"").append(poi.getId()).append("\" ");
+        if ("node".equals(poi.getType())) {
+            xml.append("lat=\"").append(poi.getLat()).append("\" lon=\"").append(poi.getLon()).append("\" ");
+        }
+        // バージョン情報が必要だが、OsmPoiには含まれていない。
+        // 本来は事前に要素を取得してバージョンを確認すべきだが、簡易実装として
+        // 取得した直後の値を保持している想定で進める（ただしOsmPoiにversionがないのでAPIから再取得が必要）
+        // getElementを呼んで最新のXMLを取得し、tagsを書き換えるのが安全。
+
+        osmApi.getElement(poi.getType(), poi.getId()).enqueue(new Callback<okhttp3.ResponseBody>() {
+            @Override
+            public void onResponse(Call<okhttp3.ResponseBody> call, Response<okhttp3.ResponseBody> response) {
+                try {
+                    if (response.isSuccessful() && response.body() != null) {
+                        String originalXml = response.body().string();
+                        // 簡易的なXML置換。本来はXMLパーサーを使うべき。
+                        // version="..." を抽出
+                        java.util.regex.Matcher m = java.util.regex.Pattern.compile("version=\"(\\d+)\"").matcher(originalXml);
+                        if (m.find()) {
+                            String version = m.group(1);
+                            
+                            StringBuilder updateXml = new StringBuilder();
+                            updateXml.append("<osm>");
+                            updateXml.append("<").append(poi.getType()).append(" ")
+                                    .append("id=\"").append(poi.getId()).append("\" ")
+                                    .append("version=\"").append(version).append("\" ")
+                                    .append("changeset=\"").append(changesetId).append("\" ");
+                            
+                            if ("node".equals(poi.getType())) {
+                                updateXml.append("lat=\"").append(poi.getLat()).append("\" lon=\"").append(poi.getLon()).append("\" ");
+                            }
+                            updateXml.append(">");
+
+                            for (Map.Entry<String, String> entry : poi.getTags().entrySet()) {
+                                updateXml.append("<tag k=\"").append(entry.getKey()).append("\" v=\"").append(entry.getValue()).append("\"/>");
+                            }
+                            updateXml.append("</").append(poi.getType()).append(">");
+                            updateXml.append("</osm>");
+
+                            osmApi.updateElement(auth, poi.getType(), poi.getId(), updateXml.toString()).enqueue(new Callback<String>() {
+                                @Override
+                                public void onResponse(Call<String> call, Response<String> response) {
+                                    if (response.isSuccessful()) {
+                                        closeChangeset(auth, changesetId, callback);
+                                    } else {
+                                        callback.onError("データの更新に失敗しました: " + response.code());
+                                    }
+                                }
+
+                                @Override
+                                public void onFailure(Call<String> call, Throwable t) {
+                                    callback.onError("通信エラー: " + t.getMessage());
+                                }
+                            });
+                        } else {
+                            callback.onError("バージョン情報の取得に失敗しました");
+                        }
+                    } else {
+                        callback.onError("要素の取得に失敗しました");
+                    }
+                } catch (Exception e) {
+                    callback.onError("処理エラー: " + e.getMessage());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<okhttp3.ResponseBody> call, Throwable t) {
+                callback.onError("通信エラー: " + t.getMessage());
+            }
+        });
+    }
+
+    private void closeChangeset(String auth, long changesetId, PoiSaveCallback callback) {
+        osmApi.closeChangeset(auth, changesetId).enqueue(new Callback<Void>() {
+            @Override
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                callback.onSuccess();
+            }
+
+            @Override
+            public void onFailure(Call<Void> call, Throwable t) {
+                // クローズ失敗でもデータは保存されていることが多いが、一応成功扱いにするか迷うところ
+                callback.onSuccess();
+            }
+        });
     }
 
     @Override
@@ -174,10 +288,37 @@ public class PoiRepositoryImpl implements PoiRepository {
             return;
         }
 
+        String auth = "Bearer " + accessToken;
+
+        // 1. Create Changeset
+        String changesetXml = "<osm><changeset>" +
+                "<tag k=\"created_by\" v=\"OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME + "\"/>" +
+                "<tag k=\"comment\" v=\"郵便ポストの追加\"/>" +
+                "</changeset></osm>";
+
+        osmApi.createChangeset(auth, changesetXml).enqueue(new Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    long changesetId = Long.parseLong(response.body().trim());
+                    createPostBoxInternal(auth, changesetId, lat, lon, shape, branch, collectionTimes, note, callback);
+                } else {
+                    callback.onError("Changesetの作成に失敗しました: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+                callback.onError("通信エラー: " + t.getMessage());
+            }
+        });
+    }
+
+    private void createPostBoxInternal(String auth, long changesetId, double lat, double lon, String shape, String branch, String collectionTimes, String note, PoiSaveCallback callback) {
         // XML生成 (OSM API v0.6 形式)
         StringBuilder xml = new StringBuilder();
         xml.append("<osm>");
-        xml.append("<node lat=\"").append(lat).append("\" lon=\"").append(lon).append("\">");
+        xml.append("<node changeset=\"").append(changesetId).append("\" lat=\"").append(lat).append("\" lon=\"").append(lon).append("\">");
         xml.append("<tag k=\"amenity\" v=\"post_box\"/>");
         xml.append("<tag k=\"operator\" v=\"日本郵便\"/>");
         if (branch != null && !branch.isEmpty()) {
@@ -192,8 +333,21 @@ public class PoiRepositoryImpl implements PoiRepository {
         xml.append("</node>");
         xml.append("</osm>");
 
-        // TODO: 実際の送信処理
-        callback.onSuccess();
+        osmApi.createElement(auth, "node", xml.toString()).enqueue(new Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                if (response.isSuccessful()) {
+                    closeChangeset(auth, changesetId, callback);
+                } else {
+                    callback.onError("ポストの作成に失敗しました: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+                callback.onError("通信エラー: " + t.getMessage());
+            }
+        });
     }
 
     @Override
