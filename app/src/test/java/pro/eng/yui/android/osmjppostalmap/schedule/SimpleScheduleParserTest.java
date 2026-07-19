@@ -14,8 +14,6 @@ public class SimpleScheduleParserTest {
     @Before
     public void setUp() {
         parser = new SimpleScheduleParser();
-        // テスト環境でネットワーク取得するのは不安定だが、指示に従い初期化を試みる
-        // あるいは Mock 等が必要だが、ここでは単純に呼び出しを修正する
         SimpleScheduleParser.initializeHolidays();
     }
     /**
