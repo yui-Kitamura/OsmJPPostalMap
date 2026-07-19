@@ -59,6 +59,16 @@ public class SettingsActivity extends AppCompatActivity {
                 .show();
         });
 
+        findViewById(R.id.btn_osm_copyright).setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.url_osm_copyright)));
+            startActivity(intent);
+        });
+
+        findViewById(R.id.btn_github_repo).setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.url_github_repo)));
+            startActivity(intent);
+        });
+
         // 認可コードの処理
         handleIntent(getIntent(), loginStatus, btnLogin, btnUserPage, btnLogout);
     }

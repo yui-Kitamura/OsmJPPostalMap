@@ -1,4 +1,9 @@
 <resources>
     <string name="app_name">OsmJPPostalMap</string>
-    <string name="osm_copyright">© OpenStreetMap contributors</string>
+    <string name="osm_copyright">©OpenStreetMap contributors</string>
+    <string name="settings_license_title">ライセンス</string>
+    <string name="settings_osm_copyright_link">OpenStreetMapの著作権とライセンス</string>
+    <string name="settings_github_link">GitHubリポジトリ (ソースコード)</string>
+    <string name="url_osm_copyright">https://www.openstreetmap.org/copyright</string>
+    <string name="url_github_repo">https://github.com/yui-Kitamura/OsmJPPostalMap</string>
 </resources>

@@ -57,6 +57,33 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="OSM JP Postal Map v1.0" />
+        android:text="OSM JP Postal Map v1.0"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/settings_license_title"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/btn_osm_copyright"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/settings_osm_copyright_link"
+        android:textAllCaps="false"
+        android:gravity="start|center_vertical" />
+
+    <Button
+        android:id="@+id/btn_github_repo"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/settings_github_link"
+        android:textAllCaps="false"
+        android:gravity="start|center_vertical" />
 
 </LinearLayout>
