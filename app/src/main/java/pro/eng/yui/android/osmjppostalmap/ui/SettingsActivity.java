@@ -21,7 +21,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     private AuthRepository authRepository;
     private static final String CLIENT_ID = "YOUR_CLIENT_ID";
-    private static final String CLIENT_SECRET = "YOUR_CLIENT_SECRET";
+    private static final String CLIENT_SECRET = ""; // パブリッククライアントの場合は空で可
     private static final String REDIRECT_URI = "osmjppostalmap://oauth";
 
     @Override
@@ -111,9 +111,23 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void exchangeToken(String code, TextView loginStatus, Button btnLogin, Button btnUserPage, Button btnLogout) {
-        authRepository.getAuthApi().getAccessToken(
-                CLIENT_ID, CLIENT_SECRET, code, "authorization_code", REDIRECT_URI
-        ).enqueue(new Callback<ResponseBody>() {
+        if ("YOUR_CLIENT_ID".equals(CLIENT_ID)) {
+            Toast.makeText(this, "CLIENT_ID が設定されていません。SettingsActivity を修正してください。", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        Call<ResponseBody> call;
+        if (CLIENT_SECRET == null || CLIENT_SECRET.isEmpty()) {
+            call = authRepository.getAuthApi().getAccessTokenPublic(
+                    CLIENT_ID, code, "authorization_code", REDIRECT_URI
+            );
+        } else {
+            call = authRepository.getAuthApi().getAccessToken(
+                    CLIENT_ID, CLIENT_SECRET, code, "authorization_code", REDIRECT_URI
+            );
+        }
+
+        call.enqueue(new Callback<ResponseBody>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                 try {

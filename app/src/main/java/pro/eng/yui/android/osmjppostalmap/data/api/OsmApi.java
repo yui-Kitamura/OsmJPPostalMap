@@ -23,6 +23,15 @@ public interface OsmApi {
             @Field("redirect_uri") String redirectUri
     );
 
+    @FormUrlEncoded
+    @POST("oauth2/token")
+    Call<ResponseBody> getAccessTokenPublic(
+            @Field("client_id") String clientId,
+            @Field("code") String code,
+            @Field("grant_type") String grantType,
+            @Field("redirect_uri") String redirectUri
+    );
+
     @GET("user/details.json")
     Call<ResponseBody> getUserDetailsJson(@Header("Authorization") String auth);
 
