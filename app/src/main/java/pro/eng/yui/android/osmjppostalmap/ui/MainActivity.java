@@ -115,7 +115,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // Menu Button
-        ImageButton menuButton = findViewById(R.id.menu_button);
+        View menuButton = findViewById(R.id.menu_button);
         menuButton.setOnClickListener(v -> {
             Intent intent = new Intent(this, SettingsActivity.class);
             startActivity(intent);
@@ -123,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Search Button
         View searchCard = findViewById(R.id.search_card);
-        ImageButton searchButton = findViewById(R.id.search_button);
+        View searchButton = findViewById(R.id.search_button);
         searchButton.setOnClickListener(v -> {
             if (searchCard.getVisibility() == View.VISIBLE) {
                 searchCard.setVisibility(View.GONE);
@@ -136,11 +136,13 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // Filter Button
-        ImageButton filterButton = findViewById(R.id.filter_button);
+        View filterButton = findViewById(R.id.filter_button);
         filterButton.setOnClickListener(v -> {
             boolean currentFilter = viewModel.getFilterOpenOnly().getValue() != null && viewModel.getFilterOpenOnly().getValue();
             viewModel.setFilterOpenOnly(!currentFilter);
-            filterButton.setColorFilter(currentFilter ? 0 : 0xFF00FF00); // 簡易的な状態表示
+            if (v instanceof android.widget.ImageView) {
+                ((android.widget.ImageView) v).setColorFilter(currentFilter ? 0 : 0xFF00FF00); // 簡易的な状態表示
+            }
             Toast.makeText(this, currentFilter ? "フィルタ解除" : "営業中・収集残りありのみ表示", Toast.LENGTH_SHORT).show();
         });
 

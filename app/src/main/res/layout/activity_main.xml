@@ -30,7 +30,7 @@
             app:queryHint="郵便局・郵便番号・住所を検索" />
     </com.google.android.material.card.MaterialCardView>
 
-    <ImageButton
+    <androidx.appcompat.widget.AppCompatImageButton
         android:id="@+id/menu_button"
         android:layout_width="48dp"
         android:layout_height="48dp"
@@ -42,7 +42,7 @@
         app:layout_constraintTop_toTopOf="parent"
         android:contentDescription="設定メニュー" />
 
-    <ImageButton
+    <androidx.appcompat.widget.AppCompatImageButton
         android:id="@+id/search_button"
         android:layout_width="48dp"
         android:layout_height="48dp"
@@ -54,7 +54,7 @@
         app:layout_constraintTop_toBottomOf="@id/menu_button"
         android:contentDescription="検索" />
 
-    <ImageButton
+    <androidx.appcompat.widget.AppCompatImageButton
         android:id="@+id/filter_button"
         android:layout_width="48dp"
         android:layout_height="48dp"
