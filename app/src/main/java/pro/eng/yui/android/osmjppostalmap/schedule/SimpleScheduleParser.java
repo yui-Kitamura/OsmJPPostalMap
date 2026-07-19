@@ -1,11 +1,12 @@
 package pro.eng.yui.android.osmjppostalmap.schedule;
 
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.time.*;
+import java.util.*;
+
+import de.focus_shift.jollyday.core.HolidayManager;
+import de.focus_shift.jollyday.core.ManagerParameters;
+
+import static de.focus_shift.jollyday.core.HolidayCalendar.JAPAN;
 
 /**
  * 簡易版のopening_hours / collection_times パーサー
@@ -13,21 +14,55 @@ import java.util.TreeMap;
  */
 public class SimpleScheduleParser implements ScheduleParser {
 
+    private static final ZoneId JST = ZoneId.of("Asia/Tokyo");
+
     @Override
     public ScheduleResult parse(String tagValue, long currentTime) {
         if (tagValue == null || tagValue.isEmpty()) {
-            return new ScheduleResult(null, null, "不明", ScheduleResult.CurrentState.CLOSED, new HashMap<>(), tagValue);
+            return new ScheduleResult(null, null, "不明", ScheduleResult.CurrentState.UNKNOWN, new HashMap<>(), tagValue);
+        }
+
+        String trimmedTag = tagValue.trim();
+        if (trimmedTag.equals("24/7")) {
+            return new ScheduleResult(null, null, "24時間営業", ScheduleResult.CurrentState.OPENING, new HashMap<>(), tagValue);
         }
 
         try {
-            Calendar now = Calendar.getInstance();
-            now.setTimeInMillis(currentTime);
+            ZonedDateTime now = ZonedDateTime.ofInstant(Instant.ofEpochMilli(currentTime), JST);
             
+            boolean isHoliday = isJapanHoliday(now.toLocalDate());
             Map<String, List<String>> weeklyTable = parseToWeeklyTable(tagValue);
             
-            int dayOfWeek = now.get(Calendar.DAY_OF_WEEK);
-            String dayKey = getDayKey(dayOfWeek);
-            List<String> todayTimes = weeklyTable.get(dayKey);
+            if (weeklyTable.isEmpty()) {
+                return new ScheduleResult(null, null, "解析不能", ScheduleResult.CurrentState.UNKNOWN, new HashMap<>(), tagValue);
+            }
+
+            List<String> todayTimes = null;
+            boolean hasSpecificDayRules = false;
+            for (String key : weeklyTable.keySet()) {
+                if (!key.equals("ALL")) {
+                    hasSpecificDayRules = true;
+                    break;
+                }
+            }
+
+            if (isHoliday) {
+                if (weeklyTable.containsKey("PH")) {
+                    todayTimes = weeklyTable.get("PH");
+                } else {
+                    // 祝日の情報がない場合はUNKNOWN
+                    return new ScheduleResult(null, null, "祝日のため不明", ScheduleResult.CurrentState.UNKNOWN, weeklyTable, tagValue);
+                }
+            } else {
+                DayOfWeek dayOfWeek = now.getDayOfWeek();
+                String dayKey = getDayKey(dayOfWeek);
+                if (weeklyTable.containsKey(dayKey)) {
+                    todayTimes = weeklyTable.get(dayKey);
+                } else if (hasSpecificDayRules) {
+                    // 判定できる曜日以外はUNKNOWN
+                    return new ScheduleResult(null, null, "定休日または不明", ScheduleResult.CurrentState.UNKNOWN, weeklyTable, tagValue);
+                }
+            }
 
             ScheduleResult.CurrentState state = ScheduleResult.CurrentState.CLOSED;
             String todayStatus = "本日は営業終了または休業";
@@ -35,7 +70,7 @@ public class SimpleScheduleParser implements ScheduleParser {
             ScheduleResult.Event followingEvent = null;
 
             if (todayTimes != null && !todayTimes.isEmpty()) {
-                long currentMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE);
+                long currentMinutes = now.getHour() * 60 + now.getMinute();
                 
                 for (String timeRange : todayTimes) {
                     if (timeRange.contains("-")) {
@@ -47,57 +82,70 @@ public class SimpleScheduleParser implements ScheduleParser {
                         if (currentMinutes < start) {
                             if (nextEvent == null) {
                                 nextEvent = createEvent(now, start, ScheduleResult.EventType.OPEN);
-                                state = ScheduleResult.CurrentState.OPEN_SOON_FUTURE; // 営業開始前（本日）
+                                state = ScheduleResult.CurrentState.CLOSING_OPEN_SOON; 
                                 todayStatus = "営業開始前 " + range[0];
                             }
                         } else if (currentMinutes < end) {
                             state = (end - currentMinutes <= 60) ? 
-                                    ScheduleResult.CurrentState.OPEN_SOON : ScheduleResult.CurrentState.OPENING;
+                                    ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON : ScheduleResult.CurrentState.OPENING;
                             nextEvent = createEvent(now, end, ScheduleResult.EventType.CLOSE);
                             todayStatus = "営業中 (" + range[1] + "まで)";
-                            // 次の枠を探す（もしあれば）
+                            break; // 営業中なら確定
                         }
                     } else {
                         // 収集時刻形式: 09:00
                         int collectionTime = parseMinutes(timeRange);
                         if (currentMinutes < collectionTime) {
-                            if (nextEvent == null) {
-                                nextEvent = createEvent(now, collectionTime, ScheduleResult.EventType.COLLECTION);
-                                state = (collectionTime - currentMinutes <= 60) ? 
-                                        ScheduleResult.CurrentState.OPEN_SOON : ScheduleResult.CurrentState.OPENING;
-                                todayStatus = "次回収集 " + timeRange;
-                            } else if (followingEvent == null) {
-                                followingEvent = createEvent(now, collectionTime, ScheduleResult.EventType.COLLECTION);
+                            if (nextEvent == null || nextEvent.getType() != ScheduleResult.EventType.COLLECTION) {
+                                if (nextEvent == null) {
+                                    nextEvent = createEvent(now, collectionTime, ScheduleResult.EventType.COLLECTION);
+                                    state = (collectionTime - currentMinutes <= 60) ? 
+                                            ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON : ScheduleResult.CurrentState.OPENING;
+                                    todayStatus = "次回収集 " + timeRange;
+                                } else if (followingEvent == null) {
+                                    followingEvent = createEvent(now, collectionTime, ScheduleResult.EventType.COLLECTION);
+                                }
                             }
+                        } else {
+                            // 収集時刻を過ぎている場合、翌日の候補としてキープするための処理は122行目以降で行うが、
+                            // もし今日の中にまだ他にも収集時刻があれば、上の if (currentMinutes < collectionTime) で拾われる
                         }
                     }
                 }
                 
-                if (nextEvent == null && !isCollectionOnly(todayTimes)) {
-                     state = ScheduleResult.CurrentState.TODAY_FINISHED;
-                     todayStatus = "本日の営業は終了しました";
-                } else if (nextEvent == null) {
-                    state = ScheduleResult.CurrentState.TODAY_FINISHED;
-                    todayStatus = "本日の収集は終了しました";
+                if (nextEvent == null && state == ScheduleResult.CurrentState.CLOSED) {
+                    if (!isCollectionOnly(todayTimes)) {
+                         state = ScheduleResult.CurrentState.TODAY_FINISHED;
+                         todayStatus = "本日の営業は終了しました";
+                    } else {
+                        state = ScheduleResult.CurrentState.TODAY_FINISHED;
+                        todayStatus = "本日の収集は終了しました";
+                    }
                 }
             }
             
             // 明日以降のイベント検索（今日終わっている場合）
             if (nextEvent == null) {
+                DayOfWeek dayOfWeek = now.getDayOfWeek();
                 for (int i = 1; i <= 7; i++) {
-                    int nextDayOfWeek = ((dayOfWeek + i - 1) % 7) + 1;
+                    DayOfWeek nextDayOfWeek = dayOfWeek.plus(i);
                     String nextDayKey = getDayKey(nextDayOfWeek);
                     List<String> nextDayTimes = weeklyTable.get(nextDayKey);
                     if (nextDayTimes != null && !nextDayTimes.isEmpty()) {
-                        Calendar nextDay = (Calendar) now.clone();
-                        nextDay.add(Calendar.DAY_OF_YEAR, i);
+                        ZonedDateTime nextDay = now.plusDays(i);
+                        
+                        // 最初のイベントを取得
                         String firstTime = nextDayTimes.get(0);
-                        int minutes = parseMinutes(firstTime.split("-")[0]);
+                        String firstStartTime = firstTime.contains("-") ? firstTime.split("-")[0] : firstTime;
+                        int minutes = parseMinutes(firstStartTime);
                         nextEvent = createEvent(nextDay, minutes, isCollectionOnly(nextDayTimes) ? 
                                 ScheduleResult.EventType.COLLECTION : ScheduleResult.EventType.OPEN);
+                        
+                        // 2つ目のイベントがあれば取得
                         if (nextDayTimes.size() > 1) {
                             String secondTime = nextDayTimes.get(1);
-                            int m2 = parseMinutes(secondTime.split("-")[0]);
+                            String secondStartTime = secondTime.contains("-") ? secondTime.split("-")[0] : secondTime;
+                            int m2 = parseMinutes(secondStartTime);
                             followingEvent = createEvent(nextDay, m2, isCollectionOnly(nextDayTimes) ? 
                                     ScheduleResult.EventType.COLLECTION : ScheduleResult.EventType.OPEN);
                         }
@@ -122,13 +170,22 @@ public class SimpleScheduleParser implements ScheduleParser {
         return Integer.parseInt(parts[0]) * 60 + Integer.parseInt(parts[1]);
     }
 
-    private ScheduleResult.Event createEvent(Calendar baseDate, int totalMinutes, ScheduleResult.EventType type) {
-        Calendar cal = (Calendar) baseDate.clone();
-        cal.set(Calendar.HOUR_OF_DAY, totalMinutes / 60);
-        cal.set(Calendar.MINUTE, totalMinutes % 60);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-        return new ScheduleResult.Event(cal.getTimeInMillis(), type);
+    private ScheduleResult.Event createEvent(ZonedDateTime baseDate, int totalMinutes, ScheduleResult.EventType type) {
+        ZonedDateTime eventTime = baseDate.withHour(totalMinutes / 60)
+                .withMinute(totalMinutes % 60)
+                .withSecond(0)
+                .withNano(0);
+        return new ScheduleResult.Event(eventTime.toInstant().toEpochMilli(), type);
+    }
+
+    private boolean isJapanHoliday(LocalDate date) {
+        try {
+            HolidayManager manager = HolidayManager.getInstance(ManagerParameters.create(JAPAN));
+            return manager.isHoliday(date);
+        } catch (Exception ignore) {
+            // 失敗した場合は祝日なしとして扱う
+        }
+        return false;
     }
 
     private Map<String, List<String>> parseToWeeklyTable(String tagValue) {
@@ -138,12 +195,37 @@ public class SimpleScheduleParser implements ScheduleParser {
             part = part.trim();
             if (part.isEmpty()) continue;
             
-            // 例: "Mo-Fr 09:00-17:00" または "Mo,Tu,We 09:00"
+            // 例: "Mo-Fr 09:00-17:00" または "Mo,Tu,We 09:00" または "PH off" または "10:00-19:00"
             String[] dayAndTime = part.split(" ", 2);
-            if (dayAndTime.length < 2) continue;
             
-            List<String> days = expandDays(dayAndTime[0]);
-            String[] times = dayAndTime[1].split(",");
+            List<String> days;
+            String timePart;
+            
+            if (dayAndTime.length < 2) {
+                // 曜日なしのケース: "10:00-19:00"
+                if (dayAndTime[0].contains(":") || dayAndTime[0].equalsIgnoreCase("off")) {
+                    days = Arrays.asList("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su");
+                    timePart = dayAndTime[0];
+                } else {
+                    continue;
+                }
+            } else {
+                if (dayAndTime[0].equalsIgnoreCase("ALL")) {
+                    // ALL構文は受け付けない
+                    continue;
+                }
+                days = expandDays(dayAndTime[0]);
+                timePart = dayAndTime[1].trim();
+            }
+            
+            if (timePart.equalsIgnoreCase("off")) {
+                for (String day : days) {
+                    table.put(day, new ArrayList<>()); // 空リスト = 休み
+                }
+                continue;
+            }
+
+            String[] times = timePart.split(",");
             
             for (String day : days) {
                 List<String> dayTimes = table.get(day);
@@ -161,6 +243,10 @@ public class SimpleScheduleParser implements ScheduleParser {
 
     private List<String> expandDays(String dayRange) {
         List<String> result = new ArrayList<>();
+        if (dayRange.equals("PH")) {
+            result.add("PH");
+            return result;
+        }
         String[] allDays = {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"};
         
         if (dayRange.contains("-")) {
@@ -185,15 +271,15 @@ public class SimpleScheduleParser implements ScheduleParser {
         return result;
     }
 
-    private String getDayKey(int calendarDay) {
-        switch (calendarDay) {
-            case Calendar.MONDAY: return "Mo";
-            case Calendar.TUESDAY: return "Tu";
-            case Calendar.WEDNESDAY: return "We";
-            case Calendar.THURSDAY: return "Th";
-            case Calendar.FRIDAY: return "Fr";
-            case Calendar.SATURDAY: return "Sa";
-            case Calendar.SUNDAY: return "Su";
+    private String getDayKey(DayOfWeek dayOfWeek) {
+        switch (dayOfWeek) {
+            case MONDAY: return "Mo";
+            case TUESDAY: return "Tu";
+            case WEDNESDAY: return "We";
+            case THURSDAY: return "Th";
+            case FRIDAY: return "Fr";
+            case SATURDAY: return "Sa";
+            case SUNDAY: return "Su";
             default: return "";
         }
     }

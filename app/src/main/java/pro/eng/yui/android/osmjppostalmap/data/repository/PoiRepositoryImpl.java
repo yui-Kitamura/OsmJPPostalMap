@@ -23,6 +23,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final OverpassApi overpassApi;
     private final OsmApi osmApi;
     private final MutableLiveData<List<OsmPoi>> poisLiveData = new MutableLiveData<>(new ArrayList<>());
+    private final MutableLiveData<String> errorLiveData = new MutableLiveData<>();
     private String accessToken;
 
     public PoiRepositoryImpl() {
@@ -85,13 +86,13 @@ public class PoiRepositoryImpl implements PoiRepository {
                     }
                     poisLiveData.postValue(new ArrayList<>(currentPois));
                 } else {
-                    // TODO: ViewModel経由でエラー通知
+                    errorLiveData.postValue("データの取得に失敗しました: " + response.code());
                 }
             }
 
             @Override
             public void onFailure(Call<OverpassResponse> call, Throwable t) {
-                // TODO: ViewModel経由でエラー通知
+                errorLiveData.postValue("通信エラーが発生しました: " + t.getMessage());
             }
         });
 
@@ -198,6 +199,11 @@ public class PoiRepositoryImpl implements PoiRepository {
         });
         
         return result;
+    }
+
+    @Override
+    public LiveData<String> getError() {
+        return errorLiveData;
     }
 
     @Override

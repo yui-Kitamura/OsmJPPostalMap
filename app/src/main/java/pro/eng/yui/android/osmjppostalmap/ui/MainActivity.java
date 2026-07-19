@@ -112,6 +112,12 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
+        // Refresh Button
+        findViewById(R.id.refresh_button).setOnClickListener(v -> {
+            updatePois();
+            Toast.makeText(this, "再取得しています...", Toast.LENGTH_SHORT).show();
+        });
+
         // Search Button
         View searchCard = findViewById(R.id.search_card);
         View searchButton = findViewById(R.id.search_button);

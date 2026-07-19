@@ -3,9 +3,7 @@ package pro.eng.yui.android.osmjppostalmap.core;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
-import android.graphics.drawable.Drawable;
 
-import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
 
@@ -69,15 +67,19 @@ public class PoiMarker extends Marker {
         }
 
         // 〒 記号
-        canvas.drawText("〒", screenPos.x, screenPos.y + 10f, symbolPaint);
+        String symbol = "〒";
+        if (schedule != null && schedule.getCurrentState() == ScheduleResult.CurrentState.UNKNOWN) {
+            symbol = "?";
+        }
+        canvas.drawText(symbol, screenPos.x, screenPos.y + 10f, symbolPaint);
 
         // 外周リング
-        if (schedule != null) {
+        if (schedule != null && schedule.getCurrentState() != ScheduleResult.CurrentState.UNKNOWN) {
             updateRingPaint(schedule);
             float sweepAngle = 360f;
             long now = System.currentTimeMillis();
             
-            if (schedule.getCurrentState() == ScheduleResult.CurrentState.OPEN_SOON && schedule.getNextEvent() != null) {
+            if (schedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON && schedule.getNextEvent() != null) {
                 long remainingMillis = schedule.getNextEvent().getTimestamp() - now;
                 float remainingMinutes = remainingMillis / 60000f;
                 if (remainingMinutes < 0) remainingMinutes = 0;
@@ -85,7 +87,7 @@ public class PoiMarker extends Marker {
                 sweepAngle = (remainingMinutes / 60f) * 360f;
             }
             
-            if (schedule.getCurrentState() == ScheduleResult.CurrentState.OPEN_SOON_FUTURE && schedule.getNextEvent() != null) {
+            if (schedule.getCurrentState() == ScheduleResult.CurrentState.CLOSING_OPEN_SOON && schedule.getNextEvent() != null) {
                 // 営業開始前：緑ドットを短針の位置に配置
                 canvas.drawArc(rect, -90f, 360f, false, ringPaint); // 灰がかった緑のリング（updateRingPaintで設定）
                 
@@ -113,7 +115,7 @@ public class PoiMarker extends Marker {
             case OPENING:
                 ringPaint.setColor(0xFF00FF00); // 緑
                 break;
-            case OPEN_SOON:
+            case OPENING_BUT_EVENT_SOON:
                 ringPaint.setColor(0xFFFFA500); // 橙
                 break;
             case CLOSED:
@@ -122,8 +124,11 @@ public class PoiMarker extends Marker {
             case TODAY_FINISHED:
                 ringPaint.setColor(0xFF808080); // グレー
                 break;
-            case OPEN_SOON_FUTURE:
+            case CLOSING_OPEN_SOON:
                 ringPaint.setColor(0xFF556B2F); // 灰がかった緑 (DarkOliveGreen)
+                break;
+            case UNKNOWN:
+                ringPaint.setColor(0x00000000); // 透明
                 break;
         }
     }

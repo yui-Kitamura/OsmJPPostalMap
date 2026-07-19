@@ -11,13 +11,20 @@ public class ScheduleResult {
     public enum EventType {
         COLLECTION, OPEN, CLOSE
     }
-    
+
     public enum CurrentState {
-        OPENING,      // 営業中/収集可能（残り1時間以上）
-        OPEN_SOON,    // まもなく終了（残り1時間以内）
-        TODAY_FINISHED, // 本日終了
-        CLOSED,       // 営業時間外
-        OPEN_SOON_FUTURE // 営業開始前（本日開始予定あり）
+        /** 営業中/収集可能（残り1時間以上） */
+        OPENING,
+        /** まもなく終了（残り1時間以内） */
+        OPENING_BUT_EVENT_SOON,
+        /** 本日終了 */
+        TODAY_FINISHED,
+        /** 営業時間外 */
+        CLOSED,
+        /** 営業開始前（本日開始予定あり） */
+        CLOSING_OPEN_SOON,
+        /** 情報なし（タグ未登録など） */
+        UNKNOWN
     }
     
     public static class Event {

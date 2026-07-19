@@ -38,6 +38,11 @@ public interface PoiRepository {
      */
     LiveData<List<OsmPoi>> searchPois(String query);
 
+    /**
+     * エラーメッセージを配信するLiveDataを取得する
+     */
+    LiveData<String> getError();
+
     interface PoiSaveCallback {
         void onSuccess();
         void onError(String message);

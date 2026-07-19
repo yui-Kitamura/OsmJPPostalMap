@@ -24,6 +24,7 @@ public class MainViewModel extends ViewModel {
         
         getPois().observeForever(pois -> applyFilter());
         filterOpenOnly.observeForever(filter -> applyFilter());
+        repository.getError().observeForever(errorMessage::postValue);
     }
 
     public LiveData<Boolean> getFilterOpenOnly() {
@@ -64,7 +65,7 @@ public class MainViewModel extends ViewModel {
                 parser.parse(poi.getTag(tag), now);
             
             if (res.getCurrentState() == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult.CurrentState.OPENING ||
-                res.getCurrentState() == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult.CurrentState.OPEN_SOON) {
+                res.getCurrentState() == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
                 filtered.add(poi);
             }
         }

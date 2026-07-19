@@ -47,17 +47,25 @@ public class PoiDetailsDialog {
                 String diffStr = (remainingMinutes / 60) + ":" + String.format(Locale.US, "%02d", (remainingMinutes % 60)) + "後";
 
                 if (isPostBox) {
-                    String prefix = schedule.getNextEvent().getTimestamp() > getEndOfToday() ? "明日" : "次回";
+                    long now = System.currentTimeMillis();
+                    String prefix = "次回";
+                    if (schedule.getNextEvent().getTimestamp() > getEndOfToday()) {
+                        prefix = "明日";
+                    }
                     String msg = prefix + " " + timeStr + " (" + diffStr + ")";
                     
                     if (schedule.getFollowingEvent() != null) {
                         String followTime = sdf.format(new Date(schedule.getFollowingEvent().getTimestamp()));
                         String fPrefix = schedule.getFollowingEvent().getTimestamp() > getEndOfToday() ? "明日" : "本日";
-                        msg += "\n逃した場合 " + fPrefix + followTime;
+                        msg += "\n逃した場合 " + fPrefix + " " + followTime;
                     }
                     nextEventText.setText(msg);
                 } else {
-                    nextEventText.setText("次回イベント: " + timeStr);
+                    String prefix = "次回イベント: ";
+                    if (schedule.getNextEvent().getTimestamp() > getEndOfToday()) {
+                        prefix = "明日の営業開始: ";
+                    }
+                    nextEventText.setText(prefix + timeStr);
                 }
             }
 
