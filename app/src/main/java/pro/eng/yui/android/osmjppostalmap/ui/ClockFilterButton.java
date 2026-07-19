@@ -4,9 +4,12 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.util.AttributeSet;
 import androidx.appcompat.widget.AppCompatImageButton;
+import java.time.LocalDate;
 import java.util.Calendar;
+import pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser;
 
 public class ClockFilterButton extends AppCompatImageButton {
 
@@ -64,6 +67,42 @@ public class ClockFilterButton extends AppCompatImageButton {
         Calendar calendar = Calendar.getInstance();
         float hours = calendar.get(Calendar.HOUR);
         float minutes = calendar.get(Calendar.MINUTE);
+
+        // 曜日 or 祝の表示
+        String label;
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult result = 
+            parser.parse("24/7", System.currentTimeMillis(), pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_BOX);
+
+        if (result.isHoliday()) {
+            label = "祝";
+        } else {
+            String[] weekDays = {"", "日", "月", "火", "水", "木", "金", "土"};
+            label = weekDays[calendar.get(Calendar.DAY_OF_WEEK)];
+        }
+
+        paint.setStyle(Paint.Style.FILL);
+        paint.setTextSize(radius * 0.5f);
+        paint.setFakeBoldText(true);
+        
+        if (result.isHoliday() || calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+            paint.setColor(Color.RED);
+        } else if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
+            paint.setColor(Color.BLUE);
+        } else {
+            paint.setColor(Color.BLACK);
+        }
+
+        paint.setTextAlign(Paint.Align.CENTER);
+
+        Rect textBounds = new Rect();
+        paint.getTextBounds(label, 0, label.length(), textBounds);
+        // 盤面の上部中央付近に描画
+        canvas.drawText(label, centerX, centerY - radius * 0.4f, paint);
+
+        // 各描画後にPaintの状態をリセット
+        paint.setFakeBoldText(false);
+        paint.setTextAlign(Paint.Align.LEFT);
 
         // 短針の描画
         float hourAngle = (hours + minutes / 60f) * 30f; // 360 / 12 = 30

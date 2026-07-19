@@ -1,12 +1,12 @@
 package pro.eng.yui.android.osmjppostalmap.schedule;
 
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
-
-import de.focus_shift.jollyday.core.HolidayManager;
-import de.focus_shift.jollyday.core.ManagerParameters;
-
-import static de.focus_shift.jollyday.core.HolidayCalendar.JAPAN;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import android.content.Context;
+import android.content.res.AssetManager;
 
 /**
  * 簡易版のopening_hours / collection_times パーサー
@@ -15,28 +15,64 @@ import static de.focus_shift.jollyday.core.HolidayCalendar.JAPAN;
 public class SimpleScheduleParser implements ScheduleParser {
 
     private static final ZoneId JST = ZoneId.of("Asia/Tokyo");
-    private static HolidayManager holidayManager;
+    private static final Set<LocalDate> HOLIDAYS = new HashSet<>();
+    private static boolean holidaysLoaded = false;
 
-    private static synchronized HolidayManager getHolidayManager() {
-        if (holidayManager == null) {
+    public static void initializeHolidays() {
+        if (holidaysLoaded) return;
+        int currentYear = LocalDate.now(JST).getYear();
+        synchronized (HOLIDAYS) {
+            if (holidaysLoaded) return;
             try {
-                holidayManager = HolidayManager.getInstance(ManagerParameters.create(JAPAN));
+                java.net.URL url = new java.net.URL("https://www8.cao.go.jp/chosei/shukujitsu/syukujitsu.csv");
+                java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(connection.getInputStream(), "Shift_JIS"))) {
+                    String line;
+                    boolean firstLine = true;
+                    while ((line = reader.readLine()) != null) {
+                        if (firstLine) {
+                            firstLine = false;
+                            continue;
+                        }
+                        String[] cols = line.split(",");
+                        if (cols.length > 0) {
+                            String dateStr = cols[0].trim();
+                            try {
+                                // CSV format: yyyy/M/d (e.g., 1955/1/1)
+                                String[] parts = dateStr.split("/");
+                                if (parts.length == 3) {
+                                    int y = Integer.parseInt(parts[0]);
+                                    if (y < currentYear) {
+                                        continue; // 過去年は切り捨て
+                                    }
+                                    int m = Integer.parseInt(parts[1]);
+                                    int d = Integer.parseInt(parts[2]);
+                                    HOLIDAYS.add(LocalDate.of(y, m, d));
+                                }
+                            } catch (Exception ignore) {}
+                        }
+                    }
+                    holidaysLoaded = true;
+                }
             } catch (Exception e) {
-                // ignore
+                e.printStackTrace();
             }
         }
-        return holidayManager;
     }
 
     @Override
     public ScheduleResult parse(String tagValue, long currentTime, Amenity amenity) {
         if (tagValue == null || tagValue.isEmpty()) {
-            return new ScheduleResult(null, null, "不明", ScheduleResult.CurrentState.UNKNOWN, new HashMap<>(), tagValue);
+            return new ScheduleResult(null, null, "不明", ScheduleResult.CurrentState.UNKNOWN, new HashMap<>(), tagValue, false);
         }
 
         String trimmedTag = tagValue.trim();
         if (trimmedTag.equals("24/7")) {
-            return new ScheduleResult(null, null, "24時間営業", ScheduleResult.CurrentState.OPENING, new HashMap<>(), tagValue);
+            ZonedDateTime now = ZonedDateTime.ofInstant(Instant.ofEpochMilli(currentTime), JST);
+            boolean isHoliday = isJapanHoliday(now.toLocalDate());
+            return new ScheduleResult(null, null, "24時間営業", ScheduleResult.CurrentState.OPENING, new HashMap<>(), tagValue, isHoliday);
         }
 
         try {
@@ -46,7 +82,7 @@ public class SimpleScheduleParser implements ScheduleParser {
             Map<String, List<String>> weeklyTable = parseToWeeklyTable(tagValue);
             
             if (weeklyTable.isEmpty()) {
-                return new ScheduleResult(null, null, "解析不能", ScheduleResult.CurrentState.UNKNOWN, new HashMap<>(), tagValue);
+                return new ScheduleResult(null, null, "解析不能", ScheduleResult.CurrentState.UNKNOWN, new HashMap<>(), tagValue, isHoliday);
             }
 
             List<String> todayTimes = null;
@@ -58,22 +94,14 @@ public class SimpleScheduleParser implements ScheduleParser {
                 }
             }
 
-            if (isHoliday) {
-                if (weeklyTable.containsKey("PH")) {
-                    todayTimes = weeklyTable.get("PH");
-                } else {
-                    // 祝日の情報がない場合はUNKNOWN
-                    return new ScheduleResult(null, null, "祝日のため不明", ScheduleResult.CurrentState.UNKNOWN, weeklyTable, tagValue);
-                }
+            // 深夜判定（前日の延長がないか確認）
+            ZonedDateTime yesterday = now.minusDays(1);
+            boolean yesterdayWasHoliday = isJapanHoliday(yesterday.toLocalDate());
+            List<String> yesterdayTimes = null;
+            if (yesterdayWasHoliday && weeklyTable.containsKey("PH")) {
+                yesterdayTimes = weeklyTable.get("PH");
             } else {
-                DayOfWeek dayOfWeek = now.getDayOfWeek();
-                String dayKey = getDayKey(dayOfWeek);
-                if (weeklyTable.containsKey(dayKey)) {
-                    todayTimes = weeklyTable.get(dayKey);
-                } else if (hasSpecificDayRules) {
-                    // 判定できる曜日以外はUNKNOWN
-                    return new ScheduleResult(null, null, "定休日または不明", ScheduleResult.CurrentState.UNKNOWN, weeklyTable, tagValue);
-                }
+                yesterdayTimes = weeklyTable.get(getDayKey(yesterday.getDayOfWeek()));
             }
 
             ScheduleResult.CurrentState state = ScheduleResult.CurrentState.CLOSED;
@@ -81,60 +109,115 @@ public class SimpleScheduleParser implements ScheduleParser {
             ScheduleResult.Event nextEvent = null;
             ScheduleResult.Event followingEvent = null;
 
-            if (todayTimes != null && !todayTimes.isEmpty()) {
-                long currentMinutes = now.getHour() * 60 + now.getMinute();
-                
-                for (String timeRange : todayTimes) {
-                    if (amenity == Amenity.POST_OFFICE || timeRange.contains("-")) {
-                        // 営業時間形式: 09:00-17:00
+            long currentMinutes = now.getHour() * 60 + now.getMinute();
+
+            // 前日のスケジュールからの継続判定
+            if (yesterdayTimes != null) {
+                for (String timeRange : yesterdayTimes) {
+                    if (timeRange.contains("-")) {
                         String[] range = timeRange.split("-");
-                        int start = parseMinutes(range[0]);
                         int end = parseMinutes(range[1]);
-                        
-                        if (currentMinutes < start) {
-                            if (nextEvent == null) {
-                                nextEvent = createEvent(now, start, ScheduleResult.EventType.OPEN);
-                                state = ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON; 
-                                todayStatus = "営業開始前 " + range[0];
+                        if (end > 1440) { // 24:00 を超えている
+                            int endOffset = end - 1440;
+                            if (currentMinutes < endOffset) {
+                                // 前日から継続して営業中
+                                state = (endOffset - currentMinutes <= 60) ? 
+                                        ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON : ScheduleResult.CurrentState.OPENING;
+                                nextEvent = createEvent(now, endOffset, ScheduleResult.EventType.CLOSE);
+                                todayStatus = (amenity == Amenity.POST_OFFICE ? "営業中" : "収集中") + 
+                                        " (" + String.format(Locale.getDefault(), "%02d:%02d", endOffset / 60, endOffset % 60) + "まで)";
+                                break;
                             }
-                        } else if (currentMinutes < end) {
-                            state = (end - currentMinutes <= 60) ? 
-                                    ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON : ScheduleResult.CurrentState.OPENING;
-                            nextEvent = createEvent(now, end, ScheduleResult.EventType.CLOSE);
-                            todayStatus = "営業中 (" + range[1] + "まで)";
-                            break; // 営業中なら確定
                         }
                     } else {
-                        // 収集時刻形式: 09:00
+                        // 収集時刻形式: 前日の 24:00 以降 (24:30など) が今日の 00:30 として扱われるべきか
                         int collectionTime = parseMinutes(timeRange);
-                        if (currentMinutes < collectionTime) {
-                            if (nextEvent == null || nextEvent.getType() != ScheduleResult.EventType.COLLECTION) {
+                        if (collectionTime > 1440) {
+                            int offset = collectionTime - 1440;
+                            if (currentMinutes < offset) {
+                                // 前日の 24:30 収集予定などは、今日の 00:30 収集として扱う
                                 if (nextEvent == null) {
-                                    nextEvent = createEvent(now, collectionTime, ScheduleResult.EventType.COLLECTION);
-                                    if (collectionTime - currentMinutes <= 60) {
+                                    nextEvent = createEvent(now, offset, ScheduleResult.EventType.COLLECTION);
+                                    if (offset - currentMinutes <= 60) {
                                         state = ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON;
                                     } else {
                                         state = ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON;
                                     }
-                                    todayStatus = "次回収集 " + timeRange;
-                                } else if (followingEvent == null) {
-                                    followingEvent = createEvent(now, collectionTime, ScheduleResult.EventType.COLLECTION);
+                                    todayStatus = "次回収集 " + String.format(Locale.getDefault(), "%02d:%02d", offset / 60, offset % 60);
                                 }
                             }
-                        } else {
-                            // 収集時刻を過ぎている場合、翌日の候補としてキープするための処理は122行目以降で行うが、
-                            // もし今日の中にまだ他にも収集時刻があれば、上の if (currentMinutes < collectionTime) で拾われる
                         }
                     }
                 }
-                
-                        if (nextEvent == null && state == ScheduleResult.CurrentState.CLOSED) {
-                    if (amenity == Amenity.POST_OFFICE) {
-                         state = ScheduleResult.CurrentState.TODAY_FINISHED;
-                         todayStatus = "本日の営業は終了しました";
+            }
+
+            if (state == ScheduleResult.CurrentState.CLOSED) {
+                if (isHoliday) {
+                    if (weeklyTable.containsKey("PH")) {
+                        todayTimes = weeklyTable.get("PH");
                     } else {
+                        // 祝日の情報がない場合はUNKNOWN
+                        return new ScheduleResult(null, null, "祝日のため不明", ScheduleResult.CurrentState.UNKNOWN, weeklyTable, tagValue, isHoliday);
+                    }
+                } else {
+                    DayOfWeek dayOfWeek = now.getDayOfWeek();
+                    String dayKey = getDayKey(dayOfWeek);
+                    if (weeklyTable.containsKey(dayKey)) {
+                        todayTimes = weeklyTable.get(dayKey);
+                    } else if (hasSpecificDayRules) {
+                        // 判定できる曜日以外はUNKNOWN
+                        return new ScheduleResult(null, null, "定休日または不明", ScheduleResult.CurrentState.UNKNOWN, weeklyTable, tagValue, isHoliday);
+                    }
+                }
+
+                if (todayTimes != null && !todayTimes.isEmpty()) {
+                    for (String timeRange : todayTimes) {
+                        if (amenity == Amenity.POST_OFFICE || timeRange.contains("-")) {
+                            // 営業時間形式: 09:00-17:00
+                            String[] range = timeRange.split("-");
+                            int start = parseMinutes(range[0]);
+                            int end = parseMinutes(range[1]);
+                            
+                            if (currentMinutes < start) {
+                                if (nextEvent == null) {
+                                    nextEvent = createEvent(now, start, ScheduleResult.EventType.OPEN);
+                                    state = ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON; 
+                                    todayStatus = "営業開始前 " + range[0];
+                                }
+                            } else if (currentMinutes < end) {
+                                state = (end - currentMinutes <= 60) ? 
+                                        ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON : ScheduleResult.CurrentState.OPENING;
+                                nextEvent = createEvent(now, end, ScheduleResult.EventType.CLOSE);
+                                todayStatus = (amenity == Amenity.POST_OFFICE ? "営業中" : "収集中") + 
+                                        " (" + (end >= 1440 ? String.format(Locale.getDefault(), "%02d:%02d", (end - 1440) / 60, (end - 1440) % 60) : range[1]) + "まで)";
+                                break; // 営業中なら確定
+                            }
+                        } else {
+                            // 収集時刻形式: 09:00
+                            int collectionTime = parseMinutes(timeRange);
+                            
+                            if (currentMinutes < collectionTime) {
+                                if (nextEvent == null || nextEvent.getType() != ScheduleResult.EventType.COLLECTION) {
+                                    if (nextEvent == null) {
+                                        nextEvent = createEvent(now, collectionTime, ScheduleResult.EventType.COLLECTION);
+                                        // 10:00ちょうどは「手遅れ」なので、ここには入らない
+                                        if (collectionTime - currentMinutes <= 60) {
+                                            state = ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON;
+                                        } else {
+                                            state = ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON;
+                                        }
+                                        todayStatus = "次回収集 " + (collectionTime >= 1440 ? String.format(Locale.getDefault(), "%02d:%02d", (collectionTime - 1440) / 60, (collectionTime - 1440) % 60) : timeRange);
+                                    } else if (followingEvent == null) {
+                                        followingEvent = createEvent(now, collectionTime, ScheduleResult.EventType.COLLECTION);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (nextEvent == null && state == ScheduleResult.CurrentState.CLOSED) {
                         state = ScheduleResult.CurrentState.TODAY_FINISHED;
-                        todayStatus = "本日の収集は終了しました";
+                        todayStatus = (amenity == Amenity.POST_OFFICE ? "本日の営業は終了しました" : "本日の収集は終了しました");
                     }
                 }
             }
@@ -149,6 +232,9 @@ public class SimpleScheduleParser implements ScheduleParser {
                     if (nextDayIsHoliday) {
                         if (weeklyTable.containsKey("PH")) {
                             nextDayTimes = weeklyTable.get("PH");
+                        } else {
+                            // 祝日なのにPH指定がない場合は、そこで探索を打ち切る（今日の判定と整合性を取る）
+                            break;
                         }
                     } else {
                         String nextDayKey = getDayKey(nextDay.getDayOfWeek());
@@ -160,25 +246,30 @@ public class SimpleScheduleParser implements ScheduleParser {
                         String firstTime = nextDayTimes.get(0);
                         String firstStartTime = firstTime.contains("-") ? firstTime.split("-")[0] : firstTime;
                         int minutes = parseMinutes(firstStartTime);
-                        nextEvent = createEvent(nextDay, minutes, amenity == Amenity.POST_BOX ? 
-                                ScheduleResult.EventType.COLLECTION : ScheduleResult.EventType.OPEN);
-                        
-                        // 2つ目のイベントがあれば取得
-                        if (nextDayTimes.size() > 1) {
-                            String secondTime = nextDayTimes.get(1);
-                            String secondStartTime = secondTime.contains("-") ? secondTime.split("-")[0] : secondTime;
-                            int m2 = parseMinutes(secondStartTime);
-                            followingEvent = createEvent(nextDay, m2, amenity == Amenity.POST_BOX ? 
+                        // 24:00 を超える分は、その日の深夜分として既に処理されているはずなのでスキップ
+                        if (minutes < 1440) {
+                            nextEvent = createEvent(nextDay, minutes, amenity == Amenity.POST_BOX ? 
                                     ScheduleResult.EventType.COLLECTION : ScheduleResult.EventType.OPEN);
+                            
+                            // 2つ目のイベントがあれば取得
+                            if (nextDayTimes.size() > 1) {
+                                String secondTime = nextDayTimes.get(1);
+                                String secondStartTime = secondTime.contains("-") ? secondTime.split("-")[0] : secondTime;
+                                int m2 = parseMinutes(secondStartTime);
+                                if (m2 < 1440) {
+                                    followingEvent = createEvent(nextDay, m2, amenity == Amenity.POST_BOX ? 
+                                            ScheduleResult.EventType.COLLECTION : ScheduleResult.EventType.OPEN);
+                                }
+                            }
+                            break;
                         }
-                        break;
                     }
                 }
             }
 
-            return new ScheduleResult(nextEvent, followingEvent, todayStatus, state, weeklyTable, tagValue);
+            return new ScheduleResult(nextEvent, followingEvent, todayStatus, state, weeklyTable, tagValue, isHoliday);
         } catch (Exception e) {
-            return new ScheduleResult(null, null, "解析エラー", ScheduleResult.CurrentState.CLOSED, new HashMap<>(), tagValue);
+            return new ScheduleResult(null, null, "エラー", ScheduleResult.CurrentState.UNKNOWN, new HashMap<>(), tagValue, false);
         }
     }
 
@@ -193,26 +284,13 @@ public class SimpleScheduleParser implements ScheduleParser {
     }
 
     private ScheduleResult.Event createEvent(ZonedDateTime baseDate, int totalMinutes, ScheduleResult.EventType type) {
-        ZonedDateTime eventTime = baseDate.withHour(totalMinutes / 60)
-                .withMinute(totalMinutes % 60)
-                .withSecond(0)
-                .withNano(0);
+        ZonedDateTime eventTime = baseDate.withHour(0).withMinute(0).withSecond(0).withNano(0)
+                .plusMinutes(totalMinutes);
         return new ScheduleResult.Event(eventTime.toInstant().toEpochMilli(), type);
     }
 
-    private boolean isJapanHoliday(LocalDate date) {
-        HolidayManager manager = getHolidayManager();
-        if (manager != null) {
-            try {
-                return manager.isHoliday(date);
-            } catch (Exception ignore) {
-            }
-        }
-        // Fallback: Check if it's Sunday (many holiday schedules match Sunday)
-        // However, OSM PH specifically means public holiday. 
-        // If we can't detect holiday, we might be better off returning false and 
-        // using day-of-week than guessing.
-        return false;
+    public static boolean isJapanHoliday(LocalDate date) {
+        return HOLIDAYS.contains(date);
     }
 
     private Map<String, List<String>> parseToWeeklyTable(String tagValue) {
@@ -287,8 +365,18 @@ public class SimpleScheduleParser implements ScheduleParser {
                     if (allDays[i].equals(startEnd[1])) endIdx = i;
                 }
                 if (startIdx != -1 && endIdx != -1) {
-                    for (int i = startIdx; i <= endIdx; i++) {
-                        result.add(allDays[i]);
+                    if (startIdx <= endIdx) {
+                        for (int i = startIdx; i <= endIdx; i++) {
+                            result.add(allDays[i]);
+                        }
+                    } else {
+                        // We-Mo のように週を跨ぐ場合
+                        for (int i = startIdx; i < allDays.length; i++) {
+                            result.add(allDays[i]);
+                        }
+                        for (int i = 0; i <= endIdx; i++) {
+                            result.add(allDays[i]);
+                        }
                     }
                 }
             } else {

@@ -60,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
         Configuration.getInstance().load(this, getSharedPreferences("osmdroid", MODE_PRIVATE));
         
         setContentView(R.layout.activity_main);
+        new Thread(pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser::initializeHolidays).start();
 
         // Edge-to-Edge adjustment
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_layout), (v, insets) -> {

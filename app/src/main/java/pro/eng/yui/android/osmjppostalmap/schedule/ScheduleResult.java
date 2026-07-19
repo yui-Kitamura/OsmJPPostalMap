@@ -46,16 +46,24 @@ public class ScheduleResult {
     private final CurrentState currentState;
     private final Map<String, List<String>> weeklyTable; // 曜日 -> 時間リスト
     private final String rawTagValue;
+    private final boolean isHoliday;
 
     public ScheduleResult(Event nextEvent, Event followingEvent, String todayStatus, 
                           CurrentState currentState, Map<String, List<String>> weeklyTable,
-                          String rawTagValue) {
+                          String rawTagValue, boolean isHoliday) {
         this.nextEvent = nextEvent;
         this.followingEvent = followingEvent;
         this.todayStatus = todayStatus;
         this.currentState = currentState;
         this.weeklyTable = weeklyTable;
         this.rawTagValue = rawTagValue;
+        this.isHoliday = isHoliday;
+    }
+
+    public ScheduleResult(Event nextEvent, Event followingEvent, String todayStatus,
+                          CurrentState currentState, Map<String, List<String>> weeklyTable,
+                          String rawTagValue) {
+        this(nextEvent, followingEvent, todayStatus, currentState, weeklyTable, rawTagValue, false);
     }
 
     public Event getNextEvent() { return nextEvent; }
@@ -64,4 +72,5 @@ public class ScheduleResult {
     public CurrentState getCurrentState() { return currentState; }
     public Map<String, List<String>> getWeeklyTable() { return weeklyTable; }
     public String getRawTagValue() { return rawTagValue; }
+    public boolean isHoliday() { return isHoliday; }
 }
