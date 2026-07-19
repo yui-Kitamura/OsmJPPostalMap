@@ -20,10 +20,24 @@ import pro.eng.yui.android.osmjppostalmap.core.PoiMarker;
 import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
 import pro.eng.yui.android.osmjppostalmap.R;
 
+import android.view.View;
+import android.widget.TextView;
+import android.widget.ImageButton;
+import android.widget.Toast;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.graphics.Insets;
+import androidx.appcompat.widget.SearchView;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import java.util.ArrayList;
+
 public class MainActivity extends AppCompatActivity {
 
     private MapView map;
     private MainViewModel viewModel;
+    private RecyclerView searchResultsList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,7 +48,34 @@ public class MainActivity extends AppCompatActivity {
         
         setContentView(R.layout.activity_main);
 
+        // Edge-to-Edge adjustment
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_layout), (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            return insets;
+        });
+
         map = findViewById(R.id.map);
+        searchResultsList = findViewById(R.id.search_results);
+        searchResultsList.setLayoutManager(new LinearLayoutManager(this));
+
+        SearchView searchView = findViewById(R.id.search_view);
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                viewModel.search(query);
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                if (newText.isEmpty()) {
+                    searchResultsList.setVisibility(View.GONE);
+                }
+                return false;
+            }
+        });
+
         // OSM JP Tile Server
         map.setTileSource(new XYTileSource("OSMJP", 0, 18, 256, ".png", 
                 new String[] { "https://tile.openstreetmap.jp/" }));
@@ -46,8 +87,8 @@ public class MainActivity extends AppCompatActivity {
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
         
-        // Observe POIs
-        viewModel.getPois().observe(this, pois -> {
+        // Observe Filtered POIs
+        viewModel.getFilteredPois().observe(this, pois -> {
             map.getOverlays().clear();
             for (OsmPoi poi : pois) {
                 PoiMarker.PoiType type = "post_office".equals(poi.getTag("amenity")) ? 
@@ -55,7 +96,6 @@ public class MainActivity extends AppCompatActivity {
                 PoiMarker marker = new PoiMarker(map, type);
                 marker.setPosition(new GeoPoint(poi.getLat(), poi.getLon()));
                 
-                // 解析 (本来はViewModelで行うべき)
                 String tag = type == PoiMarker.PoiType.POST_OFFICE ? "opening_hours" : "collection_times";
                 marker.setSchedule(new pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser()
                         .parse(poi.getTag(tag), System.currentTimeMillis()));
@@ -69,7 +109,39 @@ public class MainActivity extends AppCompatActivity {
             map.invalidate();
         });
 
-        // 初期表示領域のPOI取得
+        // Menu Button
+        ImageButton menuButton = findViewById(R.id.menu_button);
+        menuButton.setOnClickListener(v -> {
+            Toast.makeText(this, "設定画面（実装予定）", Toast.LENGTH_SHORT).show();
+            // TODO: Intent to SettingsActivity
+        });
+
+        // Error Bar
+        TextView errorBar = findViewById(R.id.error_bar);
+        viewModel.getErrorMessage().observe(this, msg -> {
+            if (msg == null || msg.isEmpty()) {
+                errorBar.setVisibility(View.GONE);
+            } else {
+                errorBar.setText(msg);
+                errorBar.setVisibility(View.VISIBLE);
+            }
+        });
+
+        // Observe Search Results
+        viewModel.getSearchResults().observe(this, results -> {
+            if (results == null || results.isEmpty()) {
+                searchResultsList.setVisibility(View.GONE);
+                return;
+            }
+            searchResultsList.setVisibility(View.VISIBLE);
+            searchResultsList.setAdapter(new SearchAdapter(results, poi -> {
+                map.getController().animateTo(new GeoPoint(poi.getLat(), poi.getLon()));
+                map.getController().setZoom(18.0);
+                searchResultsList.setVisibility(View.GONE);
+                searchView.clearFocus();
+            }));
+        });
+
         map.addMapListener(new org.osmdroid.events.MapListener() {
             @Override
             public boolean onScroll(org.osmdroid.events.ScrollEvent event) {
@@ -85,20 +157,76 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private static class SearchAdapter extends RecyclerView.Adapter<SearchAdapter.ViewHolder> {
+        private final java.util.List<OsmPoi> items;
+        private final OnItemClickListener listener;
+
+        interface OnItemClickListener {
+            void onItemClick(OsmPoi poi);
+        }
+
+        SearchAdapter(java.util.List<OsmPoi> items, OnItemClickListener listener) {
+            this.items = items;
+            this.listener = listener;
+        }
+
+        @Override
+        public ViewHolder onCreateViewHolder(android.view.ViewGroup parent, int viewType) {
+            TextView tv = new TextView(parent.getContext());
+            tv.setLayoutParams(new android.view.ViewGroup.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT, 
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT));
+            tv.setPadding(32, 32, 32, 32);
+            tv.setTextSize(16f);
+            return new ViewHolder(tv);
+        }
+
+        @Override
+        public void onBindViewHolder(ViewHolder holder, int position) {
+            OsmPoi poi = items.get(position);
+            String name = poi.getTag("name");
+            if (name == null) name = poi.getTag("addr:full");
+            if (name == null) name = "位置: " + poi.getLat() + ", " + poi.getLon();
+            holder.textView.setText(name);
+            holder.itemView.setOnClickListener(v -> listener.onItemClick(poi));
+        }
+
+        @Override
+        public int getItemCount() { return items.size(); }
+
+        static class ViewHolder extends RecyclerView.ViewHolder {
+            TextView textView;
+            ViewHolder(TextView v) { super(v); textView = v; }
+        }
+    }
+
     private void updatePois() {
         org.osmdroid.util.BoundingBox box = map.getBoundingBox();
         viewModel.fetchPois(box.getLatSouth(), box.getLonWest(), box.getLatNorth(), box.getLonEast());
     }
 
+    private final android.os.Handler updateHandler = new android.os.Handler();
+    private final Runnable updateRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (map != null) {
+                map.invalidate(); // 再描画をトリガーしてリングを更新
+            }
+            updateHandler.postDelayed(this, 60000); // 1分ごとに実行
+        }
+    };
+
     @Override
     public void onResume() {
         super.onResume();
         map.onResume();
+        updateHandler.post(updateRunnable);
     }
 
     @Override
     public void onPause() {
         super.onPause();
         map.onPause();
+        updateHandler.removeCallbacks(updateRunnable);
     }
 }

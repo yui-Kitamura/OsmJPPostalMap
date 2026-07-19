@@ -3,7 +3,8 @@ package pro.eng.yui.android.osmjppostalmap.domain.model;
 import java.util.Map;
 
 /**
- * OpenStreetMapのPOIを表す基底モデル
+ * OpenStreetMapのPOI(Point of Interest)を表す基底モデル。
+ * ノード(node)とウェイ(way)の両方をサポートし、タグ情報をMap形式で保持します。
  */
 public class OsmPoi {
     private final long id;
@@ -12,6 +13,13 @@ public class OsmPoi {
     private final String type; // "node" or "way"
     private final Map<String, String> tags;
 
+    /**
+     * @param id OSM要素ID
+     * @param lat 緯度
+     * @param lon 経度
+     * @param type 要素タイプ ("node" または "way")
+     * @param tags タグのマップ
+     */
     public OsmPoi(long id, double lat, double lon, String type, Map<String, String> tags) {
         this.id = id;
         this.lat = lat;

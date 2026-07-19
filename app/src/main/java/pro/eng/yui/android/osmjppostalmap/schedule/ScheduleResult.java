@@ -16,7 +16,8 @@ public class ScheduleResult {
         OPENING,      // 営業中/収集可能（残り1時間以上）
         OPEN_SOON,    // まもなく終了（残り1時間以内）
         TODAY_FINISHED, // 本日終了
-        CLOSED        // 営業時間外
+        CLOSED,       // 営業時間外
+        OPEN_SOON_FUTURE // 営業開始前（本日開始予定あり）
     }
     
     public static class Event {

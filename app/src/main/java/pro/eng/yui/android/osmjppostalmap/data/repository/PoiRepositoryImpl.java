@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import pro.eng.yui.android.osmjppostalmap.data.api.OsmApi;
 import pro.eng.yui.android.osmjppostalmap.data.api.OverpassApi;
 import pro.eng.yui.android.osmjppostalmap.data.api.OverpassResponse;
 import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
@@ -20,14 +21,20 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class PoiRepositoryImpl implements PoiRepository {
 
     private final OverpassApi overpassApi;
+    private final OsmApi osmApi;
     private final MutableLiveData<List<OsmPoi>> poisLiveData = new MutableLiveData<>(new ArrayList<>());
 
     public PoiRepositoryImpl() {
-        Retrofit retrofit = new Retrofit.Builder()
+        Retrofit overpassRetrofit = new Retrofit.Builder()
                 .baseUrl("https://overpass-api.de/api/")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
-        this.overpassApi = retrofit.create(OverpassApi.class);
+        this.overpassApi = overpassRetrofit.create(OverpassApi.class);
+
+        Retrofit osmRetrofit = new Retrofit.Builder()
+                .baseUrl("https://www.openstreetmap.org/api/0.6/")
+                .build();
+        this.osmApi = osmRetrofit.create(OsmApi.class);
     }
 
     @Override
@@ -38,8 +45,10 @@ public class PoiRepositoryImpl implements PoiRepository {
                 "  node[\"amenity\"=\"post_box\"](%f,%f,%f,%f);" +
                 "  node[\"amenity\"=\"post_office\"](%f,%f,%f,%f);" +
                 "  way[\"amenity\"=\"post_office\"](%f,%f,%f,%f);" +
+                "  node[\"name\"~\"郵便局\"](%f,%f,%f,%f);" + // 名称検索用
                 ");" +
                 "out body center;",
+                minLat, minLon, maxLat, maxLon,
                 minLat, minLon, maxLat, maxLon,
                 minLat, minLon, maxLat, maxLon,
                 minLat, minLon, maxLat, maxLon);
@@ -48,24 +57,39 @@ public class PoiRepositoryImpl implements PoiRepository {
             @Override
             public void onResponse(Call<OverpassResponse> call, Response<OverpassResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    List<OsmPoi> pois = new ArrayList<>();
+                    List<OsmPoi> currentPois = poisLiveData.getValue();
+                    if (currentPois == null) currentPois = new ArrayList<>();
+                    
                     for (OverpassResponse.Element element : response.body().elements) {
-                        // 郵便局のフィルタリング (operator=未設定 OR "日本郵便")
-                        if ("post_office".equals(element.tags.get("amenity"))) {
+                        // 既存のIDチェック（重複排除）
+                        boolean exists = false;
+                        for (OsmPoi p : currentPois) {
+                            if (p.getId() == element.id) {
+                                exists = true;
+                                break;
+                            }
+                        }
+                        if (exists) continue;
+
+                        // 郵便局のフィルタリング
+                        if ("post_office".equals(element.tags.get("amenity")) || 
+                            (element.tags.get("name") != null && element.tags.get("name").contains("郵便局"))) {
                             String operator = element.tags.get("operator");
                             if (operator != null && !operator.contains("日本郵便") && !operator.equals("Japan Post")) {
                                 continue;
                             }
                         }
-                        pois.add(new OsmPoi(element.id, element.lat, element.lon, element.type, element.tags));
+                        currentPois.add(new OsmPoi(element.id, element.lat, element.lon, element.type, element.tags));
                     }
-                    poisLiveData.postValue(pois);
+                    poisLiveData.postValue(new ArrayList<>(currentPois));
+                } else {
+                    // TODO: ViewModel経由でエラー通知
                 }
             }
 
             @Override
             public void onFailure(Call<OverpassResponse> call, Throwable t) {
-                // TODO: エラー通知
+                // TODO: ViewModel経由でエラー通知
             }
         });
 
@@ -80,16 +104,58 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public void savePoi(OsmPoi poi, String comment, PoiSaveCallback callback) {
-        // TODO: OSM API実装
+        callback.onError("ログインが必要です");
     }
 
     @Override
     public void addPostBox(double lat, double lon, String shape, String branch, String collectionTimes, PoiSaveCallback callback) {
-        // TODO: OSM API実装
+        callback.onError("ログインが必要です");
+    }
+
+    @Override
+    public LiveData<List<OsmPoi>> searchPois(String query) {
+        MutableLiveData<List<OsmPoi>> result = new MutableLiveData<>();
+        
+        // 郵便番号(7桁)かどうかの簡易判定
+        String osmQuery;
+        if (query.matches("\\d{3}-?\\d{4}")) {
+            osmQuery = String.format(Locale.US, "node[\"addr:postcode\"=\"%s\"];", query);
+        } else {
+            // 名称または住所での検索
+            osmQuery = String.format(Locale.US, 
+                "node[\"name\"~\"%s\"];" +
+                "node[\"addr:full\"~\"%s\"];" +
+                "node[\"addr:street\"~\"%s\"];", 
+                query, query, query);
+        }
+
+        String fullQuery = "[out:json][timeout:25];(" + osmQuery + ");out body center;";
+
+        overpassApi.query(fullQuery).enqueue(new Callback<OverpassResponse>() {
+            @Override
+            public void onResponse(Call<OverpassResponse> call, Response<OverpassResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    List<OsmPoi> pois = new ArrayList<>();
+                    for (OverpassResponse.Element element : response.body().elements) {
+                        pois.add(new OsmPoi(element.id, element.lat, element.lon, element.type, element.tags));
+                    }
+                    result.postValue(pois);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<OverpassResponse> call, Throwable t) {
+                result.postValue(new ArrayList<>());
+            }
+        });
+        
+        return result;
     }
 
     @Override
     public void addNote(double lat, double lon, String text, PoiSaveCallback callback) {
-        // TODO: OSM API実装
+        // 地図メモ (Note) の最終行に署名を追加
+        String finalNote = text + "\ncreated by OSM JP Postal Map Android v0.1";
+        // TODO: Note API実装 (Noteは匿名でも投稿可能だが、ログイン推奨)
     }
 }

@@ -75,11 +75,36 @@ public class PoiMarker extends Marker {
         if (schedule != null) {
             updateRingPaint(schedule);
             float sweepAngle = 360f;
-            if (schedule.getCurrentState() == ScheduleResult.CurrentState.OPEN_SOON) {
-                // TODO: 60分かけて減少するロジック
-                sweepAngle = 180f; // 仮
+            long now = System.currentTimeMillis();
+            
+            if (schedule.getCurrentState() == ScheduleResult.CurrentState.OPEN_SOON && schedule.getNextEvent() != null) {
+                long remainingMillis = schedule.getNextEvent().getTimestamp() - now;
+                float remainingMinutes = remainingMillis / 60000f;
+                if (remainingMinutes < 0) remainingMinutes = 0;
+                if (remainingMinutes > 60) remainingMinutes = 60;
+                sweepAngle = (remainingMinutes / 60f) * 360f;
             }
-            canvas.drawArc(rect, -90f, sweepAngle, false, ringPaint);
+            
+            if (schedule.getCurrentState() == ScheduleResult.CurrentState.OPEN_SOON_FUTURE && schedule.getNextEvent() != null) {
+                // 営業開始前：緑ドットを短針の位置に配置
+                canvas.drawArc(rect, -90f, 360f, false, ringPaint); // 灰がかった緑のリング（updateRingPaintで設定）
+                
+                java.util.Calendar cal = java.util.Calendar.getInstance();
+                cal.setTimeInMillis(schedule.getNextEvent().getTimestamp());
+                int hour = cal.get(java.util.Calendar.HOUR);
+                int minute = cal.get(java.util.Calendar.MINUTE);
+                float angle = (hour + minute / 60f) * 30f - 90f;
+                
+                Paint dotPaint = new Paint(ringPaint);
+                dotPaint.setColor(0xFF00FF00); // 明るい緑
+                dotPaint.setStyle(Paint.Style.FILL);
+                
+                float dotX = (float) (screenPos.x + size * Math.cos(Math.toRadians(angle)));
+                float dotY = (float) (screenPos.y + size * Math.sin(Math.toRadians(angle)));
+                canvas.drawCircle(dotX, dotY, 6f, dotPaint);
+            } else {
+                canvas.drawArc(rect, -90f, sweepAngle, false, ringPaint);
+            }
         }
     }
 
@@ -96,6 +121,9 @@ public class PoiMarker extends Marker {
                 break;
             case TODAY_FINISHED:
                 ringPaint.setColor(0xFF808080); // グレー
+                break;
+            case OPEN_SOON_FUTURE:
+                ringPaint.setColor(0xFF556B2F); // 灰がかった緑 (DarkOliveGreen)
                 break;
         }
     }

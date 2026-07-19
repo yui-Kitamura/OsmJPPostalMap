@@ -33,6 +33,11 @@ public interface PoiRepository {
      */
     void addNote(double lat, double lon, String text, PoiSaveCallback callback);
 
+    /**
+     * キーワードでPOIを検索する
+     */
+    LiveData<List<OsmPoi>> searchPois(String query);
+
     interface PoiSaveCallback {
         void onSuccess();
         void onError(String message);
