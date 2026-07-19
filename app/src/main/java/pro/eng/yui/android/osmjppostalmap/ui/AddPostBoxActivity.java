@@ -8,6 +8,9 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
+import org.osmdroid.events.MapListener;
+import org.osmdroid.events.ScrollEvent;
+import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
@@ -45,9 +48,24 @@ public class AddPostBoxActivity extends AppCompatActivity {
 
         marker = new Marker(map);
         marker.setPosition(startPoint);
-        marker.setDraggable(true);
+        marker.setDraggable(false); // 中心固定にするためドラッグ不可にする
         marker.setTitle("設置位置");
+        marker.setInfoWindow(null); // 中心固定なのでInfoWindowは不要または自動表示されないようにする
         map.getOverlays().add(marker);
+
+        map.addMapListener(new MapListener() {
+            @Override
+            public boolean onScroll(ScrollEvent event) {
+                marker.setPosition((GeoPoint) map.getMapCenter());
+                return true;
+            }
+
+            @Override
+            public boolean onZoom(ZoomEvent event) {
+                marker.setPosition((GeoPoint) map.getMapCenter());
+                return true;
+            }
+        });
 
         btnSave.setOnClickListener(v -> {
             if (!authRepository.isLoggedIn()) {
