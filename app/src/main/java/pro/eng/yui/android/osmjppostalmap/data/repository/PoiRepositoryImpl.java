@@ -69,6 +69,11 @@ public class PoiRepositoryImpl implements PoiRepository {
             @Override
             public void onResponse(Call<OverpassResponse> call, Response<OverpassResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
+                    if (response.body().elements.size() > 100) {
+                        errorLiveData.postValue("ズームインしてください");
+                        return;
+                    }
+
                     List<OsmPoi> currentPois = poisLiveData.getValue();
                     if (currentPois == null) currentPois = new ArrayList<>();
                     

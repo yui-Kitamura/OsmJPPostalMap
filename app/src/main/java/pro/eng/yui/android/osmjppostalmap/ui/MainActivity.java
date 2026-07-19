@@ -33,6 +33,10 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView searchResultsList;
     private pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository authRepository;
 
+    private double lastZoomLevel = 17.0;
+    private final android.os.Handler debounceHandler = new android.os.Handler();
+    private Runnable debounceRunnable = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -182,16 +186,31 @@ public class MainActivity extends AppCompatActivity {
         map.addMapListener(new org.osmdroid.events.MapListener() {
             @Override
             public boolean onScroll(org.osmdroid.events.ScrollEvent event) {
-                updatePois();
+                scheduleUpdatePois();
                 return true;
             }
 
             @Override
             public boolean onZoom(org.osmdroid.events.ZoomEvent event) {
-                updatePois();
+                double currentZoom = event.getZoomLevel();
+                if (currentZoom > lastZoomLevel) {
+                    // ズームイン時は処理しない
+                    lastZoomLevel = currentZoom;
+                    return true;
+                }
+                lastZoomLevel = currentZoom;
+                scheduleUpdatePois();
                 return true;
             }
         });
+    }
+
+    private void scheduleUpdatePois() {
+        if (debounceRunnable != null) {
+            debounceHandler.removeCallbacks(debounceRunnable);
+        }
+        debounceRunnable = this::updatePois;
+        debounceHandler.postDelayed(debounceRunnable, 1500);
     }
 
     private static class SearchAdapter extends RecyclerView.Adapter<SearchAdapter.ViewHolder> {
