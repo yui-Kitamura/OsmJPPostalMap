@@ -17,6 +17,6 @@
         android:padding="8dp"
         android:textColor="#FFFFFF"
         android:visibility="gone"
-        app:layout_topToTop="parent" />
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
