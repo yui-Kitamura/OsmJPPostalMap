@@ -30,7 +30,8 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final MutableLiveData<String> errorLiveData = new MutableLiveData<>();
     private String accessToken;
     private static long lastFetchTime = 0;
-    private static final long MIN_INTERVAL_MS = 3000;
+    /** APIコールの最小間隔ms */
+    private static final long MIN_INTERVAL_MS = 3500;
 
     public PoiRepositoryImpl() {
         this(null);
