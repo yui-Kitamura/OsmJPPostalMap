@@ -42,7 +42,7 @@
             android:id="@+id/edit_tag_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="営業時間"
+            android:hint="営業時間 (タグ直接編集)"
             android:layout_marginBottom="16dp"
             android:visibility="gone">
 
@@ -52,6 +52,69 @@
                 android:layout_height="wrap_content"
                 android:inputType="textMultiLine" />
         </com.google.android.material.textfield.TextInputLayout>
+
+        <LinearLayout
+            android:id="@+id/layout_opening_hours_edit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TableLayout
+                android:id="@+id/table_opening_hours"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:stretchColumns="1,2,3"
+                android:layout_marginBottom="8dp">
+                <TableRow>
+                    <TextView android:text="" android:padding="4dp"/>
+                    <TextView android:text="開店" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="閉店" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="休憩 (開始-終了)" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                </TableRow>
+                <TableRow>
+                    <TextView android:text="平日" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
+                    <EditText android:id="@+id/edit_oh_wd_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="09:00" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
+                    <EditText android:id="@+id/edit_oh_wd_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="17:00" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
+                    <EditText android:id="@+id/edit_oh_wd_break" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="12:00-13:00" android:inputType="text" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
+                </TableRow>
+                <TableRow android:layout_marginTop="4dp">
+                    <TextView android:text="土曜" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
+                    <EditText android:id="@+id/edit_oh_sa_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="09:00" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
+                    <EditText android:id="@+id/edit_oh_sa_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="17:00" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
+                    <EditText android:id="@+id/edit_oh_sa_break" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="12:00-13:00" android:inputType="text" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
+                </TableRow>
+                <TableRow android:layout_marginTop="4dp">
+                    <TextView android:text="日祝" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
+                    <EditText android:id="@+id/edit_oh_ph_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="09:00" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
+                    <EditText android:id="@+id/edit_oh_ph_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="17:00" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
+                    <EditText android:id="@+id/edit_oh_ph_break" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="12:00-13:00" android:inputType="text" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
+                </TableRow>
+            </TableLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+                <Button
+                    android:id="@+id/btn_oh_copy_to_sa"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="平日→土曜"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:textSize="12sp" />
+                <Button
+                    android:id="@+id/btn_oh_copy_to_ph"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="平日→日祝"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
 
         <LinearLayout
             android:id="@+id/layout_collection_edit"

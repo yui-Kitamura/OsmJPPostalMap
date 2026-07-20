@@ -46,6 +46,9 @@ public class EditPoiActivity extends AppCompatActivity {
     private TextView textFallback;
     private View layoutFallback;
     private final List<EditText[]> timeRows = new ArrayList<>();
+    private EditText editOhWdOpen, editOhWdClose, editOhWdBreak;
+    private EditText editOhSaOpen, editOhSaClose, editOhSaBreak;
+    private EditText editOhPhOpen, editOhPhClose, editOhPhBreak;
     private static final Pattern TIME_PATTERN = Pattern.compile("^([01]?[0-9]|2[0-3]):[0-5][0-9]$");
     private PoiRepository repository;
     private AuthRepository authRepository;
@@ -141,6 +144,20 @@ public class EditPoiActivity extends AppCompatActivity {
         });
         Button btnSave = findViewById(R.id.btn_save);
 
+        // Opening Hours UI
+        View ohLayout = findViewById(R.id.layout_opening_hours_edit);
+        editOhWdOpen = findViewById(R.id.edit_oh_wd_open);
+        editOhWdClose = findViewById(R.id.edit_oh_wd_close);
+        editOhWdBreak = findViewById(R.id.edit_oh_wd_break);
+        editOhSaOpen = findViewById(R.id.edit_oh_sa_open);
+        editOhSaClose = findViewById(R.id.edit_oh_sa_close);
+        editOhSaBreak = findViewById(R.id.edit_oh_sa_break);
+        editOhPhOpen = findViewById(R.id.edit_oh_ph_open);
+        editOhPhClose = findViewById(R.id.edit_oh_ph_close);
+        editOhPhBreak = findViewById(R.id.edit_oh_ph_break);
+        Button btnOhCopyToSa = findViewById(R.id.btn_oh_copy_to_sa);
+        Button btnOhCopyToPh = findViewById(R.id.btn_oh_copy_to_ph);
+
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
         String amenity = targetPoi.getTag("amenity");
@@ -194,18 +211,65 @@ public class EditPoiActivity extends AppCompatActivity {
             });
         } else {
             String hours = targetPoi.getTag("opening_hours");
-            tagInput.setText(hours);
-            
-            // 営業時間も同様にフォールバックからの強制編集を可能にする
-            // 現在は単純なテキスト入力だが、将来的にパースを導入した場合に備える
-            collectionLayout.setVisibility(View.GONE);
-            layoutFallback.setVisibility(View.GONE);
-            tagLayout.setVisibility(View.VISIBLE);
+            if (hours != null && !hours.isEmpty()) {
+                boolean parsed = parseAndFillOpeningHours(hours);
+                if (!parsed) {
+                    ohLayout.setVisibility(View.GONE);
+                    tagLayout.setVisibility(View.VISIBLE);
+                    layoutFallback.setVisibility(View.VISIBLE);
+                    textFallback.setText("解析できない形式のため直接編集できません:\n" + hours);
+                } else {
+                    ohLayout.setVisibility(View.VISIBLE);
+                    tagLayout.setVisibility(View.GONE);
+                    layoutFallback.setVisibility(View.GONE);
+                }
+            } else {
+                ohLayout.setVisibility(View.VISIBLE);
+                tagLayout.setVisibility(View.GONE);
+                layoutFallback.setVisibility(View.GONE);
+            }
 
             btnForceEdit.setOnClickListener(v -> {
                 layoutFallback.setVisibility(View.GONE);
+                ohLayout.setVisibility(View.VISIBLE);
                 tagLayout.setVisibility(View.VISIBLE);
             });
+
+            btnOhCopyToSa.setOnClickListener(v -> {
+                editOhSaOpen.setText(editOhWdOpen.getText());
+                editOhSaClose.setText(editOhWdClose.getText());
+                editOhSaBreak.setText(editOhWdBreak.getText());
+            });
+            btnOhCopyToPh.setOnClickListener(v -> {
+                editOhPhOpen.setText(editOhWdOpen.getText());
+                editOhPhClose.setText(editOhWdClose.getText());
+                editOhPhBreak.setText(editOhWdBreak.getText());
+            });
+
+            // 変更監視用
+            TextWatcher ohWatcher = new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                @Override
+                public void afterTextChanged(Editable s) {
+                    // 何か入力されたらスタイルを適用
+                    View focused = getCurrentFocus();
+                    if (focused instanceof EditText) {
+                        applyCellStyles((EditText) focused, s.toString(), true);
+                    }
+                }
+            };
+            EditText[] ohEditors = {
+                editOhWdOpen, editOhWdClose, editOhWdBreak,
+                editOhSaOpen, editOhSaClose, editOhSaBreak,
+                editOhPhOpen, editOhPhClose, editOhPhBreak
+            };
+            for (EditText et : ohEditors) {
+                if (et != null) {
+                    et.addTextChangedListener(ohWatcher);
+                    applyCellStyles(et, et.getText().toString(), false);
+                }
+            }
         }
 
         // 地図の初期化
@@ -271,8 +335,9 @@ public class EditPoiActivity extends AppCompatActivity {
             if (layoutFallback.getVisibility() == View.VISIBLE) {
                 // パース失敗時（フォールバック表示中）は営業時間タグを更新しない
             } else {
-                String newValue = tagInput.getText() != null ? tagInput.getText().toString() : "";
-                targetPoi.getTags().put("opening_hours", newValue);
+                String openingHours = formatOpeningHours();
+                if (openingHours == null) return;
+                targetPoi.getTags().put("opening_hours", openingHours);
             }
         }
         
@@ -362,6 +427,126 @@ public class EditPoiActivity extends AppCompatActivity {
         }
 
         et.setBackground(bg);
+    }
+
+    private String formatOpeningHours() {
+        StringBuilder sb = new StringBuilder();
+        
+        // 平日
+        String wdOpen = editOhWdOpen.getText().toString().trim();
+        String wdClose = editOhWdClose.getText().toString().trim();
+        String wdBreak = editOhWdBreak.getText().toString().trim();
+        
+        if (!wdOpen.isEmpty() && !wdClose.isEmpty()) {
+            sb.append("Mo-Fr ").append(wdOpen).append("-").append(wdClose);
+            if (!wdBreak.isEmpty()) sb.append(", ").append(wdBreak).append(" off");
+        }
+        
+        // 土曜
+        String saOpen = editOhSaOpen.getText().toString().trim();
+        String saClose = editOhSaClose.getText().toString().trim();
+        String saBreak = editOhSaBreak.getText().toString().trim();
+        
+        if (!saOpen.isEmpty() && !saClose.isEmpty()) {
+            if (sb.length() > 0) sb.append("; ");
+            sb.append("Sa ").append(saOpen).append("-").append(saClose);
+            if (!saBreak.isEmpty()) sb.append(", ").append(saBreak).append(" off");
+        } else if (!sb.toString().contains("Sa") && sb.length() > 0) {
+            // 土曜が空欄なら明示的に off か、あるいは単に記述しないか。
+            // 郵便局の場合、土日は休みが多いので off を入れるのが親切
+            if (sb.length() > 0) sb.append("; ");
+            sb.append("Sa off");
+        }
+        
+        // 日祝
+        String phOpen = editOhPhOpen.getText().toString().trim();
+        String phClose = editOhPhClose.getText().toString().trim();
+        String phBreak = editOhPhBreak.getText().toString().trim();
+        
+        if (!phOpen.isEmpty() && !phClose.isEmpty()) {
+            if (sb.length() > 0) sb.append("; ");
+            sb.append("Su,PH ").append(phOpen).append("-").append(phClose);
+            if (!phBreak.isEmpty()) sb.append(", ").append(phBreak).append(" off");
+        } else if (sb.length() > 0) {
+            if (sb.length() > 0) sb.append("; ");
+            sb.append("Su,PH off");
+        }
+        
+        return sb.toString();
+    }
+
+    private boolean parseAndFillOpeningHours(String tag) {
+        try {
+            String[] parts = tag.split(";");
+            for (String part : parts) {
+                part = part.trim();
+                if (part.isEmpty()) continue;
+                
+                String[] dayAndTime = part.split(" ", 2);
+                if (dayAndTime.length < 2) continue;
+                
+                String dayPart = dayAndTime[0].trim();
+                String timePart = dayAndTime[1].trim();
+                
+                List<String> days = new ArrayList<>();
+                if (dayPart.contains("-")) {
+                    String[] range = dayPart.split("-");
+                    String[] allDays = {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"};
+                    int start = -1, end = -1;
+                    for(int i=0; i<7; i++) {
+                        if (allDays[i].equals(range[0])) start = i;
+                        if (allDays[i].equals(range[1])) end = i;
+                    }
+                    if (start != -1 && end != -1) {
+                        for(int i=start; i<=end; i++) days.add(allDays[i]);
+                    }
+                } else {
+                    for (String d : dayPart.split(",")) days.add(d.trim());
+                }
+                
+                String open = "", close = "", breakTime = "";
+                if (timePart.equalsIgnoreCase("off")) {
+                    // 休み
+                } else {
+                    String[] times = timePart.split(",");
+                    for (String t : times) {
+                        t = t.trim();
+                        if (t.contains("-") && !t.contains("off")) {
+                            String[] range = t.split("-");
+                            open = range[0].trim();
+                            close = range[1].trim();
+                        } else if (t.contains("off")) {
+                            breakTime = t.replace("off", "").trim();
+                            if (breakTime.endsWith("-")) breakTime = breakTime.substring(0, breakTime.length()-1);
+                            if (breakTime.contains("-")) {
+                                // OK
+                            } else {
+                                // 形式が違う場合はスキップまたは適宜処理
+                            }
+                        }
+                    }
+                }
+                
+                if (days.contains("Mo") || days.contains("Tu") || days.contains("We") || days.contains("Th") || days.contains("Fr")) {
+                    editOhWdOpen.setText(open);
+                    editOhWdClose.setText(close);
+                    editOhWdBreak.setText(breakTime);
+                }
+                if (days.contains("Sa")) {
+                    editOhSaOpen.setText(open);
+                    editOhSaClose.setText(close);
+                    editOhSaBreak.setText(breakTime);
+                }
+                if (days.contains("Su") || days.contains("PH")) {
+                    editOhPhOpen.setText(open);
+                    editOhPhClose.setText(close);
+                    editOhPhBreak.setText(breakTime);
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private String formatCollectionTimes() {
