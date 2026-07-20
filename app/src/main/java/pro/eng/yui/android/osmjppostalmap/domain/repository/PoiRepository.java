@@ -62,4 +62,14 @@ public interface PoiRepository {
         void onSuccess();
         void onError(String message);
     }
+
+    /**
+     * エラーメッセージをクリアする
+     */
+    void clearError();
+
+    /**
+     * 成功メッセージをクリアする
+     */
+    void clearSuccessMessage();
 }

@@ -39,11 +39,20 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable cooldownRunnable;
 
-    public PoiRepositoryImpl() {
+    private static PoiRepositoryImpl instance;
+
+    public static synchronized PoiRepositoryImpl getInstance() {
+        if (instance == null) {
+            instance = new PoiRepositoryImpl();
+        }
+        return instance;
+    }
+
+    private PoiRepositoryImpl() {
         this(null);
     }
 
-    public PoiRepositoryImpl(String accessToken) {
+    private PoiRepositoryImpl(String accessToken) {
         this.accessToken = accessToken;
 
         OkHttpClient client = new OkHttpClient.Builder()
@@ -499,9 +508,17 @@ public class PoiRepositoryImpl implements PoiRepository {
         return errorLiveData;
     }
 
+    public void clearError() {
+        errorLiveData.postValue(null);
+    }
+
     @Override
     public LiveData<String> getSuccessMessage() {
         return successLiveData;
+    }
+
+    public void clearSuccessMessage() {
+        successLiveData.postValue(null);
     }
 
     @Override

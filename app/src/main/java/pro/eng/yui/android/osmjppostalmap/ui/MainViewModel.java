@@ -24,7 +24,7 @@ public class MainViewModel extends ViewModel {
 
     public MainViewModel() {
         // TODO: Dependency Injection
-        this.repository = new PoiRepositoryImpl();
+        this.repository = PoiRepositoryImpl.getInstance();
         
         repository.getPois(0,0,0,0).observeForever(pois -> applyFilter());
         filterOpenOnly.observeForever(filter -> applyFilter());
@@ -108,6 +108,14 @@ public class MainViewModel extends ViewModel {
 
     public LiveData<String> getSuccessMessage() {
         return successMessage;
+    }
+
+    public void clearError() {
+        repository.clearError();
+    }
+
+    public void clearSuccessMessage() {
+        repository.clearSuccessMessage();
     }
 
     public LiveData<Long> getCooldownRemaining() {

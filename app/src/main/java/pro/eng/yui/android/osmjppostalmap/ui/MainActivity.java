@@ -281,7 +281,10 @@ public class MainActivity extends AppCompatActivity {
                 statusBar.setBackgroundColor(0xFFFF0000); // Red
                 statusBar.setText(msg);
                 statusBar.setVisibility(View.VISIBLE);
-                statusBar.postDelayed(() -> statusBar.setVisibility(View.GONE), 5000);
+                statusBar.postDelayed(() -> {
+                    statusBar.setVisibility(View.GONE);
+                    viewModel.clearError();
+                }, 5000);
             }
         });
 
@@ -292,7 +295,10 @@ public class MainActivity extends AppCompatActivity {
                 statusBar.setBackgroundColor(0xFF4CAF50); // Green
                 statusBar.setText(msg);
                 statusBar.setVisibility(View.VISIBLE);
-                statusBar.postDelayed(() -> statusBar.setVisibility(View.GONE), 5000);
+                statusBar.postDelayed(() -> {
+                    statusBar.setVisibility(View.GONE);
+                    viewModel.clearSuccessMessage();
+                }, 5000);
             }
         });
 
