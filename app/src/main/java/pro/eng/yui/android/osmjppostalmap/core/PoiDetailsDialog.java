@@ -144,15 +144,12 @@ public class PoiDetailsDialog {
         }
 
         String checkDate = poi.getTag("check_date");
-        if (checkDate == null) {
-            checkDate = poi.getTag("lastcheck");
-        }
         if (checkDate != null) {
             checkDateText.setText("最終確認日: " + checkDate);
-            checkDateText.setVisibility(View.VISIBLE);
         } else {
-            checkDateText.setVisibility(View.GONE);
+            checkDateText.setText("最終確認日: 不明");
         }
+        checkDateText.setVisibility(View.VISIBLE);
 
         builder.setView(view);
         builder.setPositiveButton("閉じる", null);
