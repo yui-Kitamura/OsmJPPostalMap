@@ -34,6 +34,7 @@ public class PoiDetailsDialog {
         TextView nextEventText = view.findViewById(R.id.dialog_next_event);
         TableLayout table = view.findViewById(R.id.dialog_weekly_table);
         TextView rawTagText = view.findViewById(R.id.dialog_raw_tag);
+        TextView checkDateText = view.findViewById(R.id.dialog_check_date);
 
         if (schedule != null) {
             statusText.setText(schedule.getTodayStatus());
@@ -140,6 +141,17 @@ public class PoiDetailsDialog {
         } else {
             statusText.setText("解析不可");
             rawTagText.setText("Raw: " + poi.getTag(isPostBox ? "collection_times" : "opening_hours"));
+        }
+
+        String checkDate = poi.getTag("check_date");
+        if (checkDate == null) {
+            checkDate = poi.getTag("lastcheck");
+        }
+        if (checkDate != null) {
+            checkDateText.setText("最終確認日: " + checkDate);
+            checkDateText.setVisibility(View.VISIBLE);
+        } else {
+            checkDateText.setVisibility(View.GONE);
         }
 
         builder.setView(view);
