@@ -25,7 +25,7 @@ public class MainViewModel extends ViewModel {
         // TODO: Dependency Injection
         this.repository = new PoiRepositoryImpl();
         
-        getPois().observeForever(pois -> applyFilter());
+        repository.getPois(0,0,0,0).observeForever(pois -> applyFilter());
         filterOpenOnly.observeForever(filter -> applyFilter());
         repository.getError().observeForever(errorMessage::postValue);
     }

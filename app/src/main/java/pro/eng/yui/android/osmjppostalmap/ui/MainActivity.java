@@ -54,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
     private double lastZoomLevel = 17.0;
     private final android.os.Handler debounceHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable debounceRunnable = null;
+    private boolean initialLocationSet = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -137,9 +138,10 @@ public class MainActivity extends AppCompatActivity {
         map.getController().setZoom(17.0);
         map.getController().setCenter(startPoint);
 
-        requestLocationPermissions();
-
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
+        viewModel.setFilterOpenOnly(false); // 初期化トリガー
+        
+        requestLocationPermissions();
         
         // Observe Filtered POIs
         viewModel.getFilteredPois().observe(this, pois -> {
@@ -199,6 +201,9 @@ public class MainActivity extends AppCompatActivity {
         // Refresh Button
         CooldownRefreshButton refreshButton = findViewById(R.id.refresh_button);
         refreshButton.setOnClickListener(v -> {
+            if (!initialLocationSet) {
+                initialLocationSet = true;
+            }
             updatePois();
             Toast.makeText(this, "再取得しています...", Toast.LENGTH_SHORT).show();
         });
@@ -244,6 +249,10 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.gps_button).setOnClickListener(v -> {
             if (lastLocation != null) {
                 map.getController().animateTo(new GeoPoint(lastLocation.getLatitude(), lastLocation.getLongitude()));
+                if (!initialLocationSet) {
+                    initialLocationSet = true;
+                    updatePois();
+                }
             } else {
                 Toast.makeText(this, "現在地を取得中です...", Toast.LENGTH_SHORT).show();
             }
@@ -278,6 +287,9 @@ public class MainActivity extends AppCompatActivity {
             }
             searchResultsList.setVisibility(View.VISIBLE);
             searchResultsList.setAdapter(new SearchAdapter(results, poi -> {
+                if (!initialLocationSet) {
+                    initialLocationSet = true;
+                }
                 map.getController().animateTo(new GeoPoint(poi.getLat(), poi.getLon()));
                 map.getController().setZoom(18.0);
                 searchResultsList.setVisibility(View.GONE);
@@ -370,7 +382,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updatePois() {
-        if (map == null || !map.isLayoutOccurred()) {
+        if (map == null || !map.isLayoutOccurred() || !initialLocationSet) {
             return;
         }
         org.osmdroid.util.BoundingBox box = map.getBoundingBox();
@@ -394,6 +406,10 @@ public class MainActivity extends AppCompatActivity {
                     updateCurrentLocation(loc);
                     // 初期表示を現在地に
                     map.getController().setCenter(new GeoPoint(loc.getLatitude(), loc.getLongitude()));
+                    if (!initialLocationSet) {
+                        initialLocationSet = true;
+                        updatePois();
+                    }
                 }
             }
             if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
@@ -403,6 +419,10 @@ public class MainActivity extends AppCompatActivity {
                     updateCurrentLocation(loc);
                     // 初期表示を現在地に
                     map.getController().setCenter(new GeoPoint(loc.getLatitude(), loc.getLongitude()));
+                    if (!initialLocationSet) {
+                        initialLocationSet = true;
+                        updatePois();
+                    }
                 }
             }
         } catch (SecurityException e) {
@@ -414,6 +434,11 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onLocationChanged(@NonNull Location location) {
             updateCurrentLocation(location);
+            if (!initialLocationSet) {
+                initialLocationSet = true;
+                map.getController().setCenter(new GeoPoint(location.getLatitude(), location.getLongitude()));
+                updatePois();
+            }
         }
         @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
         @Override public void onProviderEnabled(@NonNull String provider) {}
