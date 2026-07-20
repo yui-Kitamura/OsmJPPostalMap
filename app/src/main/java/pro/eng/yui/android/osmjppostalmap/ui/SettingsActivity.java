@@ -183,10 +183,9 @@ public class SettingsActivity extends AppCompatActivity {
                         
                         if (displayName != null && !displayName.isEmpty()) {
                             authRepository.saveUserName(displayName);
-                            String finalDisplayName = displayName;
                             runOnUiThread(() -> {
                                 updateUi(loginStatus, btnLogin, btnUserPage, btnLogout);
-                                Toast.makeText(SettingsActivity.this, "ログインしました: " + finalDisplayName, Toast.LENGTH_SHORT).show();
+                                Toast.makeText(SettingsActivity.this, "ログインしました: " + authRepository.getUserName(), Toast.LENGTH_SHORT).show();
                             });
                         } else {
                             android.util.Log.e("OSM_AUTH", "display_name is empty in JSON response");
