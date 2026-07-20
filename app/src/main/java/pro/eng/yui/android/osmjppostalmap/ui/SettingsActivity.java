@@ -178,25 +178,18 @@ public class SettingsActivity extends AppCompatActivity {
                         android.util.Log.d("OSM_AUTH", "User Details Response: " + json);
                         
                         JSONObject obj = new JSONObject(json);
-                        String displayName = null;
+                        JSONObject user = obj.getJSONObject("user");
+                        String displayName = user.getString("display_name");
                         
-                        // OSM API 0.6 JSON can have {"user": {...}} or just fields if it's a different endpoint
-                        if (obj.has("user")) {
-                            JSONObject user = obj.getJSONObject("user");
-                            displayName = user.optString("display_name", null);
-                        } else {
-                            displayName = obj.optString("display_name", null);
-                        }
-                        
-                        final String finalDisplayName = displayName;
                         if (displayName != null && !displayName.isEmpty()) {
                             authRepository.saveUserName(displayName);
+                            String finalDisplayName = displayName;
                             runOnUiThread(() -> {
                                 updateUi(loginStatus, btnLogin, btnUserPage, btnLogout);
                                 Toast.makeText(SettingsActivity.this, "ログインしました: " + finalDisplayName, Toast.LENGTH_SHORT).show();
                             });
                         } else {
-                            android.util.Log.e("OSM_AUTH", "display_name not found in JSON response");
+                            android.util.Log.e("OSM_AUTH", "display_name is empty in JSON response");
                             runOnUiThread(() -> updateUi(loginStatus, btnLogin, btnUserPage, btnLogout));
                         }
                     } else {
