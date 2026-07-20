@@ -220,6 +220,21 @@
                 android:contentDescription="強制的に編集する" />
         </LinearLayout>
 
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/edit_ref_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="ポスト番号 (ref)"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edit_ref_value"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
+
         <Button
             android:id="@+id/btn_save"
             android:layout_width="match_parent"

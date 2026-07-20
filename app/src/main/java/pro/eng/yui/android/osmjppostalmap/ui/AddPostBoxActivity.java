@@ -108,6 +108,7 @@ public class AddPostBoxActivity extends AppCompatActivity {
         });
         RadioGroup radioShape = findViewById(R.id.radio_shape);
         TextInputEditText inputBranch = findViewById(R.id.input_branch);
+        TextInputEditText inputRef = findViewById(R.id.input_ref);
         TextInputEditText inputNote = findViewById(R.id.input_note);
         tableCollection = findViewById(R.id.table_collection);
         Button btnAddRow = findViewById(R.id.btn_add_row);
@@ -179,6 +180,7 @@ public class AddPostBoxActivity extends AppCompatActivity {
             }
             String shape = ((RadioButton)findViewById(selectedShapeId)).getText().toString();
             String branch = inputBranch.getText() != null ? inputBranch.getText().toString() : "";
+            String ref = inputRef.getText() != null ? inputRef.getText().toString() : "";
             String note = inputNote.getText() != null ? inputNote.getText().toString() : "";
             String collection = formatCollectionTimes();
 
@@ -192,7 +194,7 @@ public class AddPostBoxActivity extends AppCompatActivity {
                 .setMessage("OSMに新しいポストを追加しますか？")
                 .setPositiveButton("追加", (dialog, which) -> {
                     GeoPoint pos = marker.getPosition();
-                    repository.addPostBox(pos.getLatitude(), pos.getLongitude(), shape, branch, collection, note, new PoiRepository.PoiSaveCallback() {
+                    repository.addPostBox(pos.getLatitude(), pos.getLongitude(), shape, branch, ref, collection, note, new PoiRepository.PoiSaveCallback() {
                         @Override
                         public void onSuccess() {
                             Toast.makeText(AddPostBoxActivity.this, "追加しました", Toast.LENGTH_SHORT).show();

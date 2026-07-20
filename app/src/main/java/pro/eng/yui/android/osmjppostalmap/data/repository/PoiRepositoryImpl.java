@@ -308,7 +308,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     @Override
-    public void addPostBox(double lat, double lon, String shape, String branch, String collectionTimes, String note, PoiSaveCallback callback) {
+    public void addPostBox(double lat, double lon, String shape, String branch, String postboxRef, String collectionTimes, String note, PoiSaveCallback callback) {
         if (accessToken == null) {
             callback.onError("ログインが必要です");
             return;
@@ -327,7 +327,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             public void onResponse(Call<String> call, Response<String> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     long changesetId = Long.parseLong(response.body().trim());
-                    createPostBoxInternal(auth, changesetId, lat, lon, shape, branch, collectionTimes, note, callback);
+                    createPostBoxInternal(auth, changesetId, lat, lon, shape, branch, postboxRef, collectionTimes, note, callback);
                 } else {
                     callback.onError("Changesetの作成に失敗しました: " + response.code());
                 }
@@ -340,7 +340,7 @@ public class PoiRepositoryImpl implements PoiRepository {
         });
     }
 
-    private void createPostBoxInternal(String auth, long changesetId, double lat, double lon, String shape, String branch, String collectionTimes, String note, PoiSaveCallback callback) {
+    private void createPostBoxInternal(String auth, long changesetId, double lat, double lon, String shape, String branch, String postboxRef, String collectionTimes, String note, PoiSaveCallback callback) {
         // XML生成 (OSM API v0.6 形式)
         StringBuilder xml = new StringBuilder();
         xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
@@ -355,6 +355,9 @@ public class PoiRepositoryImpl implements PoiRepository {
         }
         if (branch != null && !branch.isEmpty()) {
             xml.append("    <tag k=\"operator:branch\" v=\"").append(branch).append("\"/>\n");
+        }
+        if (postboxRef != null && !postboxRef.isEmpty()) {
+            xml.append("    <tag k=\"ref\" v=\"").append(postboxRef).append("\"/>\n");
         }
         if (collectionTimes != null && !collectionTimes.isEmpty()) {
             xml.append("    <tag k=\"collection_times\" v=\"").append(collectionTimes).append("\"/>\n");

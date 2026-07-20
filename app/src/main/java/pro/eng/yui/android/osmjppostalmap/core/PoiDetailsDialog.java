@@ -156,6 +156,7 @@ public class PoiDetailsDialog {
             intent.putExtra("TAG_NAME", poi.getTag("name"));
             intent.putExtra("TAG_OPENING_HOURS", poi.getTag("opening_hours"));
             intent.putExtra("TAG_COLLECTION_TIMES", poi.getTag("collection_times"));
+            intent.putExtra("TAG_REF", poi.getTag("ref"));
             context.startActivity(intent);
         });
         

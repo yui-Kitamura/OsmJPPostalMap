@@ -120,6 +120,7 @@ public class EditPoiActivity extends AppCompatActivity {
         if (getIntent().hasExtra("TAG_NAME")) tags.put("name", getIntent().getStringExtra("TAG_NAME"));
         if (getIntent().hasExtra("TAG_OPENING_HOURS")) tags.put("opening_hours", getIntent().getStringExtra("TAG_OPENING_HOURS"));
         if (getIntent().hasExtra("TAG_COLLECTION_TIMES")) tags.put("collection_times", getIntent().getStringExtra("TAG_COLLECTION_TIMES"));
+        if (getIntent().hasExtra("TAG_REF")) tags.put("ref", getIntent().getStringExtra("TAG_REF"));
 
         targetPoi = new OsmPoi(id, initialLat, initialLon, type != null ? type : "node", tags);
 
@@ -127,6 +128,8 @@ public class EditPoiActivity extends AppCompatActivity {
         tagInput = findViewById(R.id.edit_tag_value);
         View tagLayout = findViewById(R.id.edit_tag_layout);
         View collectionLayout = findViewById(R.id.layout_collection_edit);
+        View refLayout = findViewById(R.id.edit_ref_layout);
+        TextInputEditText refInput = findViewById(R.id.edit_ref_value);
         tableCollection = findViewById(R.id.table_collection);
         layoutFallback = findViewById(R.id.layout_fallback);
         textFallback = findViewById(R.id.text_fallback_value);
@@ -162,6 +165,12 @@ public class EditPoiActivity extends AppCompatActivity {
         title.setText(isPostBox ? "郵便ポストの編集" : "郵便局の編集");
 
         if (isPostBox) {
+            refLayout.setVisibility(View.VISIBLE);
+            String currentRef = targetPoi.getTag("ref");
+            if (currentRef != null) {
+                refInput.setText(currentRef);
+            }
+
             String currentTimes = targetPoi.getTag("collection_times");
             if (currentTimes != null && !currentTimes.isEmpty()) {
                 boolean parsed = parseAndFillCollectionTimes(currentTimes);
@@ -320,6 +329,14 @@ public class EditPoiActivity extends AppCompatActivity {
         boolean isPostBox = "post_box".equals(amenity);
         
         if (isPostBox) {
+            TextInputEditText refInput = findViewById(R.id.edit_ref_value);
+            String newRef = refInput.getText() != null ? refInput.getText().toString().trim() : "";
+            if (!newRef.isEmpty()) {
+                targetPoi.getTags().put("ref", newRef);
+            } else {
+                targetPoi.getTags().remove("ref");
+            }
+
             if (layoutFallback.getVisibility() == View.VISIBLE) {
                 // パース失敗時（フォールバック表示中）は時刻タグを更新しない（位置のみ更新）
                 // 既に targetPoi.getTags() には元の値が入っている
