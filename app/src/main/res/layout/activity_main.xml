@@ -8,7 +8,8 @@
     <org.osmdroid.views.MapView
         android:id="@+id/map"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:elevation="0dp" />
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/search_card"
@@ -38,6 +39,7 @@
         android:layout_marginEnd="16dp"
         android:background="@drawable/bg_menu_button"
         android:src="@android:drawable/ic_menu_sort_by_size"
+        android:elevation="10dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         android:contentDescription="設定メニュー" />
@@ -50,6 +52,7 @@
         android:layout_marginEnd="16dp"
         android:background="@drawable/bg_menu_button"
         android:src="@android:drawable/ic_menu_rotate"
+        android:elevation="10dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/menu_button"
         android:contentDescription="再取得" />
@@ -62,6 +65,7 @@
         android:layout_marginEnd="16dp"
         android:background="@drawable/bg_menu_button"
         android:src="@android:drawable/ic_menu_search"
+        android:elevation="10dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/refresh_button"
         android:contentDescription="検索" />
@@ -73,6 +77,7 @@
         android:layout_marginTop="8dp"
         android:layout_marginEnd="16dp"
         android:background="@android:color/transparent"
+        android:elevation="10dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/search_button"
         android:contentDescription="フィルタ" />
@@ -85,6 +90,7 @@
         android:layout_marginEnd="16dp"
         android:background="@drawable/bg_menu_button"
         android:src="@android:drawable/ic_menu_mylocation"
+        android:elevation="10dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/filter_button"
         android:contentDescription="現在地へ移動" />
@@ -95,6 +101,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="24dp"
         android:src="@android:drawable/ic_input_add"
+        app:elevation="6dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:contentDescription="ポスト追加" />
