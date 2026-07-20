@@ -76,6 +76,21 @@ public class SimpleScheduleParserTest {
     }
 
     @Test
+    public void testMultipleCollectionsToday() {
+        // Mo-Su 10:00, 15:00
+        String tag = "Mo-Su 10:00, 15:00";
+        // 2026-07-20 09:00 (Mon)
+        ZonedDateTime now = ZonedDateTime.of(2026, 7, 20, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult result = parser.parse(tag, now.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        
+        assertNotNull(result.getNextEvent());
+        assertEquals(10, LocalDateTime.ofInstant(Instant.ofEpochMilli(result.getNextEvent().getTimestamp()), ZoneId.of("Asia/Tokyo")).getHour());
+        
+        assertNotNull("Following event should not be null", result.getFollowingEvent());
+        assertEquals(15, LocalDateTime.ofInstant(Instant.ofEpochMilli(result.getFollowingEvent().getTimestamp()), ZoneId.of("Asia/Tokyo")).getHour());
+    }
+
+    @Test
     public void testEmptyTagReturnsUnknown() {
         ScheduleResult result = parser.parse(null, System.currentTimeMillis(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());

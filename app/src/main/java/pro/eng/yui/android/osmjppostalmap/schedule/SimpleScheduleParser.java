@@ -212,19 +212,17 @@ public class SimpleScheduleParser implements ScheduleParser {
                             int collectionTime = parseMinutes(timeRange);
                             
                             if (currentMinutes < collectionTime) {
-                                if (nextEvent == null || nextEvent.getType() != ScheduleResult.EventType.COLLECTION) {
-                                    if (nextEvent == null) {
-                                        nextEvent = createEvent(now, collectionTime, ScheduleResult.EventType.COLLECTION);
-                                        // 10:00ちょうどは「手遅れ」なので、ここには入らない
-                                        if (collectionTime - currentMinutes <= 60) {
-                                            state = ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON;
-                                        } else {
-                                            state = ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON;
-                                        }
-                                        todayStatus = "次回 " + (collectionTime >= 1440 ? String.format(Locale.getDefault(), "%02d:%02d", (collectionTime - 1440) / 60, (collectionTime - 1440) % 60) : timeRange);
-                                    } else if (followingEvent == null) {
-                                        followingEvent = createEvent(now, collectionTime, ScheduleResult.EventType.COLLECTION);
+                                if (nextEvent == null) {
+                                    nextEvent = createEvent(now, collectionTime, ScheduleResult.EventType.COLLECTION);
+                                    // 10:00ちょうどは「手遅れ」なので、ここには入らない
+                                    if (collectionTime - currentMinutes <= 60) {
+                                        state = ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON;
+                                    } else {
+                                        state = ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON;
                                     }
+                                    todayStatus = "次回 " + (collectionTime >= 1440 ? String.format(Locale.getDefault(), "%02d:%02d", (collectionTime - 1440) / 60, (collectionTime - 1440) % 60) : timeRange);
+                                } else if (followingEvent == null) {
+                                    followingEvent = createEvent(now, collectionTime, ScheduleResult.EventType.COLLECTION);
                                 }
                             }
                         }
