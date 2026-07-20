@@ -3,6 +3,7 @@ package pro.eng.yui.android.osmjppostalmap.data.repository;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import retrofit2.converter.scalars.ScalarsConverterFactory;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -73,8 +74,9 @@ public class PoiRepositoryImpl implements PoiRepository {
         this.overpassApi = overpassRetrofit.create(OverpassApi.class);
 
         Retrofit osmRetrofit = new Retrofit.Builder()
-                .baseUrl("https://www.openstreetmap.org/api/0.6/")
+                .baseUrl("https://www.openstreetmap.org/")
                 .client(client)
+                .addConverterFactory(ScalarsConverterFactory.create())
                 .build();
         this.osmApi = osmRetrofit.create(OsmApi.class);
     }
