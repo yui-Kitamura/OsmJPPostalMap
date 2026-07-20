@@ -60,7 +60,6 @@ public class PoiRepositoryImpl implements PoiRepository {
                 .addInterceptor(chain -> {
                     Request request = chain.request().newBuilder()
                             .header("User-Agent", "OsmJPPostalMap/" + BuildConfig.VERSION_NAME)
-                            .header("Accept", "application/json")
                             .build();
                     return chain.proceed(request);
                 })
@@ -68,14 +67,24 @@ public class PoiRepositoryImpl implements PoiRepository {
 
         Retrofit overpassRetrofit = new Retrofit.Builder()
                 .baseUrl("https://overpass-api.de/api/")
-                .client(client)
+                .client(client.newBuilder().addInterceptor(chain -> {
+                    Request request = chain.request().newBuilder()
+                            .header("Accept", "application/json")
+                            .build();
+                    return chain.proceed(request);
+                }).build())
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
         this.overpassApi = overpassRetrofit.create(OverpassApi.class);
 
         Retrofit osmRetrofit = new Retrofit.Builder()
                 .baseUrl("https://www.openstreetmap.org/")
-                .client(client)
+                .client(client.newBuilder().addInterceptor(chain -> {
+                    Request request = chain.request().newBuilder()
+                            .header("Accept", "application/xml")
+                            .build();
+                    return chain.proceed(request);
+                }).build())
                 .addConverterFactory(ScalarsConverterFactory.create())
                 .build();
         this.osmApi = osmRetrofit.create(OsmApi.class);
