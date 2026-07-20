@@ -3,7 +3,9 @@ package pro.eng.yui.android.osmjppostalmap.data.repository;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -247,7 +249,11 @@ public class PoiRepositoryImpl implements PoiRepository {
                             }
                             updateXml.append(">");
 
-                            for (Map.Entry<String, String> entry : poi.getTags().entrySet()) {
+                            String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+                            Map<String, String> tags = poi.getTags();
+                            tags.put("check_date", today);
+
+                            for (Map.Entry<String, String> entry : tags.entrySet()) {
                                 updateXml.append("<tag k=\"").append(entry.getKey()).append("\" v=\"").append(entry.getValue()).append("\"/>");
                             }
                             updateXml.append("</").append(poi.getType()).append(">");
@@ -356,6 +362,8 @@ public class PoiRepositoryImpl implements PoiRepository {
         if (note != null && !note.isEmpty()) {
             xml.append("    <tag k=\"note\" v=\"").append(note).append("\"/>\n");
         }
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+        xml.append("    <tag k=\"check_date\" v=\"").append(today).append("\"/>\n");
         xml.append("  </node>\n");
         xml.append("</osm>");
 
