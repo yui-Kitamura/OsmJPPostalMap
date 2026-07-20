@@ -2,6 +2,23 @@ plugins {
     id 'com.android.application'
 }
 
+def getGitCommitHash = { ->
+    def hash = System.getenv("GIT_COMMIT_HASH")
+    if (hash != null && !hash.isEmpty()) {
+        return hash.take(7)
+    }
+    try {
+        def stdout = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'rev-parse', '--short', 'HEAD'
+            standardOutput = stdout
+        }
+        return stdout.toString().trim()
+    } catch (ignored) {
+        return "local"
+    }
+}
+
 android {
     namespace 'pro.eng.yui.android.osmjppostalmap'
     compileSdk {
@@ -19,6 +36,7 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "VERSION_NAME", "\"${versionName}\""
+        buildConfigField "String", "GIT_COMMIT_HASH", "\"${getGitCommitHash()}\""
 
         // OSM OAuth credentials from environment variables or local.properties
         def osmClientId = System.getenv("OSM_CLIENT_ID") ?: project.findProperty("OSM_CLIENT_ID") ?: ""

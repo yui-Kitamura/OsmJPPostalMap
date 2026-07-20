@@ -91,6 +91,13 @@ public class SettingsActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
+        TextView appVersionInfo = findViewById(R.id.app_version_info);
+        String versionInfo = String.format("v%s(%d) + %s", 
+                BuildConfig.VERSION_NAME, 
+                BuildConfig.VERSION_CODE, 
+                BuildConfig.GIT_COMMIT_HASH);
+        appVersionInfo.setText("OSM JP Postal Map " + versionInfo);
+
         // 認可コードの処理
         handleIntent(getIntent(), loginStatus, btnLogin, btnUserPage, btnLogout);
     }

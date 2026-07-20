@@ -28,6 +28,7 @@ jobs:
       - name: Build Release APK
         run: gradle assembleRelease
         env:
+          GIT_COMMIT_HASH: ${{ github.sha }}
           KEYSTORE_FILE: release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -39,6 +40,7 @@ jobs:
         if: github.event_name == 'release'
         run: gradle bundleRelease
         env:
+          GIT_COMMIT_HASH: ${{ github.sha }}
           KEYSTORE_FILE: release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
