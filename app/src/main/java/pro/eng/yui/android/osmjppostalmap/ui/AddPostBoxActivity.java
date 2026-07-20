@@ -22,6 +22,7 @@ import org.osmdroid.events.MapListener;
 import org.osmdroid.events.ScrollEvent;
 import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.util.GeoPoint;
+import org.osmdroid.tileprovider.tilesource.XYTileSource;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
 import android.view.View;
@@ -138,11 +139,14 @@ public class AddPostBoxActivity extends AppCompatActivity {
         });
 
         // 地図の初期化 (MainActivityからの遷移時はその中心座標を使用)
+        map.setTileSource(new XYTileSource("OSMJP", 0, 18, 256, ".png", 
+                new String[] { "https://tile.openstreetmap.jp/" }));
         map.setMultiTouchControls(true);
         double lat = getIntent().getDoubleExtra("LATITUDE", 35.6812);
         double lon = getIntent().getDoubleExtra("LONGITUDE", 139.7671);
+        double zoom = getIntent().getDoubleExtra("ZOOM_LEVEL", 18.0);
         GeoPoint startPoint = new GeoPoint(lat, lon);
-        map.getController().setZoom(18.0);
+        map.getController().setZoom(zoom);
         map.getController().setCenter(startPoint);
 
         marker = new ReticleMarker(map);

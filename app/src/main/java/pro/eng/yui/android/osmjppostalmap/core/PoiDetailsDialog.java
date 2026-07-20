@@ -166,6 +166,13 @@ public class PoiDetailsDialog {
             intent.putExtra("TAG_OPENING_HOURS", poi.getTag("opening_hours"));
             intent.putExtra("TAG_COLLECTION_TIMES", poi.getTag("collection_times"));
             intent.putExtra("TAG_REF", poi.getTag("ref"));
+            if (context instanceof pro.eng.yui.android.osmjppostalmap.ui.MainActivity) {
+                pro.eng.yui.android.osmjppostalmap.ui.MainActivity activity = (pro.eng.yui.android.osmjppostalmap.ui.MainActivity) context;
+                org.osmdroid.views.MapView map = activity.findViewById(R.id.map);
+                if (map != null) {
+                    intent.putExtra("ZOOM_LEVEL", map.getZoomLevelDouble());
+                }
+            }
             context.startActivity(intent);
         });
         

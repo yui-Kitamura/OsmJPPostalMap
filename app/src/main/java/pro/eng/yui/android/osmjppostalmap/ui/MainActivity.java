@@ -235,6 +235,7 @@ public class MainActivity extends AppCompatActivity {
             org.osmdroid.api.IGeoPoint center = map.getMapCenter();
             intent.putExtra("LATITUDE", center.getLatitude());
             intent.putExtra("LONGITUDE", center.getLongitude());
+            intent.putExtra("ZOOM_LEVEL", map.getZoomLevelDouble());
             startActivity(intent);
         });
 

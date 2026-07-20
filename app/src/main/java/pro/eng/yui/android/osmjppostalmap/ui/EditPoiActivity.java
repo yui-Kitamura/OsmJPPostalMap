@@ -22,6 +22,7 @@ import org.osmdroid.events.MapListener;
 import org.osmdroid.events.ScrollEvent;
 import org.osmdroid.events.ZoomEvent;
 import org.osmdroid.util.GeoPoint;
+import org.osmdroid.tileprovider.tilesource.XYTileSource;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
 import androidx.core.view.ViewCompat;
@@ -313,9 +314,12 @@ public class EditPoiActivity extends AppCompatActivity {
         }
 
         // 地図の初期化
+        map.setTileSource(new XYTileSource("OSMJP", 0, 18, 256, ".png", 
+                new String[] { "https://tile.openstreetmap.jp/" }));
         map.setMultiTouchControls(true);
         GeoPoint startPoint = new GeoPoint(targetPoi.getLat(), targetPoi.getLon());
-        map.getController().setZoom(19.0);
+        double zoom = getIntent().getDoubleExtra("ZOOM_LEVEL", 19.0);
+        map.getController().setZoom(zoom);
         map.getController().setCenter(startPoint);
 
         marker = new ReticleMarker(map);
