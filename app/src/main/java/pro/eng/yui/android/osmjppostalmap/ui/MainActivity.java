@@ -67,20 +67,15 @@ public class MainActivity extends AppCompatActivity {
         Configuration.getInstance().load(this, getSharedPreferences("osmdroid", MODE_PRIVATE));
         
         setContentView(R.layout.activity_main);
-        new Thread(SimpleScheduleParser::initializeHolidays).start();
 
+        ClockFilterButton filterButton = findViewById(R.id.filter_button);
+        if (filterButton != null) {
+            filterButton.invalidate();
+        }
         View postOfficeFilterButtonForHolidays = findViewById(R.id.post_office_filter_button);
-        SimpleScheduleParser.setOnHolidaysLoadedListener(() -> {
-            runOnUiThread(() -> {
-                View filterButton = findViewById(R.id.filter_button);
-                if (filterButton != null) {
-                    filterButton.invalidate();
-                }
-                if (postOfficeFilterButtonForHolidays != null) {
-                    postOfficeFilterButtonForHolidays.invalidate();
-                }
-            });
-        });
+        if (postOfficeFilterButtonForHolidays != null) {
+            postOfficeFilterButtonForHolidays.invalidate();
+        }
 
         // Edge-to-Edge adjustment
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_layout), (v, insets) -> {
@@ -208,7 +203,6 @@ public class MainActivity extends AppCompatActivity {
 
 
         // Filter Button
-        ClockFilterButton filterButton = findViewById(R.id.filter_button);
         filterButton.setOnClickListener(v -> {
             boolean currentFilter = viewModel.getFilterOpenOnly().getValue() != null && viewModel.getFilterOpenOnly().getValue();
             viewModel.setFilterOpenOnly(!currentFilter);

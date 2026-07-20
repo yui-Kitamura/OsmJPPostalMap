@@ -1,12 +1,8 @@
 package pro.eng.yui.android.osmjppostalmap.schedule;
 
 import java.time.*;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import android.content.Context;
-import android.content.res.AssetManager;
+import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 
 /**
  * 簡易版のopening_hours / collection_times パーサー
@@ -15,67 +11,6 @@ import android.content.res.AssetManager;
 public class SimpleScheduleParser implements ScheduleParser {
 
     private static final ZoneId JST = ZoneId.of("Asia/Tokyo");
-    private static final Set<LocalDate> HOLIDAYS = new HashSet<>();
-    private static boolean holidaysLoaded = false;
-    private static OnHolidaysLoadedListener loadListener;
-
-    public interface OnHolidaysLoadedListener {
-        void onHolidaysLoaded();
-    }
-
-    public static void setOnHolidaysLoadedListener(OnHolidaysLoadedListener listener) {
-        loadListener = listener;
-        if (holidaysLoaded && loadListener != null) {
-            loadListener.onHolidaysLoaded();
-        }
-    }
-
-    public static void initializeHolidays() {
-        if (holidaysLoaded) return;
-        int currentYear = LocalDate.now(JST).getYear();
-        synchronized (HOLIDAYS) {
-            if (holidaysLoaded) return;
-            try {
-                java.net.URL url = new java.net.URL("https://www8.cao.go.jp/chosei/shukujitsu/syukujitsu.csv");
-                java.net.HttpURLConnection connection = (java.net.HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("GET");
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(connection.getInputStream(), "Shift_JIS"))) {
-                    String line;
-                    boolean firstLine = true;
-                    while ((line = reader.readLine()) != null) {
-                        if (firstLine) {
-                            firstLine = false;
-                            continue;
-                        }
-                        String[] cols = line.split(",");
-                        if (cols.length > 0) {
-                            String dateStr = cols[0].trim();
-                            try {
-                                // CSV format: yyyy/M/d (e.g., 1955/1/1)
-                                String[] parts = dateStr.split("/");
-                                if (parts.length == 3) {
-                                    int y = Integer.parseInt(parts[0]);
-                                    if (y < currentYear) {
-                                        continue; // 過去年は切り捨て
-                                    }
-                                    int m = Integer.parseInt(parts[1]);
-                                    int d = Integer.parseInt(parts[2]);
-                                    HOLIDAYS.add(LocalDate.of(y, m, d));
-                                }
-                            } catch (Exception ignore) {}
-                        }
-                    }
-                    holidaysLoaded = true;
-                    if (loadListener != null) {
-                        loadListener.onHolidaysLoaded();
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
 
     @Override
     public ScheduleResult parse(String tagValue, long currentTime, Amenity amenity) {
@@ -85,15 +20,14 @@ public class SimpleScheduleParser implements ScheduleParser {
 
         String trimmedTag = tagValue.trim();
         if (trimmedTag.equals("24/7")) {
-            ZonedDateTime now = ZonedDateTime.ofInstant(Instant.ofEpochMilli(currentTime), JST);
-            boolean isHoliday = isJapanHoliday(now.toLocalDate());
+            boolean isHoliday = JpPostalUtil.isHoliday();
             return new ScheduleResult(null, null, "24時間営業", ScheduleResult.CurrentState.OPENING, new HashMap<>(), tagValue, isHoliday);
         }
 
         try {
             ZonedDateTime now = ZonedDateTime.ofInstant(Instant.ofEpochMilli(currentTime), JST);
             
-            boolean isHoliday = isJapanHoliday(now.toLocalDate());
+            boolean isHoliday = JpPostalUtil.isHoliday(LocalDate.from(now));
             Map<String, List<String>> weeklyTable = parseToWeeklyTable(tagValue);
             
             if (weeklyTable.isEmpty()) {
@@ -111,7 +45,7 @@ public class SimpleScheduleParser implements ScheduleParser {
 
             // 深夜判定（前日の延長がないか確認）
             ZonedDateTime yesterday = now.minusDays(1);
-            boolean yesterdayWasHoliday = isJapanHoliday(yesterday.toLocalDate());
+            boolean yesterdayWasHoliday = JpPostalUtil.isHoliday(yesterday.toLocalDate());
             List<String> yesterdayTimes = null;
             if (yesterdayWasHoliday && weeklyTable.containsKey("PH")) {
                 yesterdayTimes = weeklyTable.get("PH");
@@ -239,7 +173,7 @@ public class SimpleScheduleParser implements ScheduleParser {
             if (nextEvent == null) {
                 for (int i = 1; i <= 7; i++) {
                     ZonedDateTime nextDay = now.plusDays(i);
-                    boolean nextDayIsHoliday = isJapanHoliday(nextDay.toLocalDate());
+                    boolean nextDayIsHoliday = JpPostalUtil.isHoliday(nextDay.toLocalDate());
                     List<String> nextDayTimes = null;
                     
                     if (nextDayIsHoliday) {
@@ -300,10 +234,6 @@ public class SimpleScheduleParser implements ScheduleParser {
         ZonedDateTime eventTime = baseDate.withHour(0).withMinute(0).withSecond(0).withNano(0)
                 .plusMinutes(totalMinutes);
         return new ScheduleResult.Event(eventTime.toInstant().toEpochMilli(), type);
-    }
-
-    public static boolean isJapanHoliday(LocalDate date) {
-        return HOLIDAYS.contains(date);
     }
 
     private Map<String, List<String>> parseToWeeklyTable(String tagValue) {
