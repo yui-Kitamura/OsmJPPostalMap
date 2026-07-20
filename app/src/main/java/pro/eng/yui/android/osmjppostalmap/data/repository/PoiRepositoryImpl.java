@@ -200,7 +200,11 @@ public class PoiRepositoryImpl implements PoiRepository {
             public void onResponse(Call<String> call, Response<String> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     long changesetId = Long.parseLong(response.body().trim());
-                    updatePoiInternal(auth, changesetId, poi, callback);
+                    if (poi.getId() > 0) {
+                        updatePoiInternal(auth, changesetId, poi, callback);
+                    } else {
+                        createPoiInternal(auth, changesetId, poi, callback);
+                    }
                 } else {
                     callback.onError("Changesetの作成に失敗しました: " + response.code());
                 }
@@ -213,14 +217,45 @@ public class PoiRepositoryImpl implements PoiRepository {
         });
     }
 
-    private void updatePoiInternal(String auth, long changesetId, OsmPoi poi, PoiSaveCallback callback) {
+    private void createPoiInternal(String auth, long changesetId, OsmPoi poi, PoiSaveCallback callback) {
         // XML生成 (OSM API v0.6 形式)
         StringBuilder xml = new StringBuilder();
-        xml.append("<osm>");
-        xml.append("<").append(poi.getType()).append(" id=\"").append(poi.getId()).append("\" ");
+        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        xml.append("<osm version=\"0.6\" generator=\"OsmJPPostalMap\">\n");
+        xml.append("  <").append(poi.getType()).append(" changeset=\"").append(changesetId).append("\" ");
         if ("node".equals(poi.getType())) {
             xml.append("lat=\"").append(poi.getLat()).append("\" lon=\"").append(poi.getLon()).append("\" ");
         }
+        xml.append(">\n");
+
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+        Map<String, String> tags = poi.getTags();
+        tags.put("check_date", today);
+
+        for (Map.Entry<String, String> entry : tags.entrySet()) {
+            xml.append("    <tag k=\"").append(entry.getKey()).append("\" v=\"").append(entry.getValue()).append("\"/>\n");
+        }
+        xml.append("  </").append(poi.getType()).append(">\n");
+        xml.append("</osm>");
+
+        osmApi.createElement(auth, poi.getType(), xml.toString()).enqueue(new Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                if (response.isSuccessful()) {
+                    closeChangeset(auth, changesetId, "追加しました", callback);
+                } else {
+                    callback.onError("要素の作成に失敗しました: " + response.code());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+                callback.onError("通信エラー: " + t.getMessage());
+            }
+        });
+    }
+
+    private void updatePoiInternal(String auth, long changesetId, OsmPoi poi, PoiSaveCallback callback) {
         // バージョン情報が必要だが、OsmPoiには含まれていない。
         // 本来は事前に要素を取得してバージョンを確認すべきだが、簡易実装として
         // 取得した直後の値を保持している想定で進める（ただしOsmPoiにversionがないのでAPIから再取得が必要）
@@ -239,8 +274,9 @@ public class PoiRepositoryImpl implements PoiRepository {
                             String version = m.group(1);
                             
                             StringBuilder updateXml = new StringBuilder();
-                            updateXml.append("<osm>");
-                            updateXml.append("<").append(poi.getType()).append(" ")
+                            updateXml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+                            updateXml.append("<osm version=\"0.6\" generator=\"OsmJPPostalMap\">\n");
+                            updateXml.append("  <").append(poi.getType()).append(" ")
                                     .append("id=\"").append(poi.getId()).append("\" ")
                                     .append("version=\"").append(version).append("\" ")
                                     .append("changeset=\"").append(changesetId).append("\" ");
@@ -248,16 +284,16 @@ public class PoiRepositoryImpl implements PoiRepository {
                             if ("node".equals(poi.getType())) {
                                 updateXml.append("lat=\"").append(poi.getLat()).append("\" lon=\"").append(poi.getLon()).append("\" ");
                             }
-                            updateXml.append(">");
+                            updateXml.append(">\n");
 
                             String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
                             Map<String, String> tags = poi.getTags();
                             tags.put("check_date", today);
 
                             for (Map.Entry<String, String> entry : tags.entrySet()) {
-                                updateXml.append("<tag k=\"").append(entry.getKey()).append("\" v=\"").append(entry.getValue()).append("\"/>");
+                                updateXml.append("    <tag k=\"").append(entry.getKey()).append("\" v=\"").append(entry.getValue()).append("\"/>\n");
                             }
-                            updateXml.append("</").append(poi.getType()).append(">");
+                            updateXml.append("  </").append(poi.getType()).append(">\n");
                             updateXml.append("</osm>");
 
                             osmApi.updateElement(auth, poi.getType(), poi.getId(), updateXml.toString()).enqueue(new Callback<String>() {
