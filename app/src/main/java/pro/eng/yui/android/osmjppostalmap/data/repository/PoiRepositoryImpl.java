@@ -459,14 +459,20 @@ public class PoiRepositoryImpl implements PoiRepository {
         // 郵便番号(7桁)かどうかの簡易判定
         String osmQuery;
         if (query.matches("\\d{3}-?\\d{4}")) {
-            osmQuery = String.format(Locale.US, "node[\"addr:postcode\"=\"%s\"];", query);
+            osmQuery = String.format(Locale.US,
+                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:postcode\"=\"%s\"];", query);
         } else {
             // 名称または住所での検索
-            osmQuery = String.format(Locale.US, 
-                "node[\"name\"~\"%s\"];" +
-                "node[\"addr:full\"~\"%s\"];" +
-                "node[\"addr:street\"~\"%s\"];", 
-                query, query, query);
+            osmQuery = String.format(Locale.US,
+          "nw[\"amenity\"~\"post_box|post_office\"][\"name\"~\"%s\"];" +
+                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:full\"~\"%s\"];" +
+                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:county\"~\"%s\"];" +
+                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:city\"~\"%s\"];" +
+                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:suburb\"~\"%s\"];" +
+                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:quarter\"~\"%s\"];" +
+                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:neighbourhood\"~\"%s\"];" +
+                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:province\"~\"%s\"];",
+                query, query, query, query, query, query, query, query);
         }
 
         String fullQuery = "[out:json][timeout:25];(" + osmQuery + ");out body center qt;";
