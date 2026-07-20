@@ -462,65 +462,6 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     @Override
-    public LiveData<List<OsmPoi>> searchPois(String query) {
-        MutableLiveData<List<OsmPoi>> result = new MutableLiveData<>();
-        
-        // 郵便番号(7桁)かどうかの簡易判定
-        String osmQuery;
-        if (query.matches("\\d{3}-?\\d{4}")) {
-            osmQuery = String.format(Locale.US,
-                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:postcode\"=\"%s\"];", query);
-        } else {
-            // 名称または住所での検索
-            osmQuery = String.format(Locale.US,
-          "nw[\"amenity\"~\"post_box|post_office\"][\"name\"~\"%s\"];" +
-                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:full\"~\"%s\"];" +
-                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:county\"~\"%s\"];" +
-                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:city\"~\"%s\"];" +
-                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:suburb\"~\"%s\"];" +
-                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:quarter\"~\"%s\"];" +
-                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:neighbourhood\"~\"%s\"];" +
-                "nw[\"amenity\"~\"post_box|post_office\"][\"addr:province\"~\"%s\"];",
-                query, query, query, query, query, query, query, query);
-        }
-
-        String fullQuery = "[out:json][timeout:25];(" + osmQuery + ");out body center qt;";
-
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastFetchTime < MIN_INTERVAL_MS) {
-            result.postValue(new ArrayList<>());
-            return result;
-        }
-        lastFetchTime = currentTime;
-
-        overpassApi.query(fullQuery).enqueue(new Callback<OverpassResponse>() {
-            @Override
-            public void onResponse(Call<OverpassResponse> call, Response<OverpassResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    List<OsmPoi> pois = new ArrayList<>();
-                    for (OverpassResponse.Element element : response.body().elements) {
-                        double lat = element.lat;
-                        double lon = element.lon;
-                        if ("way".equals(element.type) && element.center != null) {
-                            lat = element.center.lat;
-                            lon = element.center.lon;
-                        }
-                        pois.add(new OsmPoi(element.id, lat, lon, element.type, element.tags));
-                    }
-                    result.postValue(pois);
-                }
-            }
-
-            @Override
-            public void onFailure(Call<OverpassResponse> call, Throwable t) {
-                result.postValue(new ArrayList<>());
-            }
-        });
-        
-        return result;
-    }
-
-    @Override
     public LiveData<String> getError() {
         return errorLiveData;
     }

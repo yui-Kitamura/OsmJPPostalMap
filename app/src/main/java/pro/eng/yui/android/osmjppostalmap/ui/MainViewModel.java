@@ -18,7 +18,6 @@ public class MainViewModel extends ViewModel {
     private final PoiRepository repository;
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
     private final MutableLiveData<String> successMessage = new MutableLiveData<>();
-    private final MutableLiveData<List<OsmPoi>> searchResults = new MutableLiveData<>();
     private final MutableLiveData<Boolean> filterOpenOnly = new MutableLiveData<>(false);
     private final MutableLiveData<List<OsmPoi>> filteredPois = new MutableLiveData<>();
 
@@ -92,15 +91,6 @@ public class MainViewModel extends ViewModel {
         }
     }
 
-    public void search(String query) {
-        repository.searchPois(query).observeForever(results -> {
-            searchResults.postValue(results);
-        });
-    }
-
-    public LiveData<List<OsmPoi>> getSearchResults() {
-        return searchResults;
-    }
 
     public LiveData<String> getErrorMessage() {
         return errorMessage;

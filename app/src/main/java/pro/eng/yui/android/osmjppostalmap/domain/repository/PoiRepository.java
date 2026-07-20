@@ -36,7 +36,6 @@ public interface PoiRepository {
     /**
      * キーワードでPOIを検索する
      */
-    LiveData<List<OsmPoi>> searchPois(String query);
 
     /**
      * エラーメッセージを配信するLiveDataを取得する

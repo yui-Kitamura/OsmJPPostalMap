@@ -45,7 +45,6 @@ public class MainActivity extends AppCompatActivity {
     private MapView map;
     private org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay locationOverlay;
     private MainViewModel viewModel;
-    private RecyclerView searchResultsList;
     private AuthRepository authRepository;
     private LocationManager locationManager;
     private Location lastLocation;
@@ -110,27 +109,7 @@ public class MainActivity extends AppCompatActivity {
         locationOverlay.enableMyLocation();
         map.getOverlays().add(locationOverlay);
 
-        searchResultsList = findViewById(R.id.search_results);
-        searchResultsList.setLayoutManager(new LinearLayoutManager(this));
-
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-
-        SearchView searchView = findViewById(R.id.search_view);
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                viewModel.search(query);
-                return true;
-            }
-
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                if (newText.isEmpty()) {
-                    searchResultsList.setVisibility(View.GONE);
-                }
-                return false;
-            }
-        });
 
         // OSM JP Tile Server
         map.setTileSource(new XYTileSource("OSMJP", 0, 18, 256, ".png", 
@@ -222,29 +201,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Search Button
-        View searchCard = findViewById(R.id.search_card);
-        View searchButton = findViewById(R.id.search_button);
-        searchButton.setOnClickListener(v -> {
-            if (searchCard.getVisibility() == View.VISIBLE) {
-                searchCard.setVisibility(View.GONE);
-                searchResultsList.setVisibility(View.GONE);
-                searchView.clearFocus();
-                android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-                if (imm != null) {
-                    imm.hideSoftInputFromWindow(searchView.getWindowToken(), 0);
-                }
-            } else {
-                searchCard.setVisibility(View.VISIBLE);
-                searchView.requestFocus();
-                searchView.postDelayed(() -> {
-                    android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-                    if (imm != null) {
-                        imm.showSoftInput(searchView.findFocus(), android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
-                    }
-                }, 100);
-            }
-        });
 
         // Filter Button
         ClockFilterButton filterButton = findViewById(R.id.filter_button);
@@ -312,24 +268,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Observe Search Results
-        viewModel.getSearchResults().observe(this, results -> {
-            if (results == null || results.isEmpty()) {
-                searchResultsList.setVisibility(View.GONE);
-                return;
-            }
-            searchResultsList.setVisibility(View.VISIBLE);
-            searchResultsList.setAdapter(new SearchAdapter(results, poi -> {
-                if (!initialLocationSet) {
-                    initialLocationSet = true;
-                }
-                map.getController().animateTo(new GeoPoint(poi.getLat(), poi.getLon()));
-                map.getController().setZoom(18.0);
-                searchResultsList.setVisibility(View.GONE);
-                searchCard.setVisibility(View.GONE);
-                searchView.clearFocus();
-            }));
-        });
 
         map.addMapListener(new org.osmdroid.events.MapListener() {
             @Override
