@@ -54,6 +54,7 @@ public class EditPoiActivity extends AppCompatActivity {
     private EditText editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd;
     private EditText editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd;
     private EditText editOhPhOpen, editOhPhClose, editOhPhBreakStart, editOhPhBreakEnd;
+    private android.widget.CheckBox checkOhWdOff, checkOhSaOff, checkOhPhOff;
     private static final Pattern TIME_PATTERN = Pattern.compile("^([01]?[0-9]|2[0-3]):[0-5][0-9]$");
     private PoiRepository repository;
     private AuthRepository authRepository;
@@ -164,6 +165,28 @@ public class EditPoiActivity extends AppCompatActivity {
         editOhPhClose = findViewById(R.id.edit_oh_ph_close);
         editOhPhBreakStart = findViewById(R.id.edit_oh_ph_break_start);
         editOhPhBreakEnd = findViewById(R.id.edit_oh_ph_break_end);
+        checkOhWdOff = findViewById(R.id.check_oh_wd_off);
+        checkOhSaOff = findViewById(R.id.check_oh_sa_off);
+        checkOhPhOff = findViewById(R.id.check_oh_ph_off);
+        
+        android.widget.CompoundButton.OnCheckedChangeListener ohOffListener = (buttonView, isChecked) -> {
+            EditText[] rowEditors;
+            if (buttonView == checkOhWdOff) {
+                rowEditors = new EditText[]{editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd};
+            } else if (buttonView == checkOhSaOff) {
+                rowEditors = new EditText[]{editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd};
+            } else {
+                rowEditors = new EditText[]{editOhPhOpen, editOhPhClose, editOhPhBreakStart, editOhPhBreakEnd};
+            }
+            for (EditText et : rowEditors) {
+                et.setEnabled(!isChecked);
+                et.setAlpha(isChecked ? 0.5f : 1.0f);
+            }
+        };
+        checkOhWdOff.setOnCheckedChangeListener(ohOffListener);
+        checkOhSaOff.setOnCheckedChangeListener(ohOffListener);
+        checkOhPhOff.setOnCheckedChangeListener(ohOffListener);
+        
         Button btnOhCopyToSa = findViewById(R.id.btn_oh_copy_to_sa);
         Button btnOhCopyToPh = findViewById(R.id.btn_oh_copy_to_ph);
 
@@ -398,27 +421,42 @@ public class EditPoiActivity extends AppCompatActivity {
                 Map<String, List<String>> weeklyTable = new HashMap<>();
                 
                 // 平日
-                String wdOpen = editOhWdOpen.getText().toString().trim();
-                String wdClose = editOhWdClose.getText().toString().trim();
-                String wdBreakStart = editOhWdBreakStart.getText().toString().trim();
-                String wdBreakEnd = editOhWdBreakEnd.getText().toString().trim();
-                List<String> wdTimes = formatOpeningTimeRange(wdOpen, wdClose, wdBreakStart, wdBreakEnd);
+                List<String> wdTimes;
+                if (checkOhWdOff.isChecked()) {
+                    wdTimes = new ArrayList<>();
+                } else {
+                    String wdOpen = editOhWdOpen.getText().toString().trim();
+                    String wdClose = editOhWdClose.getText().toString().trim();
+                    String wdBreakStart = editOhWdBreakStart.getText().toString().trim();
+                    String wdBreakEnd = editOhWdBreakEnd.getText().toString().trim();
+                    wdTimes = formatOpeningTimeRange(wdOpen, wdClose, wdBreakStart, wdBreakEnd);
+                }
                 for (String d : new String[]{"Mo", "Tu", "We", "Th", "Fr"}) weeklyTable.put(d, wdTimes);
                 
                 // 土曜
-                String saOpen = editOhSaOpen.getText().toString().trim();
-                String saClose = editOhSaClose.getText().toString().trim();
-                String saBreakStart = editOhSaBreakStart.getText().toString().trim();
-                String saBreakEnd = editOhSaBreakEnd.getText().toString().trim();
-                List<String> saTimes = formatOpeningTimeRange(saOpen, saClose, saBreakStart, saBreakEnd);
+                List<String> saTimes;
+                if (checkOhSaOff.isChecked()) {
+                    saTimes = new ArrayList<>();
+                } else {
+                    String saOpen = editOhSaOpen.getText().toString().trim();
+                    String saClose = editOhSaClose.getText().toString().trim();
+                    String saBreakStart = editOhSaBreakStart.getText().toString().trim();
+                    String saBreakEnd = editOhSaBreakEnd.getText().toString().trim();
+                    saTimes = formatOpeningTimeRange(saOpen, saClose, saBreakStart, saBreakEnd);
+                }
                 weeklyTable.put("Sa", saTimes);
                 
                 // 日祝
-                String phOpen = editOhPhOpen.getText().toString().trim();
-                String phClose = editOhPhClose.getText().toString().trim();
-                String phBreakStart = editOhPhBreakStart.getText().toString().trim();
-                String phBreakEnd = editOhPhBreakEnd.getText().toString().trim();
-                List<String> phTimes = formatOpeningTimeRange(phOpen, phClose, phBreakStart, phBreakEnd);
+                List<String> phTimes;
+                if (checkOhPhOff.isChecked()) {
+                    phTimes = new ArrayList<>();
+                } else {
+                    String phOpen = editOhPhOpen.getText().toString().trim();
+                    String phClose = editOhPhClose.getText().toString().trim();
+                    String phBreakStart = editOhPhBreakStart.getText().toString().trim();
+                    String phBreakEnd = editOhPhBreakEnd.getText().toString().trim();
+                    phTimes = formatOpeningTimeRange(phOpen, phClose, phBreakStart, phBreakEnd);
+                }
                 weeklyTable.put("Su", phTimes);
                 weeklyTable.put("PH", phTimes);
 
@@ -543,27 +581,38 @@ public class EditPoiActivity extends AppCompatActivity {
 
             for (int i = 0; i < dayGroups.length; i++) {
                 List<String> times = weeklyTable.getOrDefault(dayGroups[i], new ArrayList<>());
-                String open = "", close = "", bStart = "", bEnd = "";
-                if (times.size() == 1) {
-                    String[] range = times.get(0).split("-");
-                    if (range.length == 2) {
-                        open = range[0].trim();
-                        close = range[1].trim();
+                android.widget.CheckBox checkOff = (i == 0) ? checkOhWdOff : (i == 1 ? checkOhSaOff : checkOhPhOff);
+                
+                if (times.isEmpty() && !tag.isEmpty()) {
+                    checkOff.setChecked(true);
+                    editors[i][0].setText("");
+                    editors[i][1].setText("");
+                    editors[i][2].setText("");
+                    editors[i][3].setText("");
+                } else {
+                    checkOff.setChecked(false);
+                    String open = "", close = "", bStart = "", bEnd = "";
+                    if (times.size() == 1) {
+                        String[] range = times.get(0).split("-");
+                        if (range.length == 2) {
+                            open = range[0].trim();
+                            close = range[1].trim();
+                        }
+                    } else if (times.size() >= 2) {
+                        String[] range1 = times.get(0).split("-");
+                        String[] range2 = times.get(1).split("-");
+                        if (range1.length == 2 && range2.length == 2) {
+                            open = range1[0].trim();
+                            bStart = range1[1].trim();
+                            bEnd = range2[0].trim();
+                            close = range2[1].trim();
+                        }
                     }
-                } else if (times.size() >= 2) {
-                    String[] range1 = times.get(0).split("-");
-                    String[] range2 = times.get(1).split("-");
-                    if (range1.length == 2 && range2.length == 2) {
-                        open = range1[0].trim();
-                        bStart = range1[1].trim();
-                        bEnd = range2[0].trim();
-                        close = range2[1].trim();
-                    }
+                    editors[i][0].setText(open);
+                    editors[i][1].setText(close);
+                    editors[i][2].setText(bStart);
+                    editors[i][3].setText(bEnd);
                 }
-                editors[i][0].setText(open);
-                editors[i][1].setText(close);
-                editors[i][2].setText(bStart);
-                editors[i][3].setText(bEnd);
                 for (EditText et : editors[i]) applyCellStyles(et, et.getText().toString(), false);
             }
             return true;
