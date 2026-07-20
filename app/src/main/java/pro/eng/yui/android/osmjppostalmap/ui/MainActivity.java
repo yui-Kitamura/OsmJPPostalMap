@@ -197,9 +197,20 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // Refresh Button
-        findViewById(R.id.refresh_button).setOnClickListener(v -> {
+        CooldownRefreshButton refreshButton = findViewById(R.id.refresh_button);
+        refreshButton.setOnClickListener(v -> {
             updatePois();
             Toast.makeText(this, "再取得しています...", Toast.LENGTH_SHORT).show();
+        });
+
+        viewModel.getCooldownRemaining().observe(this, remaining -> {
+            refreshButton.setCooldown(remaining, viewModel.getCooldownInterval());
+            refreshButton.setEnabled(remaining <= 0);
+            if (remaining > 0) {
+                refreshButton.setAlpha(0.5f);
+            } else {
+                refreshButton.setAlpha(1.0f);
+            }
         });
 
         // Search Button

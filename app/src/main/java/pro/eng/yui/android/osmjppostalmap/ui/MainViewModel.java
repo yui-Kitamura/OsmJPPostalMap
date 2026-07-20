@@ -103,4 +103,12 @@ public class MainViewModel extends ViewModel {
     public LiveData<String> getErrorMessage() {
         return errorMessage;
     }
+
+    public LiveData<Long> getCooldownRemaining() {
+        return repository.getCooldownRemaining();
+    }
+
+    public long getCooldownInterval() {
+        return repository.getCooldownInterval();
+    }
 }

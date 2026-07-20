@@ -43,6 +43,16 @@ public interface PoiRepository {
      */
     LiveData<String> getError();
 
+    /**
+     * クールダウンの残り時間をミリ秒で取得するLiveDataを取得する
+     */
+    LiveData<Long> getCooldownRemaining();
+
+    /**
+     * クールダウンの全期間をミリ秒で取得する
+     */
+    long getCooldownInterval();
+
     interface PoiSaveCallback {
         void onSuccess();
         void onError(String message);

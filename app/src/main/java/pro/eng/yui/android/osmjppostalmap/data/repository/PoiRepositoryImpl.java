@@ -28,10 +28,13 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final OsmApi osmApi;
     private final MutableLiveData<List<OsmPoi>> poisLiveData = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<String> errorLiveData = new MutableLiveData<>();
+    private final MutableLiveData<Long> cooldownRemainingLiveData = new MutableLiveData<>(0L);
     private String accessToken;
     private static long lastFetchTime = 0;
     /** APIコールの最小間隔ms */
     private static final long MIN_INTERVAL_MS = 3500;
+    private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private Runnable cooldownRunnable;
 
     public PoiRepositoryImpl() {
         this(null);
@@ -87,6 +90,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             return poisLiveData;
         }
         lastFetchTime = currentTime;
+        startCooldownTimer();
 
         overpassApi.query(query).enqueue(new Callback<OverpassResponse>() {
             @Override
@@ -145,6 +149,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             return poiLiveData;
         }
         lastFetchTime = currentTime;
+        startCooldownTimer();
 
         overpassApi.query(query).enqueue(new Callback<OverpassResponse>() {
             @Override
@@ -426,6 +431,35 @@ public class PoiRepositoryImpl implements PoiRepository {
     @Override
     public LiveData<String> getError() {
         return errorLiveData;
+    }
+
+    @Override
+    public LiveData<Long> getCooldownRemaining() {
+        return cooldownRemainingLiveData;
+    }
+
+    @Override
+    public long getCooldownInterval() {
+        return MIN_INTERVAL_MS;
+    }
+
+    private void startCooldownTimer() {
+        if (cooldownRunnable != null) {
+            handler.removeCallbacks(cooldownRunnable);
+        }
+        cooldownRunnable = new Runnable() {
+            @Override
+            public void run() {
+                long remaining = MIN_INTERVAL_MS - (System.currentTimeMillis() - lastFetchTime);
+                if (remaining > 0) {
+                    cooldownRemainingLiveData.postValue(remaining);
+                    handler.postDelayed(this, 100);
+                } else {
+                    cooldownRemainingLiveData.postValue(0L);
+                }
+            }
+        };
+        handler.post(cooldownRunnable);
     }
 
     @Override

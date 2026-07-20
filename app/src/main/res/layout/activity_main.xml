@@ -42,7 +42,7 @@
         app:layout_constraintTop_toTopOf="parent"
         android:contentDescription="設定メニュー" />
 
-    <androidx.appcompat.widget.AppCompatImageButton
+    <pro.eng.yui.android.osmjppostalmap.ui.CooldownRefreshButton
         android:id="@+id/refresh_button"
         android:layout_width="48dp"
         android:layout_height="48dp"
