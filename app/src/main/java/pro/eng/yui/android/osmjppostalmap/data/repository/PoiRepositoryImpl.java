@@ -336,6 +336,11 @@ public class PoiRepositoryImpl implements PoiRepository {
         xml.append("<node changeset=\"").append(changesetId).append("\" lat=\"").append(lat).append("\" lon=\"").append(lon).append("\">");
         xml.append("<tag k=\"amenity\" v=\"post_box\"/>");
         xml.append("<tag k=\"operator\" v=\"日本郵便\"/>");
+        if ("柱上箱型".equals(shape)) {
+            xml.append("<tag k=\"support\" v=\"pole\"/>");
+        } else if ("円柱".equals(shape)) {
+            xml.append("<tag k=\"support\" v=\"ground\"/>");
+        }
         if (branch != null && !branch.isEmpty()) {
             xml.append("<tag k=\"operator:branch\" v=\"").append(branch).append("\"/>");
         }

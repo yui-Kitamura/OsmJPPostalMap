@@ -53,6 +53,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="円柱" />
+            <RadioButton
+                android:id="@+id/shape_other"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="その他" />
         </RadioGroup>
 
         <TextView
