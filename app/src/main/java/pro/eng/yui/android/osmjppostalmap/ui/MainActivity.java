@@ -273,14 +273,26 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // Error Bar
-        TextView errorBar = findViewById(R.id.error_bar);
+        TextView statusBar = findViewById(R.id.error_bar);
         viewModel.getErrorMessage().observe(this, msg -> {
             if (msg == null || msg.isEmpty()) {
-                errorBar.setVisibility(View.GONE);
+                statusBar.setVisibility(View.GONE);
             } else {
-                errorBar.setText(msg);
-                errorBar.setVisibility(View.VISIBLE);
-                errorBar.postDelayed(() -> errorBar.setVisibility(View.GONE), 5000);
+                statusBar.setBackgroundColor(0xFFFF0000); // Red
+                statusBar.setText(msg);
+                statusBar.setVisibility(View.VISIBLE);
+                statusBar.postDelayed(() -> statusBar.setVisibility(View.GONE), 5000);
+            }
+        });
+
+        viewModel.getSuccessMessage().observe(this, msg -> {
+            if (msg == null || msg.isEmpty()) {
+                statusBar.setVisibility(View.GONE);
+            } else {
+                statusBar.setBackgroundColor(0xFF4CAF50); // Green
+                statusBar.setText(msg);
+                statusBar.setVisibility(View.VISIBLE);
+                statusBar.postDelayed(() -> statusBar.setVisibility(View.GONE), 5000);
             }
         });
 

@@ -17,6 +17,7 @@ public class MainViewModel extends ViewModel {
 
     private final PoiRepository repository;
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
+    private final MutableLiveData<String> successMessage = new MutableLiveData<>();
     private final MutableLiveData<List<OsmPoi>> searchResults = new MutableLiveData<>();
     private final MutableLiveData<Boolean> filterOpenOnly = new MutableLiveData<>(false);
     private final MutableLiveData<List<OsmPoi>> filteredPois = new MutableLiveData<>();
@@ -28,6 +29,7 @@ public class MainViewModel extends ViewModel {
         repository.getPois(0,0,0,0).observeForever(pois -> applyFilter());
         filterOpenOnly.observeForever(filter -> applyFilter());
         repository.getError().observeForever(errorMessage::postValue);
+        repository.getSuccessMessage().observeForever(successMessage::postValue);
     }
 
     public LiveData<Boolean> getFilterOpenOnly() {
@@ -102,6 +104,10 @@ public class MainViewModel extends ViewModel {
 
     public LiveData<String> getErrorMessage() {
         return errorMessage;
+    }
+
+    public LiveData<String> getSuccessMessage() {
+        return successMessage;
     }
 
     public LiveData<Long> getCooldownRemaining() {

@@ -44,6 +44,11 @@ public interface PoiRepository {
     LiveData<String> getError();
 
     /**
+     * 成功メッセージを配信するLiveDataを取得する
+     */
+    LiveData<String> getSuccessMessage();
+
+    /**
      * クールダウンの残り時間をミリ秒で取得するLiveDataを取得する
      */
     LiveData<Long> getCooldownRemaining();

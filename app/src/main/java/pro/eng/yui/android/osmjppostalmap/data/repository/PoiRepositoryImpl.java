@@ -30,6 +30,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final OsmApi osmApi;
     private final MutableLiveData<List<OsmPoi>> poisLiveData = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<String> errorLiveData = new MutableLiveData<>();
+    private final MutableLiveData<String> successLiveData = new MutableLiveData<>();
     private final MutableLiveData<Long> cooldownRemainingLiveData = new MutableLiveData<>(0L);
     private String accessToken;
     private static long lastFetchTime = 0;
@@ -263,7 +264,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                                 @Override
                                 public void onResponse(Call<String> call, Response<String> response) {
                                     if (response.isSuccessful()) {
-                                        closeChangeset(auth, changesetId, callback);
+                                        closeChangeset(auth, changesetId, "更新しました", callback);
                                     } else {
                                         callback.onError("データの更新に失敗しました: " + response.code());
                                     }
@@ -292,16 +293,18 @@ public class PoiRepositoryImpl implements PoiRepository {
         });
     }
 
-    private void closeChangeset(String auth, long changesetId, PoiSaveCallback callback) {
+    private void closeChangeset(String auth, long changesetId, String successMsg, PoiSaveCallback callback) {
         osmApi.closeChangeset(auth, changesetId).enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
+                successLiveData.postValue(successMsg);
                 callback.onSuccess();
             }
 
             @Override
             public void onFailure(Call<Void> call, Throwable t) {
-                // クローズ失敗でもデータは保存されていることが多いが、一応成功扱いにするか迷うところ
+                // クローズ失敗でもデータは保存されていることが多いが、一応成功扱いにする
+                successLiveData.postValue(successMsg);
                 callback.onSuccess();
             }
         });
@@ -374,7 +377,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             @Override
             public void onResponse(Call<String> call, Response<String> response) {
                 if (response.isSuccessful()) {
-                    closeChangeset(auth, changesetId, callback);
+                    closeChangeset(auth, changesetId, "追加しました", callback);
                 } else {
                     callback.onError("ポストの作成に失敗しました: " + response.code());
                 }
@@ -443,6 +446,11 @@ public class PoiRepositoryImpl implements PoiRepository {
     @Override
     public LiveData<String> getError() {
         return errorLiveData;
+    }
+
+    @Override
+    public LiveData<String> getSuccessMessage() {
+        return successLiveData;
     }
 
     @Override
