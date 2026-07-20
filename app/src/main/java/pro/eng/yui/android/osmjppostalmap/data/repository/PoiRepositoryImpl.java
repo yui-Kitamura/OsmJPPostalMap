@@ -337,25 +337,26 @@ public class PoiRepositoryImpl implements PoiRepository {
     private void createPostBoxInternal(String auth, long changesetId, double lat, double lon, String shape, String branch, String collectionTimes, String note, PoiSaveCallback callback) {
         // XML生成 (OSM API v0.6 形式)
         StringBuilder xml = new StringBuilder();
-        xml.append("<osm>");
-        xml.append("<node changeset=\"").append(changesetId).append("\" lat=\"").append(lat).append("\" lon=\"").append(lon).append("\">");
-        xml.append("<tag k=\"amenity\" v=\"post_box\"/>");
-        xml.append("<tag k=\"operator\" v=\"日本郵便\"/>");
+        xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        xml.append("<osm version=\"0.6\" generator=\"OsmJPPostalMap\">\n");
+        xml.append("  <node changeset=\"").append(changesetId).append("\" lat=\"").append(lat).append("\" lon=\"").append(lon).append("\">\n");
+        xml.append("    <tag k=\"amenity\" v=\"post_box\"/>\n");
+        xml.append("    <tag k=\"operator\" v=\"日本郵便\"/>\n");
         if ("柱上箱型".equals(shape)) {
-            xml.append("<tag k=\"support\" v=\"pole\"/>");
+            xml.append("    <tag k=\"support\" v=\"pole\"/>\n");
         } else if ("円柱".equals(shape)) {
-            xml.append("<tag k=\"support\" v=\"ground\"/>");
+            xml.append("    <tag k=\"support\" v=\"ground\"/>\n");
         }
         if (branch != null && !branch.isEmpty()) {
-            xml.append("<tag k=\"operator:branch\" v=\"").append(branch).append("\"/>");
+            xml.append("    <tag k=\"operator:branch\" v=\"").append(branch).append("\"/>\n");
         }
         if (collectionTimes != null && !collectionTimes.isEmpty()) {
-            xml.append("<tag k=\"collection_times\" v=\"").append(collectionTimes).append("\"/>");
+            xml.append("    <tag k=\"collection_times\" v=\"").append(collectionTimes).append("\"/>\n");
         }
         if (note != null && !note.isEmpty()) {
-            xml.append("<tag k=\"note\" v=\"").append(note).append("\"/>");
+            xml.append("    <tag k=\"note\" v=\"").append(note).append("\"/>\n");
         }
-        xml.append("</node>");
+        xml.append("  </node>\n");
         xml.append("</osm>");
 
         osmApi.createElement(auth, "node", xml.toString()).enqueue(new Callback<String>() {

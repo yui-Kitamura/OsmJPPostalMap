@@ -172,7 +172,12 @@ public class AddPostBoxActivity extends AppCompatActivity {
                 return;
             }
 
-            String shape = ((RadioButton)findViewById(radioShape.getCheckedRadioButtonId())).getText().toString();
+            int selectedShapeId = radioShape.getCheckedRadioButtonId();
+            if (selectedShapeId == -1) {
+                Toast.makeText(this, "ポストの形状を選択してください", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            String shape = ((RadioButton)findViewById(selectedShapeId)).getText().toString();
             String branch = inputBranch.getText() != null ? inputBranch.getText().toString() : "";
             String note = inputNote.getText() != null ? inputNote.getText().toString() : "";
             String collection = formatCollectionTimes();
