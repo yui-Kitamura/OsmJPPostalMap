@@ -80,7 +80,7 @@ public class SimpleScheduleParserTest {
         // Mo-Su 10:00, 15:00
         String tag = "Mo-Su 10:00, 15:00";
         // 2026-07-20 09:00 (Mon)
-        ZonedDateTime now = ZonedDateTime.of(2026, 7, 20, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ZonedDateTime now = ZonedDateTime.of(2026, 7, 21, 9, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
         ScheduleResult result = parser.parse(tag, now.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
         
         assertNotNull(result.getNextEvent());

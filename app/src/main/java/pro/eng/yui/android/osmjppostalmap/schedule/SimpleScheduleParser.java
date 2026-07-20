@@ -291,7 +291,7 @@ public class SimpleScheduleParser implements ScheduleParser {
         return !times.get(0).contains("-");
     }
 
-    private int parseMinutes(String time) {
+    public static int parseMinutes(String time) {
         String[] parts = time.trim().split(":");
         return Integer.parseInt(parts[0]) * 60 + Integer.parseInt(parts[1]);
     }
@@ -364,6 +364,71 @@ public class SimpleScheduleParser implements ScheduleParser {
             }
         }
         return table;
+    }
+
+    @Override
+    public String format(Map<String, List<String>> weeklyTable, Amenity amenity) {
+        if (amenity == Amenity.POST_BOX) {
+            return formatCollectionTimes(weeklyTable);
+        } else {
+            return formatOpeningHours(weeklyTable);
+        }
+    }
+
+    private String formatCollectionTimes(Map<String, List<String>> weeklyTable) {
+        List<String> weekday = weeklyTable.getOrDefault("Mo", new ArrayList<>());
+        List<String> saturday = weeklyTable.getOrDefault("Sa", new ArrayList<>());
+        List<String> sunday = weeklyTable.getOrDefault("Su", new ArrayList<>());
+        List<String> holiday = weeklyTable.getOrDefault("PH", new ArrayList<>());
+
+        if (weekday.isEmpty() && saturday.isEmpty() && sunday.isEmpty() && holiday.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        if (!weekday.isEmpty()) {
+            sb.append("Mo-Fr ").append(String.join(",", weekday));
+        }
+        if (!saturday.isEmpty()) {
+            if (sb.length() > 0) sb.append("; ");
+            sb.append("Sa ").append(String.join(",", saturday));
+        }
+        if (!sunday.isEmpty() || !holiday.isEmpty()) {
+            if (sb.length() > 0) sb.append("; ");
+            sb.append("Su,PH ");
+            List<String> combined = new ArrayList<>(sunday);
+            for (String h : holiday) {
+                if (!combined.contains(h)) combined.add(h);
+            }
+            Collections.sort(combined);
+            sb.append(String.join(",", combined));
+        }
+        return sb.toString();
+    }
+
+    private String formatOpeningHours(Map<String, List<String>> weeklyTable) {
+        StringBuilder sb = new StringBuilder();
+        String[] dayKeys = {"Mo-Fr", "Sa", "Su,PH"};
+        String[][] dayGroups = {
+            {"Mo", "Tu", "We", "Th", "Fr"},
+            {"Sa"},
+            {"Su", "PH"}
+        };
+
+        for (int i = 0; i < dayKeys.length; i++) {
+            String key = dayKeys[i];
+            List<String> times = weeklyTable.getOrDefault(dayGroups[i][0], new ArrayList<>());
+            
+            if (sb.length() > 0) sb.append("; ");
+            sb.append(key).append(" ");
+            
+            if (times.isEmpty()) {
+                sb.append("off");
+            } else {
+                sb.append(String.join(", ", times));
+            }
+        }
+        return sb.toString();
     }
 
     private List<String> expandDays(String dayRange) {
