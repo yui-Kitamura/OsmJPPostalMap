@@ -37,6 +37,7 @@ public class SettingsActivity extends AppCompatActivity {
         Button btnUserPage = findViewById(R.id.btn_user_page);
         Button btnLogout = findViewById(R.id.btn_logout);
 
+        findViewById(R.id.btn_back).setOnClickListener(v -> finish());
         updateUi(loginStatus, btnLogin, btnUserPage, btnLogout);
 
         btnLogin.setOnClickListener(v -> {

@@ -118,6 +118,8 @@ public class AddPostBoxActivity extends AppCompatActivity {
         Button btnCopyToSun = findViewById(R.id.btn_copy_to_sun);
         Button btnSave = findViewById(R.id.btn_add_save);
 
+        findViewById(R.id.btn_back).setOnClickListener(v -> finish());
+
         // 既定3行追加
         for (int i = 0; i < 3; i++) {
             addNewRow();

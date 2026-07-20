@@ -141,6 +141,8 @@ public class EditPoiActivity extends AppCompatActivity {
         });
         Button btnSave = findViewById(R.id.btn_save);
 
+        findViewById(R.id.btn_back).setOnClickListener(v -> finish());
+
         String amenity = targetPoi.getTag("amenity");
         boolean isPostBox = "post_box".equals(amenity);
         title.setText(isPostBox ? "郵便ポストの編集" : "郵便局の編集");
