@@ -190,10 +190,13 @@ public class PoiRepositoryImpl implements PoiRepository {
         String auth = "Bearer " + accessToken;
 
         // 1. Create Changeset
-        String changesetXml = "<osm><changeset>" +
-                "<tag k=\"created_by\" v=\"OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME + "\"/>" +
-                "<tag k=\"comment\" v=\"" + comment + "\"/>" +
-                "</changeset></osm>";
+        String changesetXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<osm version=\"0.6\" generator=\"OsmJPPostalMap\">\n" +
+                "  <changeset>\n" +
+                "    <tag k=\"created_by\" v=\"OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME + "\"/>\n" +
+                "    <tag k=\"comment\" v=\"" + escapeXml(comment) + "\"/>\n" +
+                "  </changeset>\n" +
+                "</osm>";
 
         osmApi.createChangeset(auth, changesetXml).enqueue(new Callback<String>() {
             @Override
@@ -233,7 +236,7 @@ public class PoiRepositoryImpl implements PoiRepository {
         tags.put("check_date", today);
 
         for (Map.Entry<String, String> entry : tags.entrySet()) {
-            xml.append("    <tag k=\"").append(entry.getKey()).append("\" v=\"").append(entry.getValue()).append("\"/>\n");
+            xml.append("    <tag k=\"").append(escapeXml(entry.getKey())).append("\" v=\"").append(escapeXml(entry.getValue())).append("\"/>\n");
         }
         xml.append("  </").append(poi.getType()).append(">\n");
         xml.append("</osm>");
@@ -291,7 +294,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                             tags.put("check_date", today);
 
                             for (Map.Entry<String, String> entry : tags.entrySet()) {
-                                updateXml.append("    <tag k=\"").append(entry.getKey()).append("\" v=\"").append(entry.getValue()).append("\"/>\n");
+                                updateXml.append("    <tag k=\"").append(escapeXml(entry.getKey())).append("\" v=\"").append(escapeXml(entry.getValue())).append("\"/>\n");
                             }
                             updateXml.append("  </").append(poi.getType()).append(">\n");
                             updateXml.append("</osm>");
@@ -356,10 +359,13 @@ public class PoiRepositoryImpl implements PoiRepository {
         String auth = "Bearer " + accessToken;
 
         // 1. Create Changeset
-        String changesetXml = "<osm><changeset>" +
-                "<tag k=\"created_by\" v=\"OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME + "\"/>" +
-                "<tag k=\"comment\" v=\"郵便ポストの追加\"/>" +
-                "</changeset></osm>";
+        String changesetXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<osm version=\"0.6\" generator=\"OsmJPPostalMap\">\n" +
+                "  <changeset>\n" +
+                "    <tag k=\"created_by\" v=\"OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME + "\"/>\n" +
+                "    <tag k=\"comment\" v=\"郵便ポストの追加\"/>\n" +
+                "  </changeset>\n" +
+                "</osm>";
 
         osmApi.createChangeset(auth, changesetXml).enqueue(new Callback<String>() {
             @Override
@@ -393,16 +399,16 @@ public class PoiRepositoryImpl implements PoiRepository {
             xml.append("    <tag k=\"support\" v=\"ground\"/>\n");
         }
         if (branch != null && !branch.isEmpty()) {
-            xml.append("    <tag k=\"operator:branch\" v=\"").append(branch).append("\"/>\n");
+            xml.append("    <tag k=\"operator:branch\" v=\"").append(escapeXml(branch)).append("\"/>\n");
         }
         if (postboxRef != null && !postboxRef.isEmpty()) {
-            xml.append("    <tag k=\"ref\" v=\"").append(postboxRef).append("\"/>\n");
+            xml.append("    <tag k=\"ref\" v=\"").append(escapeXml(postboxRef)).append("\"/>\n");
         }
         if (collectionTimes != null && !collectionTimes.isEmpty()) {
-            xml.append("    <tag k=\"collection_times\" v=\"").append(collectionTimes).append("\"/>\n");
+            xml.append("    <tag k=\"collection_times\" v=\"").append(escapeXml(collectionTimes)).append("\"/>\n");
         }
         if (note != null && !note.isEmpty()) {
-            xml.append("    <tag k=\"note\" v=\"").append(note).append("\"/>\n");
+            xml.append("    <tag k=\"note\" v=\"").append(escapeXml(note)).append("\"/>\n");
         }
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
         xml.append("    <tag k=\"check_date\" v=\"").append(today).append("\"/>\n");
@@ -424,6 +430,15 @@ public class PoiRepositoryImpl implements PoiRepository {
                 callback.onError("通信エラー: " + t.getMessage());
             }
         });
+    }
+
+    private String escapeXml(String value) {
+        if (value == null) return "";
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;");
     }
 
     @Override

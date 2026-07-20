@@ -37,7 +37,7 @@ public interface OsmApi {
     @PUT("api/0.6/changeset/create")
     Call<String> createChangeset(@Header("Authorization") String auth, @Body String xml);
 
-    @POST("api/0.6/changeset/{id}/close")
+    @PUT("api/0.6/changeset/{id}/close")
     Call<Void> closeChangeset(@Header("Authorization") String auth, @Path("id") long id);
 
     @GET("api/0.6/{type}/{id}")
