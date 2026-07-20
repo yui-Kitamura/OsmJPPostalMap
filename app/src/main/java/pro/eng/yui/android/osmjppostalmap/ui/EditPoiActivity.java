@@ -103,8 +103,9 @@ public class EditPoiActivity extends AppCompatActivity {
             return insets;
         });
 
-        repository = new PoiRepositoryImpl();
         authRepository = new AuthRepository(this);
+        repository = new PoiRepositoryImpl();
+        ((PoiRepositoryImpl)repository).setAccessToken(authRepository.getAccessToken());
 
         // IntentからPOI情報を受け取る
         long id = getIntent().getLongExtra("POI_ID", 0);

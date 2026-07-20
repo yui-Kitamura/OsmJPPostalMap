@@ -97,6 +97,7 @@ public class AddPostBoxActivity extends AppCompatActivity {
 
         authRepository = new AuthRepository(this);
         repository = new PoiRepositoryImpl();
+        ((PoiRepositoryImpl)repository).setAccessToken(authRepository.getAccessToken());
 
         map = findViewById(R.id.add_map);
         map.setOnTouchListener((v, event) -> {

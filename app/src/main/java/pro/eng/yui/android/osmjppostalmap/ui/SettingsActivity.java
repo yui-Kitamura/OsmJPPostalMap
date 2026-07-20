@@ -53,7 +53,7 @@ public class SettingsActivity extends AppCompatActivity {
             String userName = authRepository.getUserName();
             String url = (userName != null && !userName.isEmpty()) 
                 ? "https://www.openstreetmap.org/user/" + Uri.encode(userName)
-                : "https://www.openstreetmap.org/user/gc27";
+                : "https://www.openstreetmap.org/user/";
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
             startActivity(intent);
         });
@@ -164,38 +164,44 @@ public class SettingsActivity extends AppCompatActivity {
                 try {
                     if (response.isSuccessful() && response.body() != null) {
                         String json = response.body().string();
-                        // Debug log to see actual response structure if it fails
                         android.util.Log.d("OSM_AUTH", "User Details Response: " + json);
                         
                         JSONObject obj = new JSONObject(json);
                         String displayName = null;
                         
+                        // OSM API 0.6 JSON can have {"user": {...}} or just fields if it's a different endpoint
                         if (obj.has("user")) {
                             JSONObject user = obj.getJSONObject("user");
                             displayName = user.optString("display_name", null);
+                        } else {
+                            displayName = obj.optString("display_name", null);
                         }
                         
-                        if (displayName != null) {
+                        final String finalDisplayName = displayName;
+                        if (displayName != null && !displayName.isEmpty()) {
                             authRepository.saveUserName(displayName);
-                            updateUi(loginStatus, btnLogin, btnUserPage, btnLogout);
-                            Toast.makeText(SettingsActivity.this, "ログインしました: " + displayName, Toast.LENGTH_SHORT).show();
+                            runOnUiThread(() -> {
+                                updateUi(loginStatus, btnLogin, btnUserPage, btnLogout);
+                                Toast.makeText(SettingsActivity.this, "ログインしました: " + finalDisplayName, Toast.LENGTH_SHORT).show();
+                            });
                         } else {
-                            android.util.Log.e("OSM_AUTH", "display_name not found in JSON");
-                            updateUi(loginStatus, btnLogin, btnUserPage, btnLogout);
+                            android.util.Log.e("OSM_AUTH", "display_name not found in JSON response");
+                            runOnUiThread(() -> updateUi(loginStatus, btnLogin, btnUserPage, btnLogout));
                         }
                     } else {
                         android.util.Log.e("OSM_AUTH", "Failed to fetch user details: " + response.code());
-                        updateUi(loginStatus, btnLogin, btnUserPage, btnLogout);
+                        runOnUiThread(() -> updateUi(loginStatus, btnLogin, btnUserPage, btnLogout));
                     }
                 } catch (Exception e) {
                     android.util.Log.e("OSM_AUTH", "Error parsing user details", e);
-                    updateUi(loginStatus, btnLogin, btnUserPage, btnLogout);
+                    runOnUiThread(() -> updateUi(loginStatus, btnLogin, btnUserPage, btnLogout));
                 }
             }
 
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
-                updateUi(loginStatus, btnLogin, btnUserPage, btnLogout);
+                android.util.Log.e("OSM_AUTH", "Network error fetching user details", t);
+                runOnUiThread(() -> updateUi(loginStatus, btnLogin, btnUserPage, btnLogout));
             }
         });
     }
