@@ -20,7 +20,7 @@ public class PoiMarker extends Marker {
     private final Paint ringPaint;
     private final Paint bgPaint;
     private final Paint symbolPaint;
-    private static final float SIZE = 40f;
+    private static final float SIZE = 30f;
 
     public enum PoiType {
         POST_OFFICE, POST_BOX
@@ -35,11 +35,11 @@ public class PoiMarker extends Marker {
         ringPaint.setStrokeWidth(8f);
         
         bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        bgPaint.setColor(0xFFFF0000); // 日本郵便カラー (Red)
+        bgPaint.setColor(0xCCFF0000); // 日本郵便カラー (Red) with alpha
         
         symbolPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         symbolPaint.setColor(0xFFFFFFFF);
-        symbolPaint.setTextSize(30f);
+        symbolPaint.setTextSize(22f);
         symbolPaint.setTextAlign(Paint.Align.CENTER);
 
         // ヒットテスト用の範囲を設定
@@ -110,14 +110,15 @@ public class PoiMarker extends Marker {
             boolean showDot = false;
             if (schedule.getCurrentState() == ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON && schedule.getNextEvent() != null) {
                 showDot = true;
-            } else if (poiType == PoiType.POST_BOX && schedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON && schedule.getNextEvent() != null) {
-                // ポストの場合、収集間際(OPENING_BUT_EVENT_SOON)でもドットを表示したい
-                showDot = true;
             }
 
             if (showDot) {
                 // 営業開始前または収集前：緑ドットを短針の位置に配置
-                canvas.drawArc(ringRect, -90f, 360f, false, ringPaint); // 灰がかった緑のリング
+                if (poiType == PoiType.POST_OFFICE) {
+                    canvas.drawRoundRect(ringRect, 10f, 10f, ringPaint);
+                } else {
+                    canvas.drawArc(ringRect, -90f, 360f, false, ringPaint);
+                }
                 
                 java.util.Calendar cal = java.util.Calendar.getInstance();
                 cal.setTimeInMillis(schedule.getNextEvent().getTimestamp());
@@ -133,7 +134,22 @@ public class PoiMarker extends Marker {
                 float dotY = (float) (screenPos.y + ringSize * Math.sin(Math.toRadians(angle)));
                 canvas.drawCircle(dotX, dotY, 6f, dotPaint);
             } else {
-                canvas.drawArc(ringRect, -90f, sweepAngle, false, ringPaint);
+                if (schedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
+                    // 背景としてグレーのリングを描画
+                    Paint bgRingPaint = new Paint(ringPaint);
+                    bgRingPaint.setColor(0xFF808080);
+                    if (poiType == PoiType.POST_OFFICE) {
+                        canvas.drawRoundRect(ringRect, 10f, 10f, bgRingPaint);
+                    } else {
+                        canvas.drawArc(ringRect, -90f, 360f, false, bgRingPaint);
+                    }
+                }
+
+                if (poiType == PoiType.POST_OFFICE && sweepAngle == 360f) {
+                    canvas.drawRoundRect(ringRect, 10f, 10f, ringPaint);
+                } else {
+                    canvas.drawArc(ringRect, -90f, sweepAngle, false, ringPaint);
+                }
             }
         }
 
