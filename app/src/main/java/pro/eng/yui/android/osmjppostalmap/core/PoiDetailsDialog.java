@@ -38,41 +38,60 @@ public class PoiDetailsDialog {
         if (schedule != null) {
             statusText.setText(schedule.getTodayStatus());
             
-            if (schedule.getNextEvent() != null) {
+            if (isPostBox) {
+                StringBuilder msg = new StringBuilder();
                 SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.JAPAN);
-                String timeStr = sdf.format(new Date(schedule.getNextEvent().getTimestamp()));
-                
-                long remainingMillis = schedule.getNextEvent().getTimestamp() - System.currentTimeMillis();
-                long remainingMinutes = remainingMillis / 60000;
-                long h = remainingMinutes / 60;
-                long m = remainingMinutes % 60;
-                String diffStr = (h > 0 ? h + "時間" : "") + m + "分後";
+                long now = System.currentTimeMillis();
 
-                if (isPostBox) {
-                    String msg = diffStr;
+                if (schedule.getNextEvent() != null) {
+                    long timestamp = schedule.getNextEvent().getTimestamp();
+                    String timeStr = sdf.format(new Date(timestamp));
+                    String dayPrefix = timestamp > getEndOfToday() ? "明日" : "本日";
                     
-                    if (schedule.getFollowingEvent() != null) {
-                        String followTime = sdf.format(new Date(schedule.getFollowingEvent().getTimestamp()));
-                        String fPrefix = schedule.getFollowingEvent().getTimestamp() > getEndOfToday() ? "明日" : "本日";
-                        
-                        long fRemainingMillis = schedule.getFollowingEvent().getTimestamp() - System.currentTimeMillis();
-                        long fRemainingMinutes = fRemainingMillis / 60000;
-                        long fh = fRemainingMinutes / 60;
-                        long fm = fRemainingMinutes % 60;
-                        String fDiffStr = (fh > 0 ? fh + "時間" : "") + fm + "分後";
-                        
-                        msg += "\n逃した場合 " + fPrefix + " " + followTime + " (" + fDiffStr + ")";
+                    long remainingMinutes = (timestamp - now) / 60000;
+                    long h = remainingMinutes / 60;
+                    long m = remainingMinutes % 60;
+                    String diffStr = (h > 0 ? h + "時間" : "") + m + "分後";
+
+                    if (schedule.getCurrentState() == ScheduleResult.CurrentState.TODAY_FINISHED) {
+                        msg.append("次回 ").append(dayPrefix).append(" ").append(timeStr).append(" (").append(diffStr).append(")");
+                    } else {
+                        msg.append(diffStr);
                     }
-                    nextEventText.setText(msg);
+                }
+
+                if (schedule.getFollowingEvent() != null) {
+                    long fTimestamp = schedule.getFollowingEvent().getTimestamp();
+                    String followTime = sdf.format(new Date(fTimestamp));
+                    String fPrefix = fTimestamp > getEndOfToday() ? "明日" : "本日";
+                    
+                    long fRemainingMinutes = (fTimestamp - now) / 60000;
+                    long fh = fRemainingMinutes / 60;
+                    long fm = fRemainingMinutes % 60;
+                    String fDiffStr = (fh > 0 ? fh + "時間" : "") + fm + "分後";
+                    
+                    if (msg.length() > 0) msg.append("\n");
+                    msg.append("逃した場合 ").append(fPrefix).append(" ").append(followTime).append(" (").append(fDiffStr).append(")");
+                }
+
+                if (msg.length() > 0) {
+                    nextEventText.setText(msg.toString());
                     nextEventText.setVisibility(View.VISIBLE);
                 } else {
                     nextEventText.setVisibility(View.GONE);
                 }
-            } else if (!isPostBox) {
-                nextEventText.setVisibility(View.GONE);
             } else {
-                nextEventText.setVisibility(View.VISIBLE); // ポストでイベントなしの場合、空文字か何かを表示
-                nextEventText.setText("");
+                // ポスト以外（郵便局など）
+                if (schedule.getNextEvent() != null) {
+                    long remainingMinutes = (schedule.getNextEvent().getTimestamp() - System.currentTimeMillis()) / 60000;
+                    long h = remainingMinutes / 60;
+                    long m = remainingMinutes % 60;
+                    String diffStr = (h > 0 ? h + "時間" : "") + m + "分後";
+                    nextEventText.setText(diffStr);
+                    nextEventText.setVisibility(View.VISIBLE);
+                } else {
+                    nextEventText.setVisibility(View.GONE);
+                }
             }
 
             // スケジュール表の作成 (平日/土曜/日祝の形式)

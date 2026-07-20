@@ -89,11 +89,8 @@ public class AddPostBoxActivity extends AppCompatActivity {
         setContentView(R.layout.activity_add_postbox);
 
         // Edge-to-Edge adjustment
-        View mainLayout = findViewById(R.id.add_scroll_view);
-        if (mainLayout == null) {
-            mainLayout = findViewById(android.R.id.content);
-        }
-        ViewCompat.setOnApplyWindowInsetsListener(mainLayout, (v, insets) -> {
+        View rootLayout = findViewById(android.R.id.content);
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayout, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, Math.max(systemBars.bottom, ime.bottom));
