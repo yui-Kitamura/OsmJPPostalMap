@@ -158,7 +158,7 @@ public class SimpleScheduleParser implements ScheduleParser {
                                     } else {
                                         state = ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON;
                                     }
-                                    todayStatus = "次回収集 " + String.format(Locale.getDefault(), "%02d:%02d", offset / 60, offset % 60);
+                                    todayStatus = "次回 " + String.format(Locale.getDefault(), "%02d:%02d", offset / 60, offset % 60);
                                 }
                             }
                         }
@@ -221,7 +221,7 @@ public class SimpleScheduleParser implements ScheduleParser {
                                         } else {
                                             state = ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON;
                                         }
-                                        todayStatus = "次回収集 " + (collectionTime >= 1440 ? String.format(Locale.getDefault(), "%02d:%02d", (collectionTime - 1440) / 60, (collectionTime - 1440) % 60) : timeRange);
+                                        todayStatus = "次回 " + (collectionTime >= 1440 ? String.format(Locale.getDefault(), "%02d:%02d", (collectionTime - 1440) / 60, (collectionTime - 1440) % 60) : timeRange);
                                     } else if (followingEvent == null) {
                                         followingEvent = createEvent(now, collectionTime, ScheduleResult.EventType.COLLECTION);
                                     }

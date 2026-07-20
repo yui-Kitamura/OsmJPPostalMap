@@ -49,17 +49,19 @@ public class PoiDetailsDialog {
                 String diffStr = (h > 0 ? h + "時間" : "") + m + "分後";
 
                 if (isPostBox) {
-                    long now = System.currentTimeMillis();
-                    String prefix = "次回";
-                    if (schedule.getNextEvent().getTimestamp() > getEndOfToday()) {
-                        prefix = "明日";
-                    }
-                    String msg = prefix + " " + timeStr + " (" + diffStr + ")";
+                    String msg = diffStr;
                     
                     if (schedule.getFollowingEvent() != null) {
                         String followTime = sdf.format(new Date(schedule.getFollowingEvent().getTimestamp()));
                         String fPrefix = schedule.getFollowingEvent().getTimestamp() > getEndOfToday() ? "明日" : "本日";
-                        msg += "\n逃した場合 " + fPrefix + " " + followTime;
+                        
+                        long fRemainingMillis = schedule.getFollowingEvent().getTimestamp() - System.currentTimeMillis();
+                        long fRemainingMinutes = fRemainingMillis / 60000;
+                        long fh = fRemainingMinutes / 60;
+                        long fm = fRemainingMinutes % 60;
+                        String fDiffStr = (fh > 0 ? fh + "時間" : "") + fm + "分後";
+                        
+                        msg += "\n逃した場合 " + fPrefix + " " + followTime + " (" + fDiffStr + ")";
                     }
                     nextEventText.setText(msg);
                     nextEventText.setVisibility(View.VISIBLE);

@@ -187,6 +187,7 @@ public class SimpleScheduleParserTest {
         ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
         assertEquals(ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON, result.getCurrentState());
         assertTrue(result.getTodayStatus().contains("10:00"));
+        assertTrue(result.getTodayStatus().startsWith("次回 "));
 
         // 10:00 -> 本日の収集終了または次回
         // 指示により 10:00 は「手遅れ」扱いにする
@@ -195,6 +196,7 @@ public class SimpleScheduleParserTest {
         // 10:00 ちょうどは 13:30 が次回になるべき
         assertEquals(ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON, result.getCurrentState());
         assertTrue(result.getTodayStatus().contains("13:30"));
+        assertTrue(result.getTodayStatus().startsWith("次回 "));
 
         // 11:00 -> 次回 13:30
         zdt = zdt.withHour(11);
