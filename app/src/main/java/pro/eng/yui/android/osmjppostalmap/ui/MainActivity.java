@@ -249,6 +249,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.gps_button).setOnClickListener(v -> {
             if (lastLocation != null) {
                 map.getController().animateTo(new GeoPoint(lastLocation.getLatitude(), lastLocation.getLongitude()));
+                map.getController().setZoom(15.0); // 2km四方くらい (Zoom 15 is roughly 2.4km span at latitude 35)
                 if (!initialLocationSet) {
                     initialLocationSet = true;
                     updatePois();
