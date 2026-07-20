@@ -61,6 +61,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         
         authRepository = new AuthRepository(this);
+        viewModel = new ViewModelProvider(this).get(MainViewModel.class);
+        viewModel.updateAccessToken(authRepository.getAccessToken());
+        
         // osmdroid configuration
         Configuration.getInstance().load(this, getSharedPreferences("osmdroid", MODE_PRIVATE));
         
@@ -139,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
         map.getController().setCenter(startPoint);
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
+        viewModel.updateAccessToken(authRepository.getAccessToken());
         viewModel.setFilterOpenOnly(false); // 初期化トリガー
         
         requestLocationPermissions();
@@ -487,6 +491,9 @@ public class MainActivity extends AppCompatActivity {
         map.onResume();
         if (locationOverlay != null) {
             locationOverlay.enableMyLocation();
+        }
+        if (authRepository != null && viewModel != null) {
+            viewModel.updateAccessToken(authRepository.getAccessToken());
         }
         updateHandler.post(updateRunnable);
     }

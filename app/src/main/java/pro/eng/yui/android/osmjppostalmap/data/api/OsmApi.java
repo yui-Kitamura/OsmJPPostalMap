@@ -31,24 +31,24 @@ public interface OsmApi {
             @Field("redirect_uri") String redirectUri
     );
 
-    @GET("user/details.json")
+    @GET("api/0.6/user/details.json")
     Call<ResponseBody> getUserDetailsJson(@Header("Authorization") String auth);
 
-    @PUT("changeset/create")
+    @PUT("api/0.6/changeset/create")
     Call<String> createChangeset(@Header("Authorization") String auth, @Body String xml);
 
-    @POST("changeset/{id}/close")
+    @POST("api/0.6/changeset/{id}/close")
     Call<Void> closeChangeset(@Header("Authorization") String auth, @Path("id") long id);
 
-    @GET("{type}/{id}")
+    @GET("api/0.6/{type}/{id}")
     Call<ResponseBody> getElement(@Path("type") String type, @Path("id") long id);
 
-    @POST("{type}/create")
+    @POST("api/0.6/{type}/create")
     Call<String> createElement(@Header("Authorization") String auth, @Path("type") String type, @Body String xml);
 
-    @PUT("{type}/{id}")
+    @PUT("api/0.6/{type}/{id}")
     Call<String> updateElement(@Header("Authorization") String auth, @Path("type") String type, @Path("id") long id, @Body String xml);
 
-    @POST("notes")
+    @POST("api/0.6/notes")
     Call<ResponseBody> createNote(@retrofit2.http.Query("lat") double lat, @retrofit2.http.Query("lon") double lon, @retrofit2.http.Query("text") String text);
 }

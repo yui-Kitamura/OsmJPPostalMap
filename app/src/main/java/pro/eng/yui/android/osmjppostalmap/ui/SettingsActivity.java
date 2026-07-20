@@ -97,7 +97,11 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void updateUi(TextView loginStatus, Button btnLogin, Button btnUserPage, Button btnLogout) {
         if (authRepository.isLoggedIn()) {
-            loginStatus.setText("ログイン中: " + (authRepository.getUserName() != null ? authRepository.getUserName() : ""));
+            String userName = authRepository.getUserName();
+            loginStatus.setText("ログイン中: " + (userName != null ? userName : "取得中..."));
+            if (userName == null) {
+                fetchUserDetails(authRepository.getAccessToken(), loginStatus, btnLogin, btnUserPage, btnLogout);
+            }
             btnLogin.setVisibility(View.GONE);
             btnUserPage.setVisibility(View.VISIBLE);
             btnLogout.setVisibility(View.VISIBLE);
