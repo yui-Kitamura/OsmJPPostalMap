@@ -9,6 +9,9 @@ import java.util.List;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
 import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
+import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
+import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
+import pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser;
 
 public class MainViewModel extends ViewModel {
 
@@ -54,24 +57,23 @@ public class MainViewModel extends ViewModel {
         }
 
         List<OsmPoi> filtered = new java.util.ArrayList<>();
-        pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser parser = 
-            new pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser();
+        SimpleScheduleParser parser = new SimpleScheduleParser();
         long now = System.currentTimeMillis();
 
         for (OsmPoi poi : allPois) {
             String amenityStr = poi.getTag("amenity");
-            pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity amenity = 
+            ScheduleParser.Amenity amenity = 
                 "post_office".equals(amenityStr) ? 
-                pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_OFFICE : 
-                pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_BOX;
+                ScheduleParser.Amenity.POST_OFFICE : 
+                ScheduleParser.Amenity.POST_BOX;
             
-            String tag = (amenity == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_OFFICE) ? 
+            String tag = (amenity == ScheduleParser.Amenity.POST_OFFICE) ? 
                 "opening_hours" : "collection_times";
-            pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult res = 
-                parser.parse(poi.getTag(tag), now, amenity);
+            ScheduleResult res =  parser.parse(poi.getTag(tag), now, amenity);
             
-            if (res.getCurrentState() == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult.CurrentState.OPENING ||
-                res.getCurrentState() == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
+            if (res.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
+                res.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON ||
+                res.getCurrentState() == ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON) {
                 filtered.add(poi);
             }
         }
