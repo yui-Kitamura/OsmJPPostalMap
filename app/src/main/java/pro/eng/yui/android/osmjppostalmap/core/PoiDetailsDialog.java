@@ -92,11 +92,24 @@ public class PoiDetailsDialog {
                 TextView timeView = new TextView(context);
                 // そのグループの時間を取得（代表する曜日またはPHから）
                 List<String> times = null;
+                boolean foundDay = false;
                 for (String day : groupDays[i]) {
-                    times = schedule.getWeeklyTable().get(day);
-                    if (times != null && !times.isEmpty()) break;
+                    if (schedule.getWeeklyTable().containsKey(day)) {
+                        times = schedule.getWeeklyTable().get(day);
+                        foundDay = true;
+                        break;
+                    }
                 }
-                timeView.setText(times != null && !times.isEmpty() ? String.join(", ", times) : "休業/収集なし");
+                
+                String displayTime;
+                if (!foundDay) {
+                    displayTime = "不明";
+                } else if (times == null || times.isEmpty()) {
+                    displayTime = "休業/収集なし";
+                } else {
+                    displayTime = String.join(", ", times);
+                }
+                timeView.setText(displayTime);
                 timeView.setPadding(8, 4, 8, 4);
                 
                 row.addView(dayView);

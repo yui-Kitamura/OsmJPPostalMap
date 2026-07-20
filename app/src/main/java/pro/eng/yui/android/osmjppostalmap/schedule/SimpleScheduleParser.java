@@ -315,27 +315,34 @@ public class SimpleScheduleParser implements ScheduleParser {
             part = part.trim();
             if (part.isEmpty()) continue;
             
-            // 例: "Mo-Fr 09:00-17:00" または "Mo,Tu,We 09:00" または "PH off" または "10:00-19:00"
-            String[] dayAndTime = part.split(" ", 2);
+            // 例: "Mo-Fr 09:00-17:00" または "Mo, Tu, We 09:00" または "PH off" または "10:00-19:00"
+            // 曜日パートと時間パートの境界を見つける
+            // 時間パートは数字で始まるか、"off" であることが多い
             
-            List<String> days;
+            String dayPart;
             String timePart;
+            List<String> days;
             
-            if (dayAndTime.length < 2) {
-                // 曜日なしのケース: "10:00-19:00"
-                if (dayAndTime[0].contains(":") || dayAndTime[0].equalsIgnoreCase("off")) {
+            // 正規表現で時間（HH:mm）または "off" の開始位置を探す
+            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d{1,2}:\\d{2}|off)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(part);
+            
+            if (matcher.find()) {
+                int splitIdx = matcher.start();
+                dayPart = part.substring(0, splitIdx).trim();
+                timePart = part.substring(splitIdx).trim();
+                
+                if (dayPart.isEmpty()) {
+                    // 曜日なしのケース: "10:00-19:00" または "off"
                     days = Arrays.asList("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su");
-                    timePart = dayAndTime[0];
                 } else {
-                    continue;
+                    if (dayPart.equalsIgnoreCase("ALL")) {
+                        continue;
+                    }
+                    days = expandDays(dayPart);
                 }
             } else {
-                if (dayAndTime[0].equalsIgnoreCase("ALL")) {
-                    // ALL構文は受け付けない
-                    continue;
-                }
-                days = expandDays(dayAndTime[0]);
-                timePart = dayAndTime[1].trim();
+                // 時間が見つからない場合はスキップ（不正な形式）
+                continue;
             }
             
             if (timePart.equalsIgnoreCase("off")) {
@@ -374,25 +381,34 @@ public class SimpleScheduleParser implements ScheduleParser {
             } else if (part.contains("-")) {
                 // ハイフン指定の展開
                 String[] startEnd = part.split("-");
-                int startIdx = -1, endIdx = -1;
-                for (int i = 0; i < allDays.length; i++) {
-                    if (allDays[i].equals(startEnd[0])) startIdx = i;
-                    if (allDays[i].equals(startEnd[1])) endIdx = i;
-                }
-                if (startIdx != -1 && endIdx != -1) {
-                    if (startIdx <= endIdx) {
-                        for (int i = startIdx; i <= endIdx; i++) {
-                            result.add(allDays[i]);
+                if (startEnd.length == 2) {
+                    String startDay = startEnd[0].trim();
+                    String endDay = startEnd[1].trim();
+                    int startIdx = -1, endIdx = -1;
+                    for (int i = 0; i < allDays.length; i++) {
+                        if (allDays[i].equals(startDay)) startIdx = i;
+                        if (allDays[i].equals(endDay)) endIdx = i;
+                    }
+                    if (startIdx != -1 && endIdx != -1) {
+                        if (startIdx <= endIdx) {
+                            for (int i = startIdx; i <= endIdx; i++) {
+                                result.add(allDays[i]);
+                            }
+                        } else {
+                            // We-Mo のように週を跨ぐ場合
+                            for (int i = startIdx; i < allDays.length; i++) {
+                                result.add(allDays[i]);
+                            }
+                            for (int i = 0; i <= endIdx; i++) {
+                                result.add(allDays[i]);
+                            }
                         }
                     } else {
-                        // We-Mo のように週を跨ぐ場合
-                        for (int i = startIdx; i < allDays.length; i++) {
-                            result.add(allDays[i]);
-                        }
-                        for (int i = 0; i <= endIdx; i++) {
-                            result.add(allDays[i]);
-                        }
+                        // 曜日として認識できない場合はそのまま追加（フォールバック）
+                        result.add(part);
                     }
+                } else {
+                    result.add(part);
                 }
             } else {
                 // 単一の曜日指定

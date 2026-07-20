@@ -4,6 +4,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.time.*;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.*;
 
@@ -20,6 +22,59 @@ public class SimpleScheduleParserTest {
      * 入力条件: タグが null または空文字列
      * 出力期待値: {@link ScheduleResult.CurrentState#UNKNOWN}, ステータス "不明"
      */
+    @Test
+    public void testMoFrExpansion() {
+        // Mo-Fr 10:00 が正しく展開されるか確認
+        String tag = "Mo-Fr 10:00";
+        ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 13, 12, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        Map<String, List<String>> table = result.getWeeklyTable();
+        
+        assertTrue("Table keys: " + table.keySet(), table.containsKey("Mo"));
+        assertTrue(table.containsKey("Tu"));
+        assertTrue(table.containsKey("We"));
+        assertTrue(table.containsKey("Th"));
+        assertTrue(table.containsKey("Fr"));
+        assertFalse(table.containsKey("Sa"));
+    }
+
+    @Test
+    public void testCommaSpaceExpansion() {
+        // Mo, We-Fr 10:00 が正しく展開されるか確認
+        String tag = "Mo, We-Fr 10:00";
+        ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 13, 12, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        Map<String, List<String>> table = result.getWeeklyTable();
+        
+        assertTrue(table.containsKey("Mo"));
+        assertFalse(table.containsKey("Tu"));
+        assertTrue(table.containsKey("We"));
+        assertTrue(table.containsKey("Th"));
+        assertTrue(table.containsKey("Fr"));
+    }
+
+    @Test
+    public void testOffDistinctionInWeeklyTable() {
+        // Mo-Fr 10:00; Sa off; (Su/PH は記述なし)
+        String tag = "Mo-Fr 10:00; Sa off;";
+        ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 21, 12, 0, 0, 0, ZoneId.of("Asia/Tokyo")); // Tue
+        ScheduleResult result = parser.parse(tag, zdt.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+        
+        Map<String, List<String>> table = result.getWeeklyTable();
+        
+        // Mo-Fr はデータあり
+        assertTrue(table.containsKey("Mo"));
+        assertFalse(table.get("Mo").isEmpty());
+        
+        // Sa は explicit off (empty list)
+        assertTrue(table.containsKey("Sa"));
+        assertTrue(table.get("Sa").isEmpty());
+        
+        // Su, PH はキー自体がない (unknown)
+        assertFalse(table.containsKey("Su"));
+        assertFalse(table.containsKey("PH"));
+    }
+
     @Test
     public void testEmptyTagReturnsUnknown() {
         ScheduleResult result = parser.parse(null, System.currentTimeMillis(), ScheduleParser.Amenity.POST_OFFICE);
