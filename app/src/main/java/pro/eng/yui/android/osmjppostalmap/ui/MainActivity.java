@@ -230,9 +230,19 @@ public class MainActivity extends AppCompatActivity {
                 searchCard.setVisibility(View.GONE);
                 searchResultsList.setVisibility(View.GONE);
                 searchView.clearFocus();
+                android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                if (imm != null) {
+                    imm.hideSoftInputFromWindow(searchView.getWindowToken(), 0);
+                }
             } else {
                 searchCard.setVisibility(View.VISIBLE);
                 searchView.requestFocus();
+                searchView.postDelayed(() -> {
+                    android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                    if (imm != null) {
+                        imm.showSoftInput(searchView.findFocus(), android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                    }
+                }, 100);
             }
         });
 

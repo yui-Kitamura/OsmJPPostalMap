@@ -18,7 +18,8 @@
         android:layout_margin="16dp"
         android:visibility="gone"
         app:cardCornerRadius="8dp"
-        app:cardElevation="4dp"
+        app:cardElevation="12dp"
+        android:elevation="12dp"
         app:layout_constraintEnd_toStartOf="@id/menu_button"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -138,6 +139,7 @@
         android:layout_height="0dp"
         android:background="#FFFFFF"
         android:visibility="gone"
+        android:elevation="11dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/search_card"
         app:layout_constraintHeight_percent="0.5" />
