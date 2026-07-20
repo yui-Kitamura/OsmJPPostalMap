@@ -19,6 +19,7 @@ public class MainViewModel extends ViewModel {
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
     private final MutableLiveData<String> successMessage = new MutableLiveData<>();
     private final MutableLiveData<Boolean> filterOpenOnly = new MutableLiveData<>(false);
+    private final MutableLiveData<Boolean> filterPostOfficeOnly = new MutableLiveData<>(false);
     private final MutableLiveData<List<OsmPoi>> filteredPois = new MutableLiveData<>();
 
     public MainViewModel() {
@@ -27,12 +28,17 @@ public class MainViewModel extends ViewModel {
         
         repository.getPois(0,0,0,0).observeForever(pois -> applyFilter());
         filterOpenOnly.observeForever(filter -> applyFilter());
+        filterPostOfficeOnly.observeForever(filter -> applyFilter());
         repository.getError().observeForever(errorMessage::postValue);
         repository.getSuccessMessage().observeForever(successMessage::postValue);
     }
 
     public LiveData<Boolean> getFilterOpenOnly() {
         return filterOpenOnly;
+    }
+
+    public LiveData<Boolean> getFilterPostOfficeOnly() {
+        return filterPostOfficeOnly;
     }
 
     public LiveData<List<OsmPoi>> getPois() {
@@ -47,12 +53,18 @@ public class MainViewModel extends ViewModel {
         filterOpenOnly.setValue(openOnly);
     }
 
+    public void setFilterPostOfficeOnly(boolean postOfficeOnly) {
+        filterPostOfficeOnly.setValue(postOfficeOnly);
+    }
+
     private void applyFilter() {
         List<OsmPoi> allPois = repository.getPois(0,0,0,0).getValue(); // 実装上の簡略化
         if (allPois == null) return;
 
         boolean openOnly = filterOpenOnly.getValue() != null && filterOpenOnly.getValue();
-        if (!openOnly) {
+        boolean postOfficeOnly = filterPostOfficeOnly.getValue() != null && filterPostOfficeOnly.getValue();
+        
+        if (!openOnly && !postOfficeOnly) {
             filteredPois.postValue(allPois);
             return;
         }
@@ -63,20 +75,31 @@ public class MainViewModel extends ViewModel {
 
         for (OsmPoi poi : allPois) {
             String amenityStr = poi.getTag("amenity");
-            ScheduleParser.Amenity amenity = 
-                "post_office".equals(amenityStr) ? 
-                ScheduleParser.Amenity.POST_OFFICE : 
-                ScheduleParser.Amenity.POST_BOX;
+            boolean isPostOffice = "post_office".equals(amenityStr);
             
-            String tag = (amenity == ScheduleParser.Amenity.POST_OFFICE) ? 
-                "opening_hours" : "collection_times";
-            ScheduleResult res =  parser.parse(poi.getTag(tag), now, amenity);
-            
-            if (res.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
-                res.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON ||
-                res.getCurrentState() == ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON) {
-                filtered.add(poi);
+            // 郵便局フィルタ
+            if (postOfficeOnly && !isPostOffice) {
+                continue;
             }
+
+            // 開店中フィルタ
+            if (openOnly) {
+                ScheduleParser.Amenity amenity = isPostOffice ?
+                    ScheduleParser.Amenity.POST_OFFICE :
+                    ScheduleParser.Amenity.POST_BOX;
+
+                String tag = (amenity == ScheduleParser.Amenity.POST_OFFICE) ?
+                    "opening_hours" : "collection_times";
+                ScheduleResult res = parser.parse(poi.getTag(tag), now, amenity);
+
+                if (!(res.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
+                    res.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON ||
+                    res.getCurrentState() == ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON)) {
+                    continue;
+                }
+            }
+            
+            filtered.add(poi);
         }
         filteredPois.postValue(filtered);
     }

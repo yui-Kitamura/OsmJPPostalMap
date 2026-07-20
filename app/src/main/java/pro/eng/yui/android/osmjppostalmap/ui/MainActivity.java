@@ -67,15 +67,20 @@ public class MainActivity extends AppCompatActivity {
         Configuration.getInstance().load(this, getSharedPreferences("osmdroid", MODE_PRIVATE));
         
         setContentView(R.layout.activity_main);
+        new Thread(SimpleScheduleParser::initializeHolidays).start();
+
+        View postOfficeFilterButtonForHolidays = findViewById(R.id.post_office_filter_button);
         SimpleScheduleParser.setOnHolidaysLoadedListener(() -> {
             runOnUiThread(() -> {
                 View filterButton = findViewById(R.id.filter_button);
                 if (filterButton != null) {
                     filterButton.invalidate();
                 }
+                if (postOfficeFilterButtonForHolidays != null) {
+                    postOfficeFilterButtonForHolidays.invalidate();
+                }
             });
         });
-        new Thread(SimpleScheduleParser::initializeHolidays).start();
 
         // Edge-to-Edge adjustment
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_layout), (v, insets) -> {
@@ -213,6 +218,19 @@ public class MainActivity extends AppCompatActivity {
 
         viewModel.getFilterOpenOnly().observe(this, active -> {
             filterButton.setFilterActive(active != null && active);
+        });
+
+        // Post Office Filter Button
+        PostOfficeFilterButton postOfficeFilterButton = findViewById(R.id.post_office_filter_button);
+        postOfficeFilterButton.setOnClickListener(v -> {
+            boolean currentFilter = viewModel.getFilterPostOfficeOnly().getValue() != null && viewModel.getFilterPostOfficeOnly().getValue();
+            viewModel.setFilterPostOfficeOnly(!currentFilter);
+            postOfficeFilterButton.setFilterActive(!currentFilter);
+            Toast.makeText(this, currentFilter ? "フィルタ解除" : "郵便局のみ表示", Toast.LENGTH_SHORT).show();
+        });
+
+        viewModel.getFilterPostOfficeOnly().observe(this, active -> {
+            postOfficeFilterButton.setFilterActive(active != null && active);
         });
 
         // GPS Button
