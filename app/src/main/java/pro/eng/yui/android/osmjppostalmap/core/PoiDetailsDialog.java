@@ -125,7 +125,11 @@ public class PoiDetailsDialog {
                 if (!foundDay) {
                     displayTime = "不明";
                 } else if (times == null || times.isEmpty()) {
-                    displayTime = "休業/収集なし";
+                    if (isPostBox) {
+                        displayTime = "収集なし";
+                    } else {
+                        displayTime = "休業";
+                    }
                 } else {
                     displayTime = String.join(", ", times);
                 }
