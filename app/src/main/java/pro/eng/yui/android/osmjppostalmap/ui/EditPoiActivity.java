@@ -31,13 +31,12 @@ import androidx.core.graphics.Insets;
 import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
-import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
 import pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -118,19 +117,27 @@ public class EditPoiActivity extends AppCompatActivity {
         // IntentからPOI情報を受け取る
         long id = getIntent().getLongExtra("POI_ID", 0);
         String type = getIntent().getStringExtra("POI_TYPE");
+        int ver = getIntent().getIntExtra("POI_VER", 0);
         
         // 既存の座標があればそれを使用、なければデフォルト
         double initialLat = getIntent().getDoubleExtra("POI_LAT", 35.6812);
         double initialLon = getIntent().getDoubleExtra("POI_LON", 139.7671);
         
-        java.util.Map<String, String> tags = new java.util.HashMap<>();
-        if (getIntent().hasExtra("TAG_AMENITY")) tags.put("amenity", getIntent().getStringExtra("TAG_AMENITY"));
-        if (getIntent().hasExtra("TAG_NAME")) tags.put("name", getIntent().getStringExtra("TAG_NAME"));
-        if (getIntent().hasExtra("TAG_OPENING_HOURS")) tags.put("opening_hours", getIntent().getStringExtra("TAG_OPENING_HOURS"));
-        if (getIntent().hasExtra("TAG_COLLECTION_TIMES")) tags.put("collection_times", getIntent().getStringExtra("TAG_COLLECTION_TIMES"));
-        if (getIntent().hasExtra("TAG_REF")) tags.put("ref", getIntent().getStringExtra("TAG_REF"));
+        java.util.Map<String, String> tags;
+        if (getIntent().hasExtra("POI_TAGS")) {
+            // POI_TAGS があればそれを使用（新しい方式）
+            tags = (java.util.Map<String, String>) getIntent().getSerializableExtra("POI_TAGS");
+        } else {
+            // なければ個別に取得（互換性のため）
+            tags = new java.util.HashMap<>();
+            if (getIntent().hasExtra("TAG_AMENITY")) tags.put("amenity", getIntent().getStringExtra("TAG_AMENITY"));
+            if (getIntent().hasExtra("TAG_NAME")) tags.put("name", getIntent().getStringExtra("TAG_NAME"));
+            if (getIntent().hasExtra("TAG_OPENING_HOURS")) tags.put("opening_hours", getIntent().getStringExtra("TAG_OPENING_HOURS"));
+            if (getIntent().hasExtra("TAG_COLLECTION_TIMES")) tags.put("collection_times", getIntent().getStringExtra("TAG_COLLECTION_TIMES"));
+            if (getIntent().hasExtra("TAG_REF")) tags.put("ref", getIntent().getStringExtra("TAG_REF"));
+        }
 
-        targetPoi = new OsmPoi(id, initialLat, initialLon, type != null ? type : "node", tags);
+        targetPoi = new OsmPoi(id, initialLat, initialLon, type != null ? type : "node", tags, ver);
 
         TextView title = findViewById(R.id.edit_title);
         tagInput = findViewById(R.id.edit_tag_value);
@@ -195,6 +202,15 @@ public class EditPoiActivity extends AppCompatActivity {
 
         String amenity = targetPoi.getTag("amenity");
         boolean isPostBox = "post_box".equals(amenity);
+
+        // クレンジング：不要なタグを除去
+        if (isPostBox) {
+            targetPoi.getTags().remove("opening_hours");
+        } else {
+            targetPoi.getTags().remove("collection_times");
+            targetPoi.getTags().remove("ref");
+        }
+
         title.setText(isPostBox ? "郵便ポストの編集" : "郵便局の編集");
 
         if (isPostBox) {
@@ -367,6 +383,9 @@ public class EditPoiActivity extends AppCompatActivity {
         boolean isPostBox = "post_box".equals(amenity);
         
         if (isPostBox) {
+            // 不要なタグを削除
+            targetPoi.getTags().remove("opening_hours");
+
             TextInputEditText refInput = findViewById(R.id.edit_ref_value);
             String newRef = refInput.getText() != null ? refInput.getText().toString().trim() : "";
             if (!newRef.isEmpty()) {
@@ -419,8 +438,16 @@ public class EditPoiActivity extends AppCompatActivity {
                 targetPoi.getTags().put("collection_times", collection);
             }
         } else {
-            if (layoutFallback.getVisibility() == View.VISIBLE) {
-                // パース失敗時（フォールバック表示中）は営業時間タグを更新しない
+            // 不要なタグを削除
+            targetPoi.getTags().remove("collection_times");
+            targetPoi.getTags().remove("ref");
+
+            if (layoutFallback.getVisibility() == View.VISIBLE && findViewById(R.id.edit_tag_layout).getVisibility() != View.VISIBLE) {
+                // パース失敗時（フォールバック表示中）かつ直接編集も表示されていない場合は営業時間タグを更新しない
+            } else if (findViewById(R.id.edit_tag_layout).getVisibility() == View.VISIBLE) {
+                // タグ直接編集が表示されている場合はその値を反映
+                String manualText = tagInput.getText() != null ? tagInput.getText().toString().trim() : "";
+                targetPoi.getTags().put("opening_hours", manualText);
             } else {
                 Map<String, List<String>> weeklyTable = new HashMap<>();
                 
@@ -476,7 +503,8 @@ public class EditPoiActivity extends AppCompatActivity {
                 pos.getLatitude(),
                 pos.getLongitude(),
                 targetPoi.getType(),
-                targetPoi.getTags()
+                targetPoi.getTags(),
+                targetPoi.getVer()
         );
 
         repository.savePoi(updatedPoi, "update " + (updatedPoi.getTag("name") != null ? updatedPoi.getTag("name") : updatedPoi.getType()), new PoiRepository.PoiSaveCallback() {
