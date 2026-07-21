@@ -10,11 +10,14 @@ import org.osmdroid.tileprovider.tilesource.XYTileSource;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 
 import pro.eng.yui.android.osmjppostalmap.core.PoiDetailsDialog;
 import pro.eng.yui.android.osmjppostalmap.core.PoiMarker;
-import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
+import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 import pro.eng.yui.android.osmjppostalmap.R;
 
 import android.view.View;
@@ -369,8 +372,15 @@ public class MainActivity extends AppCompatActivity {
         if (map == null || !map.isLayoutOccurred() || !initialLocationSet) {
             return;
         }
-        org.osmdroid.util.BoundingBox box = map.getBoundingBox();
-        viewModel.fetchPois(box.getLatSouth(), box.getLonWest(), box.getLatNorth(), box.getLonEast());
+        String currentPrefName = "東京都";
+        String query = String.format(Locale.US, 
+                "is_in(%f,%f)->.a;\n" +
+                "rel(pivot.a)[\"boundary\"=\"administrative\"][\"admin_level\"=\"4\"];\n",
+                map.getMapCenter().getLatitude(), map.getMapCenter().getLongitude());
+        try {
+            currentPrefName = JpPostalUtil.callOverpass(query, 3, 3).get(0).getTag("name");
+        } catch (IOException|IllegalStateException ignore) { }
+        viewModel.fetchPois(currentPrefName);
     }
 
     private void requestLocationPermissions() {

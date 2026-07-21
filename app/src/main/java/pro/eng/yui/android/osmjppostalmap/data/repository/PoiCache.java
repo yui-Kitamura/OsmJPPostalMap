@@ -3,7 +3,7 @@ package pro.eng.yui.android.osmjppostalmap.data.repository;
 import java.util.HashMap;
 import java.util.Map;
 
-import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
 /**
  * POIの一時的なキャッシュ

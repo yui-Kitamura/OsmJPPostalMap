@@ -2,7 +2,7 @@ package pro.eng.yui.android.osmjppostalmap.domain.repository;
 
 import androidx.lifecycle.LiveData;
 import java.util.List;
-import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
 /**
  * POIデータの取得と保存を担当するリポジトリインターフェース
@@ -10,8 +10,9 @@ import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
 public interface PoiRepository {
     /**
      * 指定された領域のPOIを取得する
+     * @param prefName 都道府県名
      */
-    LiveData<List<OsmPoi>> getPois(double minLat, double minLon, double maxLat, double maxLon);
+    LiveData<List<OsmPoi>> getPois(String prefName);
 
     /**
      * 指定されたIDのPOIを取得する
@@ -32,10 +33,6 @@ public interface PoiRepository {
      * 地図メモ（Note）を追加する
      */
     void addNote(double lat, double lon, String text, PoiSaveCallback callback);
-
-    /**
-     * キーワードでPOIを検索する
-     */
 
     /**
      * エラーメッセージを配信するLiveDataを取得する

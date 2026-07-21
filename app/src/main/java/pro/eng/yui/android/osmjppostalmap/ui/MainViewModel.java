@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel;
 import java.util.List;
 
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
-import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
@@ -23,10 +23,9 @@ public class MainViewModel extends ViewModel {
     private final MutableLiveData<List<OsmPoi>> filteredPois = new MutableLiveData<>();
 
     public MainViewModel() {
-        // TODO: Dependency Injection
         this.repository = PoiRepositoryImpl.getInstance();
         
-        repository.getPois(0,0,0,0).observeForever(pois -> applyFilter());
+        repository.getPois("東京都").observeForever(pois -> applyFilter());
         filterOpenOnly.observeForever(filter -> applyFilter());
         filterPostOfficeOnly.observeForever(filter -> applyFilter());
         repository.getError().observeForever(errorMessage::postValue);
@@ -42,7 +41,7 @@ public class MainViewModel extends ViewModel {
     }
 
     public LiveData<List<OsmPoi>> getPois() {
-        return repository.getPois(35.68, 139.76, 35.69, 139.77);
+        return repository.getPois("東京都");
     }
 
     public LiveData<List<OsmPoi>> getFilteredPois() {
@@ -58,7 +57,7 @@ public class MainViewModel extends ViewModel {
     }
 
     private void applyFilter() {
-        List<OsmPoi> allPois = repository.getPois(0,0,0,0).getValue(); // 実装上の簡略化
+        List<OsmPoi> allPois = repository.getPois("東京都").getValue();
         if (allPois == null) return;
 
         boolean openOnly = filterOpenOnly.getValue() != null && filterOpenOnly.getValue();
@@ -104,8 +103,8 @@ public class MainViewModel extends ViewModel {
         filteredPois.postValue(filtered);
     }
 
-    public void fetchPois(double minLat, double minLon, double maxLat, double maxLon) {
-        repository.getPois(minLat, minLon, maxLat, maxLon);
+    public void fetchPois(String prefName) {
+        repository.getPois(prefName);
     }
 
     public void updateAccessToken(String token) {

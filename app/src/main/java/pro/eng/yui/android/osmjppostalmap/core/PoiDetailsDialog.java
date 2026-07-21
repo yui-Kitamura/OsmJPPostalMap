@@ -13,10 +13,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 import pro.eng.yui.android.osmjppostalmap.R;
-import pro.eng.yui.android.osmjppostalmap.domain.model.OsmPoi;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
 
 public class PoiDetailsDialog {
@@ -163,13 +162,16 @@ public class PoiDetailsDialog {
             intent.putExtra("POI_TYPE", poi.getType());
             intent.putExtra("POI_LAT", poi.getLat());
             intent.putExtra("POI_LON", poi.getLon());
-            // タグは量が多い可能性があるが、MVPの編集対象タグに絞るか、Serializable/Parcelableが必要
-            // ここでは簡易的に amenity と編集対象タグのみ渡す
-            intent.putExtra("TAG_AMENITY", poi.getTag("amenity"));
-            intent.putExtra("TAG_NAME", poi.getTag("name"));
-            intent.putExtra("TAG_OPENING_HOURS", poi.getTag("opening_hours"));
-            intent.putExtra("TAG_COLLECTION_TIMES", poi.getTag("collection_times"));
-            intent.putExtra("TAG_REF", poi.getTag("ref"));
+            intent.putExtra("POI_VER", poi.getVer());
+            
+            // すべてのタグを渡す
+            if (poi.getTags() instanceof java.io.Serializable) {
+                intent.putExtra("POI_TAGS", (java.io.Serializable) poi.getTags());
+            } else {
+                // Serializable でない場合は HashMap にコピーして渡す
+                intent.putExtra("POI_TAGS", new java.util.HashMap<>(poi.getTags()));
+            }
+
             if (context instanceof pro.eng.yui.android.osmjppostalmap.ui.MainActivity) {
                 pro.eng.yui.android.osmjppostalmap.ui.MainActivity activity = (pro.eng.yui.android.osmjppostalmap.ui.MainActivity) context;
                 org.osmdroid.views.MapView map = activity.findViewById(R.id.map);

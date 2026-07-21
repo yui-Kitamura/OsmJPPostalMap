@@ -3,6 +3,8 @@ package pro.eng.yui.android.osmjppostalmap.ui;
 import android.content.Intent;
 import org.json.JSONObject;
 import okhttp3.ResponseBody;
+import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
+import pro.eng.yui.oss.osm.lib.jppostalcore.api.osm.OsmApi;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -145,11 +147,12 @@ public class SettingsActivity extends AppCompatActivity {
 
         Call<ResponseBody> call;
         if (CLIENT_SECRET == null || CLIENT_SECRET.isEmpty()) {
-            call = authRepository.getAuthApi().getAccessTokenPublic(
+
+            call = JpPostalUtil.getOsmApi().getAccessTokenPublic(
                     CLIENT_ID, code, "authorization_code", REDIRECT_URI
             );
         } else {
-            call = authRepository.getAuthApi().getAccessToken(
+            call = JpPostalUtil.getOsmApi().getAccessToken(
                     CLIENT_ID, CLIENT_SECRET, code, "authorization_code", REDIRECT_URI
             );
         }
@@ -180,7 +183,7 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void fetchUserDetails(String token, TextView loginStatus, Button btnLogin, Button btnUserPage, Button btnLogout) {
-        authRepository.getAuthApi().getUserDetailsJson("Bearer " + token).enqueue(new Callback<ResponseBody>() {
+        JpPostalUtil.getOsmApi().getUserDetailsJson("Bearer " + token).enqueue(new Callback<ResponseBody>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                 try {
