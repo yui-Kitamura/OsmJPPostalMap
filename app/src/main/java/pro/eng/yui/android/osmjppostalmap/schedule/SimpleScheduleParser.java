@@ -283,11 +283,8 @@ public class SimpleScheduleParser implements ScheduleParser {
             String[] times = timePart.split(",");
             
             for (String day : days) {
-                List<String> dayTimes = table.get(day);
-                if (dayTimes == null) {
-                    dayTimes = new ArrayList<>();
-                    table.put(day, dayTimes);
-                }
+                List<String> dayTimes = new ArrayList<>();
+                table.put(day, dayTimes);
                 for (String t : times) {
                     dayTimes.add(t.trim());
                 }

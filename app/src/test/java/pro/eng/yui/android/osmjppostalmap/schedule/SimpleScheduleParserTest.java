@@ -562,5 +562,52 @@ public class SimpleScheduleParserTest {
         // 今回はタグに10:00しかないため、本日の収集は終了扱いになる
         assertEquals(ScheduleResult.CurrentState.TODAY_FINISHED, result.getCurrentState());
     }
+
+    @Test
+    public void testOverlappingRulesPriority() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        // 9:00-19:00; Sa-Su 9:00-12:00
+        // 土日は 9:00-12:00 が優先されるべき
+        String tag = "9:00-19:00; Sa-Su 9:00-12:00";
+        
+        // 土曜日の 15:00
+        ZonedDateTime zdtSa = ZonedDateTime.of(2026, 7, 18, 15, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult result = parser.parse(tag, zdtSa.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
+        
+        // 12:00 で終了しているはずなので TODAY_FINISHED
+        assertEquals("Saturday 15:00 should be closed", ScheduleResult.CurrentState.TODAY_FINISHED, result.getCurrentState());
+        
+        // 24/7; PH off;
+        // 祝日は休みであるべき
+        String tag2 = "24/7; PH off;";
+        // 2026-07-20 (月・祝)
+        ZonedDateTime zdtPh = ZonedDateTime.of(2026, 7, 20, 12, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult resultPh = parser.parse(tag2, zdtPh.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
+        
+        // PH off なので TODAY_FINISHED
+        assertEquals(ScheduleResult.CurrentState.TODAY_FINISHED, resultPh.getCurrentState());
+    }
+
+    @Test
+    public void testCommaListPriority() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        // Mo-Fr 9:00-17:00; Mo,We 9:00-12:00
+        // 月、水は 9:00-12:00 が優先されるべき
+        String tag = "Mo-Fr 9:00-17:00; Mo,We 9:00-12:00";
+        
+        // 月曜日の 15:00
+        ZonedDateTime zdtMo = ZonedDateTime.of(2026, 7, 20, 15, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        // (注: 2026-07-20 は祝日なので PH 指定がないと UNKNOWN になる。テスト用に amenity を変えるか日付を変える)
+        // 2026-07-13 (月)
+        zdtMo = ZonedDateTime.of(2026, 7, 13, 15, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        
+        ScheduleResult result = parser.parse(tag, zdtMo.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
+        assertEquals(ScheduleResult.CurrentState.TODAY_FINISHED, result.getCurrentState());
+        
+        // 火曜日の 15:00 (火曜日は上書きされていないので 17:00 まで)
+        ZonedDateTime zdtTu = ZonedDateTime.of(2026, 7, 14, 15, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult resultTu = parser.parse(tag, zdtTu.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
+        assertEquals(ScheduleResult.CurrentState.OPENING, resultTu.getCurrentState());
+    }
     
 }
