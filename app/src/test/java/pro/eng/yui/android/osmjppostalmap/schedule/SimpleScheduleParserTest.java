@@ -584,8 +584,8 @@ public class SimpleScheduleParserTest {
         ZonedDateTime zdtPh = ZonedDateTime.of(2026, 7, 20, 12, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
         ScheduleResult resultPh = parser.parse(tag2, zdtPh.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
         
-        // PH off なので TODAY_FINISHED
-        assertEquals(ScheduleResult.CurrentState.TODAY_FINISHED, resultPh.getCurrentState());
+        // PH off なので CLOSED
+        assertEquals(ScheduleResult.CurrentState.CLOSED, resultPh.getCurrentState());
     }
 
     @Test
