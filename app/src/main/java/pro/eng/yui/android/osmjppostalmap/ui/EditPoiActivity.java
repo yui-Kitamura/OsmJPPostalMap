@@ -117,7 +117,7 @@ public class EditPoiActivity extends AppCompatActivity {
         // IntentからPOI情報を受け取る
         long id = getIntent().getLongExtra("POI_ID", 0);
         String type = getIntent().getStringExtra("POI_TYPE");
-        int ver = getIntent().getIntExtra("POI_VER", 0);
+        long ver = getIntent().getLongExtra("POI_VER", 0L);
         
         // 既存の座標があればそれを使用、なければデフォルト
         double initialLat = getIntent().getDoubleExtra("POI_LAT", 35.6812);
