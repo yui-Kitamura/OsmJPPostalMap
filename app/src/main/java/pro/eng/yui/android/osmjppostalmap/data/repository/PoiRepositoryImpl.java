@@ -135,7 +135,27 @@ public class PoiRepositoryImpl implements PoiRepository {
                 }
             }
 
-            // 3. クールダウン判定（ネットワーク取得のみに適用）
+            // 4. 表示範囲にかかる都道府県名を逆ジオコーディングで特定
+            Set<String> prefNames = reverseGeocodePrefectures(latLonPoints);
+            if (prefNames.isEmpty()) { return; }
+
+            // 5. 新規フェッチが必要な県を特定
+            Map<String, Integer> prefs = JpPostalUtil.getPrefectures();
+            List<String> neededPrefNames = new ArrayList<>();
+            for (String name : prefNames) {
+                Integer code = prefs.get(name);
+                if (code == null || code < 0) { continue; }
+                currentPrefCodes.add(code);
+                if (local != null && !local.hasPrefecture(code)) {
+                    neededPrefNames.add(name);
+                }
+            }
+
+            if (neededPrefNames.isEmpty()) {
+                return; // すべてキャッシュ済みなのでスキップ
+            }
+
+            // 3. クールダウン判定（新規ネットワーク取得が発生する場合のみ適用）
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastFetchTime < MIN_INTERVAL_MS) {
                 return;
@@ -143,24 +163,13 @@ public class PoiRepositoryImpl implements PoiRepository {
             lastFetchTime = currentTime;
             startCooldownTimer();
 
-            // 4. 表示範囲にかかる都道府県名を逆ジオコーディングで特定
-            Set<String> prefNames = reverseGeocodePrefectures(latLonPoints);
-            if (prefNames.isEmpty()) { return; }
-
-            // 5. 各県をキャッシュ優先で読み込み
-            Map<String, Integer> prefs = JpPostalUtil.getPrefectures();
-            boolean anyNew = false;
-            for (String name : prefNames) {
+            for (String name : neededPrefNames) {
                 Integer code = prefs.get(name);
-                if (code == null || code < 0) { continue; }
-                currentPrefCodes.add(code);
-                if (local != null && !local.hasPrefecture(code)) {
-                    loadPref(code, name, false);
-                    anyNew = true;
-                }
+                loadPref(code, name, false);
             }
-            // 新しくフェッチしたデータがある場合は、再度座標範囲で抽出して反映
-            if (anyNew && local != null) {
+
+            // 新しくフェッチしたデータがあるため、再度座標範囲で抽出して反映
+            if (local != null) {
                 poisLiveData.postValue(local.getByBoundingBox(fLatMin, fLatMax, fLonMin, fLonMax));
             }
         });
