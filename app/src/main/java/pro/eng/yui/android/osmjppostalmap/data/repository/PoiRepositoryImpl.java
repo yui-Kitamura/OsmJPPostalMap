@@ -103,7 +103,7 @@ public class PoiRepositoryImpl implements PoiRepository {
         executor.execute(() -> {
             try {
                 task.run();
-            } catch (RuntimeException e) {
+            } catch (Exception e) {
                 errorLiveData.postValue("処理中にエラーが発生しました");
             }
         });
@@ -158,14 +158,20 @@ public class PoiRepositoryImpl implements PoiRepository {
             // 3. クールダウン判定（新規ネットワーク取得が発生する場合のみ適用）
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastFetchTime < MIN_INTERVAL_MS) {
+                // クールダウン中でも、他タスクで更新された可能性を考慮して最後にDBから再取得
+                if (local != null) {
+                    poisLiveData.postValue(local.getByBoundingBox(fLatMin, fLatMax, fLonMin, fLonMax));
+                }
                 return;
             }
             lastFetchTime = currentTime;
             startCooldownTimer();
 
+            boolean anyNew = false;
             for (String name : neededPrefNames) {
                 Integer code = prefs.get(name);
                 loadPref(code, name, false);
+                anyNew = true;
             }
 
             // 新しくフェッチしたデータがあるため、再度座標範囲で抽出して反映

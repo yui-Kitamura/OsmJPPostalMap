@@ -125,6 +125,15 @@ public class MainActivity extends AppCompatActivity {
         viewModel.updateAccessToken(authRepository.getAccessToken());
         viewModel.setFilterOpenOnly(false); // 初期化トリガー
         
+        // 初回表示トリガー：レイアウト完了後に一度 updatePois を実行する
+        map.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            @Override
+            public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                map.removeOnLayoutChangeListener(this);
+                updatePois();
+            }
+        });
+
         requestLocationPermissions();
         
         // Observe Filtered POIs
