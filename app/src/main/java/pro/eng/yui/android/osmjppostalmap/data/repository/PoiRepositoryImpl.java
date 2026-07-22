@@ -62,6 +62,7 @@ public class PoiRepositoryImpl implements PoiRepository {
         PoiRepositoryImpl repo = getInstance();
         if (repo.local == null) {
             repo.local = new PoiLocalDataSource(context.getApplicationContext());
+            repo.loadAllFromCache();
         }
     }
 
@@ -112,29 +113,56 @@ public class PoiRepositoryImpl implements PoiRepository {
     public void loadPoisForArea(double[][] latLonPoints) {
         if (latLonPoints == null || latLonPoints.length == 0) { return; }
 
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastFetchTime < MIN_INTERVAL_MS) {
-            return; // クールダウン中はネットワーク取得を抑止
+        // 1. 座標範囲を特定
+        double latMin = Double.MAX_VALUE;
+        double latMax = -Double.MAX_VALUE;
+        double lonMin = Double.MAX_VALUE;
+        double lonMax = -Double.MAX_VALUE;
+        for (double[] p : latLonPoints) {
+            latMin = Math.min(latMin, p[0]);
+            latMax = Math.max(latMax, p[0]);
+            lonMin = Math.min(lonMin, p[1]);
+            lonMax = Math.max(lonMax, p[1]);
         }
-        lastFetchTime = currentTime;
-        startCooldownTimer();
+        final double fLatMin = latMin, fLatMax = latMax, fLonMin = lonMin, fLonMax = lonMax;
 
         runOnExecutor(() -> {
-            // 1. 表示範囲にかかる都道府県名を逆ジオコーディングで特定
+            // 2. キャッシュから座標範囲で即座に読み出す
+            if (local != null) {
+                List<OsmPoi> cached = local.getByBoundingBox(fLatMin, fLatMax, fLonMin, fLonMax);
+                if (!cached.isEmpty()) {
+                    poisLiveData.postValue(cached);
+                }
+            }
+
+            // 3. クールダウン判定（ネットワーク取得のみに適用）
+            long currentTime = System.currentTimeMillis();
+            if (currentTime - lastFetchTime < MIN_INTERVAL_MS) {
+                return;
+            }
+            lastFetchTime = currentTime;
+            startCooldownTimer();
+
+            // 4. 表示範囲にかかる都道府県名を逆ジオコーディングで特定
             Set<String> prefNames = reverseGeocodePrefectures(latLonPoints);
             if (prefNames.isEmpty()) { return; }
 
-            // 2. 名前→コード
+            // 5. 各県をキャッシュ優先で読み込み
             Map<String, Integer> prefs = JpPostalUtil.getPrefectures();
-
-            // 3. 各県をキャッシュ優先で読み込み
-            currentPrefCodes.clear();
+            boolean anyNew = false;
             for (String name : prefNames) {
                 Integer code = prefs.get(name);
                 if (code == null || code < 0) { continue; }
-                loadPref(code, name, false);
+                currentPrefCodes.add(code);
+                if (local != null && !local.hasPrefecture(code)) {
+                    loadPref(code, name, false);
+                    anyNew = true;
+                }
             }
-            postCombined();
+            // 新しくフェッチしたデータがある場合は、再度座標範囲で抽出して反映
+            if (anyNew && local != null) {
+                poisLiveData.postValue(local.getByBoundingBox(fLatMin, fLatMax, fLonMin, fLonMax));
+            }
         });
     }
 
@@ -186,6 +214,22 @@ public class PoiRepositoryImpl implements PoiRepository {
         } catch (RuntimeException e) {
             errorLiveData.postValue("データの取得に失敗しました: " + prefName);
         }
+    }
+
+    /**
+     * アプリ起動時、SQLiteに保存されているすべての都道府県を読み込む。
+     */
+    private void loadAllFromCache() {
+        runOnExecutor(() -> {
+            if (local == null) return;
+            List<PrefMeta> saved = local.getAllPrefMeta();
+            if (saved.isEmpty()) return;
+
+            for (PrefMeta meta : saved) {
+                currentPrefCodes.add(meta.getPrefCode());
+            }
+            postCombined();
+        });
     }
 
     /**

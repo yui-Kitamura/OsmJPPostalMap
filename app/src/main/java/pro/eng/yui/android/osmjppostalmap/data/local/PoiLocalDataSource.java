@@ -96,6 +96,28 @@ public class PoiLocalDataSource {
         return result;
     }
 
+    /**
+     * 座標範囲（Bounding Box）に含まれるPOIを取得する。
+     */
+    public List<OsmPoi> getByBoundingBox(double latMin, double latMax, double lonMin, double lonMax) {
+        SQLiteDatabase db = helper.getReadableDatabase();
+        List<OsmPoi> result = new ArrayList<>();
+        String selection = PoiDbHelper.COL_LAT + " BETWEEN ? AND ? AND " +
+                          PoiDbHelper.COL_LON + " BETWEEN ? AND ?";
+        String[] selectionArgs = new String[]{
+                String.valueOf(latMin), String.valueOf(latMax),
+                String.valueOf(lonMin), String.valueOf(lonMax)
+        };
+        try (Cursor c = db.query(PoiDbHelper.TABLE_POI, null,
+                selection, selectionArgs, null, null, null)) {
+            while (c.moveToNext()) {
+                OsmPoi poi = fromCursor(c);
+                if (poi != null) { result.add(poi); }
+            }
+        }
+        return result;
+    }
+
     public List<PrefMeta> getAllPrefMeta() {
         SQLiteDatabase db = helper.getReadableDatabase();
         List<PrefMeta> result = new ArrayList<>();
@@ -120,6 +142,8 @@ public class PoiLocalDataSource {
         v.put(PoiDbHelper.COL_ID, poi.getId());
         v.put(PoiDbHelper.COL_TYPE, poi.getType());
         v.put(PoiDbHelper.COL_NODE, serializeNode(poi));
+        v.put(PoiDbHelper.COL_LAT, poi.getLat());
+        v.put(PoiDbHelper.COL_LON, poi.getLon());
         v.put(PoiDbHelper.COL_VER, poi.getVer());
         return v;
     }
@@ -148,11 +172,11 @@ public class PoiLocalDataSource {
         long id = c.getLong(c.getColumnIndexOrThrow(PoiDbHelper.COL_ID));
         String type = c.getString(c.getColumnIndexOrThrow(PoiDbHelper.COL_TYPE));
         long ver = c.getLong(c.getColumnIndexOrThrow(PoiDbHelper.COL_VER));
+        double lat = c.getDouble(c.getColumnIndexOrThrow(PoiDbHelper.COL_LAT));
+        double lon = c.getDouble(c.getColumnIndexOrThrow(PoiDbHelper.COL_LON));
         String node = c.getString(c.getColumnIndexOrThrow(PoiDbHelper.COL_NODE));
         try {
             JSONObject json = new JSONObject(node);
-            double lat = json.getDouble("lat");
-            double lon = json.getDouble("lon");
             Map<String, String> tags = new HashMap<>();
             JSONObject tagsJson = json.optJSONObject("tags");
             if (tagsJson != null) {

@@ -363,7 +363,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updatePois() {
-        if (map == null || !map.isLayoutOccurred() || !initialLocationSet) {
+        if (map == null || !map.isLayoutOccurred()) {
             return;
         }
         // 表示範囲の4隅＋中心を渡し、範囲にかかる都道府県すべてをキャッシュ優先で取得する
