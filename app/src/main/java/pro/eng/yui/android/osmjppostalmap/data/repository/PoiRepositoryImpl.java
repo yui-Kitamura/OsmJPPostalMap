@@ -113,71 +113,55 @@ public class PoiRepositoryImpl implements PoiRepository {
     public void loadPoisForArea(double[][] latLonPoints) {
         if (latLonPoints == null || latLonPoints.length == 0) { return; }
 
-        // 1. 座標範囲を特定
-        double latMin = Double.MAX_VALUE;
-        double latMax = -Double.MAX_VALUE;
-        double lonMin = Double.MAX_VALUE;
-        double lonMax = -Double.MAX_VALUE;
-        for (double[] p : latLonPoints) {
-            latMin = Math.min(latMin, p[0]);
-            latMax = Math.max(latMax, p[0]);
-            lonMin = Math.min(lonMin, p[1]);
-            lonMax = Math.max(lonMax, p[1]);
-        }
-        final double fLatMin = latMin, fLatMax = latMax, fLonMin = lonMin, fLonMax = lonMax;
-
         runOnExecutor(() -> {
-            // 2. キャッシュから座標範囲で即座に読み出す
-            if (local != null) {
-                List<OsmPoi> cached = local.getByBoundingBox(fLatMin, fLatMax, fLonMin, fLonMax);
-                if (!cached.isEmpty()) {
-                    poisLiveData.postValue(cached);
-                }
-            }
+            // 1. まずは現在のキャッシュ分（全アクティブ県）を全出力。
+            // 描画範囲で絞り込むとズームアウト時にマーカーが消えるため、全吐き出しとする。
+            postCombined();
 
-            // 4. 表示範囲にかかる都道府県名を逆ジオコーディングで特定
+            // 2. 表示範囲にかかる都道府県名を逆ジオコーディングで特定
             Set<String> prefNames = reverseGeocodePrefectures(latLonPoints);
             if (prefNames.isEmpty()) { return; }
 
-            // 5. 新規フェッチが必要な県を特定
+            // 3. 新規フェッチが必要な県を特定
             Map<String, Integer> prefs = JpPostalUtil.getPrefectures();
             List<String> neededPrefNames = new ArrayList<>();
+            boolean addedNewCode = false;
             for (String name : prefNames) {
                 Integer code = prefs.get(name);
                 if (code == null || code < 0) { continue; }
-                currentPrefCodes.add(code);
+                if (currentPrefCodes.add(code)) {
+                    addedNewCode = true;
+                }
                 if (local != null && !local.hasPrefecture(code)) {
                     neededPrefNames.add(name);
                 }
             }
 
             if (neededPrefNames.isEmpty()) {
-                return; // すべてキャッシュ済みなのでスキップ
+                if (addedNewCode) {
+                    postCombined();
+                }
+                return;
             }
 
-            // 3. クールダウン判定（新規ネットワーク取得が発生する場合のみ適用）
+            // 4. クールダウン判定（新規ネットワーク取得が発生する場合のみ適用）
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastFetchTime < MIN_INTERVAL_MS) {
-                // クールダウン中でも、他タスクで更新された可能性を考慮して最後にDBから再取得
-                if (local != null) {
-                    poisLiveData.postValue(local.getByBoundingBox(fLatMin, fLatMax, fLonMin, fLonMax));
+                if (addedNewCode) {
+                    postCombined();
                 }
                 return;
             }
             lastFetchTime = currentTime;
             startCooldownTimer();
 
-            boolean anyNew = false;
             for (String name : neededPrefNames) {
                 Integer code = prefs.get(name);
                 loadPref(code, name, false);
-                anyNew = true;
             }
 
-            // 新しくフェッチしたデータがあるため、再度座標範囲で抽出して反映
-            if (local != null) {
-                poisLiveData.postValue(local.getByBoundingBox(fLatMin, fLatMax, fLonMin, fLonMax));
-            }
+            // 新しくフェッチしたデータがあるため再反映
+            postCombined();
         });
     }
 
@@ -252,10 +236,9 @@ public class PoiRepositoryImpl implements PoiRepository {
      */
     private void postCombined() {
         if (local == null) { return; }
-        List<OsmPoi> all = new ArrayList<>();
-        for (int code : currentPrefCodes) {
-            all.addAll(local.getByPrefCode(code));
-        }
+        // ユーザー要望に基づき、特定県の絞り込みではなくキャッシュ全量を返す。
+        // currentPrefCodes には起動時に全キャッシュ済みの県が追加されている。
+        List<OsmPoi> all = local.getAllPois();
         poisLiveData.postValue(all);
     }
 

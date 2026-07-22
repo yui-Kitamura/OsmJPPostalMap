@@ -118,6 +118,22 @@ public class PoiLocalDataSource {
         return result;
     }
 
+    /**
+     * キャッシュされているすべてのPOIを取得する。
+     */
+    public List<OsmPoi> getAllPois() {
+        SQLiteDatabase db = helper.getReadableDatabase();
+        List<OsmPoi> result = new ArrayList<>();
+        try (Cursor c = db.query(PoiDbHelper.TABLE_POI, null,
+                null, null, null, null, null)) {
+            while (c.moveToNext()) {
+                OsmPoi poi = fromCursor(c);
+                if (poi != null) { result.add(poi); }
+            }
+        }
+        return result;
+    }
+
     public List<PrefMeta> getAllPrefMeta() {
         SQLiteDatabase db = helper.getReadableDatabase();
         List<PrefMeta> result = new ArrayList<>();
