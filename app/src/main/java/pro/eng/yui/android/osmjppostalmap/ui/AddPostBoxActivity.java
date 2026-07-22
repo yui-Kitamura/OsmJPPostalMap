@@ -44,6 +44,7 @@ public class AddPostBoxActivity extends AppCompatActivity {
     private Marker marker;
     private AuthRepository authRepository;
     private PoiRepository repository;
+    private Button btnSave;
 
     private TableLayout tableCollection;
     private final List<EditText[]> timeRows = new ArrayList<>();
@@ -115,7 +116,7 @@ public class AddPostBoxActivity extends AppCompatActivity {
         Button btnAddRow = findViewById(R.id.btn_add_row);
         Button btnCopyToSat = findViewById(R.id.btn_copy_to_sat);
         Button btnCopyToSun = findViewById(R.id.btn_copy_to_sun);
-        Button btnSave = findViewById(R.id.btn_add_save);
+        btnSave = findViewById(R.id.btn_add_save);
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
@@ -197,15 +198,24 @@ public class AddPostBoxActivity extends AppCompatActivity {
                 .setTitle("ポストの追加")
                 .setMessage("OSMに新しいポストを追加しますか？")
                 .setPositiveButton("追加", (dialog, which) -> {
+                    if (btnSave != null) {
+                        btnSave.setEnabled(false);
+                    }
                     GeoPoint pos = marker.getPosition();
                     repository.addPostBox(pos.getLatitude(), pos.getLongitude(), shape, branch, ref, collection, note, new PoiRepository.PoiSaveCallback() {
                         @Override
                         public void onSuccess() {
+                            if (btnSave != null) {
+                                btnSave.setEnabled(true);
+                            }
                             Toast.makeText(AddPostBoxActivity.this, "追加しました", Toast.LENGTH_SHORT).show();
                             finish();
                         }
                         @Override
                         public void onError(String message) {
+                            if (btnSave != null) {
+                                btnSave.setEnabled(true);
+                            }
                             Toast.makeText(AddPostBoxActivity.this, "エラー: " + message, Toast.LENGTH_SHORT).show();
                         }
                     });

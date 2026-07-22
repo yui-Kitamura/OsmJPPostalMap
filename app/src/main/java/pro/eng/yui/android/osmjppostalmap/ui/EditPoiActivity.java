@@ -59,6 +59,7 @@ public class EditPoiActivity extends AppCompatActivity {
     private PoiRepository repository;
     private AuthRepository authRepository;
     private OsmPoi targetPoi;
+    private Button btnSave;
     private final ScheduleParser scheduleParser = new SimpleScheduleParser();
 
     private static class ReticleMarker extends Marker {
@@ -157,7 +158,7 @@ public class EditPoiActivity extends AppCompatActivity {
             v.getParent().requestDisallowInterceptTouchEvent(true);
             return false;
         });
-        Button btnSave = findViewById(R.id.btn_save);
+        btnSave = findViewById(R.id.btn_save);
 
         // Opening Hours UI
         View ohLayout = findViewById(R.id.layout_opening_hours_edit);
@@ -378,6 +379,9 @@ public class EditPoiActivity extends AppCompatActivity {
     }
 
     private void saveChanges() {
+        if (btnSave != null) {
+            btnSave.setEnabled(false);
+        }
         // タグの更新と位置の更新をリポジトリ経由で行う
         String amenity = targetPoi.getTag("amenity");
         boolean isPostBox = "post_box".equals(amenity);
@@ -510,12 +514,18 @@ public class EditPoiActivity extends AppCompatActivity {
         repository.savePoi(updatedPoi, "update " + (updatedPoi.getTag("name") != null ? updatedPoi.getTag("name") : updatedPoi.getType()), new PoiRepository.PoiSaveCallback() {
             @Override
             public void onSuccess() {
+                if (btnSave != null) {
+                    btnSave.setEnabled(true);
+                }
                 Toast.makeText(EditPoiActivity.this, "保存しました", Toast.LENGTH_SHORT).show();
                 finish();
             }
 
             @Override
             public void onError(String message) {
+                if (btnSave != null) {
+                    btnSave.setEnabled(true);
+                }
                 Toast.makeText(EditPoiActivity.this, "保存エラー: " + message, Toast.LENGTH_SHORT).show();
             }
         });
