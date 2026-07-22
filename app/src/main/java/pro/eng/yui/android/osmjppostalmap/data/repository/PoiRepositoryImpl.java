@@ -33,7 +33,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
     private static long lastFetchTime = 0;
     /** APIコールの最小間隔ms */
-    private static final long MIN_INTERVAL_MS = 3500;
+    private static final long MIN_INTERVAL_MS = 10 * 1000;
     /** 一度に描画する上限POI数（超過時はズーム要求） */
     private static final int MAX_RENDER = 500;
     private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
