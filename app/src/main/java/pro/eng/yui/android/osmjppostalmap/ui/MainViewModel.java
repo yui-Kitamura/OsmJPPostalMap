@@ -57,6 +57,11 @@ public class MainViewModel extends ViewModel {
         filterPostOfficeOnly.setValue(postOfficeOnly);
     }
 
+    /** マーカーの状態（営業中/収集時間など）を現在時刻で再評価し、LiveDataを更新する */
+    public void forceRefresh() {
+        applyFilter();
+    }
+
     private void applyFilter() {
         List<OsmPoi> allPois = repository.getPoisLiveData().getValue();
         if (allPois == null) return;

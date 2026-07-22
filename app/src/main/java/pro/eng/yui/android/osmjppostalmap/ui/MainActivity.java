@@ -55,7 +55,6 @@ public class MainActivity extends AppCompatActivity {
     private Location lastLocation;
     private static final int PERMISSION_REQUEST_LOCATION = 100;
 
-    private double lastZoomLevel = 17.0;
     private final android.os.Handler debounceHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable debounceRunnable = null;
     private boolean initialLocationSet = false;
@@ -302,19 +301,11 @@ public class MainActivity extends AppCompatActivity {
                 if (!map.isLayoutOccurred()) {
                     return true;
                 }
-                double currentZoom = event.getZoomLevel();
-                if (currentZoom > lastZoomLevel) {
-                    // ズームイン時
-                    lastZoomLevel = currentZoom;
-                    // 表示中のPOIがない場合は再取得を試みる
-                    List<OsmPoi> currentPois = viewModel.getFilteredPois().getValue();
-                    if (currentPois == null || currentPois.isEmpty()) {
-                        scheduleUpdatePois();
-                    }
-                    return true;
+                // 表示中のPOIがない場合は再取得を試みる
+                List<OsmPoi> currentPois = viewModel.getFilteredPois().getValue();
+                if (currentPois == null || currentPois.isEmpty()) {
+                    scheduleUpdatePois();
                 }
-                lastZoomLevel = currentZoom;
-                scheduleUpdatePois();
                 return true;
             }
         });
@@ -487,7 +478,19 @@ public class MainActivity extends AppCompatActivity {
         }
         if (authRepository != null && viewModel != null) {
             viewModel.updateAccessToken(authRepository.getAccessToken());
+            viewModel.forceRefresh(); // リングの状態などを最新時刻で再評価
         }
+
+        // 時計ボタンなどの描画を更新
+        View filterButton = findViewById(R.id.filter_button);
+        if (filterButton != null) {
+            filterButton.invalidate();
+        }
+        View postOfficeFilterButton = findViewById(R.id.post_office_filter_button);
+        if (postOfficeFilterButton != null) {
+            postOfficeFilterButton.invalidate();
+        }
+
         updateHandler.post(updateRunnable);
     }
 

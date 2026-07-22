@@ -197,10 +197,6 @@ public class PoiRepositoryImpl implements PoiRepository {
         for (int code : currentPrefCodes) {
             all.addAll(local.getByPrefCode(code));
         }
-        if (all.size() > MAX_RENDER) {
-            errorLiveData.postValue("ズームインしてください");
-            return; // 大量描画を避け、現在の表示を維持
-        }
         poisLiveData.postValue(all);
     }
 
