@@ -268,7 +268,7 @@ public class PoiRepositoryImpl implements PoiRepository {
         }
         runOnExecutor(() -> {
             // 1. Create Changeset
-            ChangeSetInfo csInfo = new ChangeSetInfo(0, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, null);
+            ChangeSetInfo csInfo = new ChangeSetInfo(0, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, new HashMap<>());
             long csId;
             try {
                 csId = JpPostalUtil.callOsmCreateChangeset(accessToken, csInfo);
@@ -276,7 +276,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                 postError(callback, "ChangeSetの登録開始処理に失敗しました。リトライしてください");
                 return;
             }
-            ChangeSetInfo csInfoActive = new ChangeSetInfo(csId, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, null);
+            ChangeSetInfo csInfoActive = new ChangeSetInfo(csId, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, new HashMap<>());
             try {
                 // 編集処理
                 JpPostalUtil.callOsmCreateOrModifyElement(accessToken, csInfoActive, poi);
@@ -304,7 +304,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                     "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, csTags);
             try {
                 long csId = JpPostalUtil.callOsmCreateChangeset(accessToken, createInfo);
-                ChangeSetInfo csIdInfo = new ChangeSetInfo(csId, null, null, null);
+                ChangeSetInfo csIdInfo = new ChangeSetInfo(csId);
 
                 Map<String, String> poiTags = new HashMap<>();
                 poiTags.put("amenity", "post_box");
