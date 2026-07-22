@@ -426,37 +426,37 @@ public class EditPoiActivity extends AppCompatActivity {
             btnSave.setEnabled(false);
         }
         // タグの更新と位置の更新をリポジトリ経由で行う
-        String amenity = targetPoi.getTag("amenity");
+        Map<String, String> currentTags = new HashMap<>(targetPoi.getTags());
+        String amenity = currentTags.get("amenity");
         boolean isPostBox = "post_box".equals(amenity);
         
         if (isPostBox) {
             // 不要なタグを削除
-            targetPoi.getTags().remove("opening_hours");
+            currentTags.remove("opening_hours");
 
             RadioGroup radioShape = findViewById(R.id.edit_radio_shape);
             int selectedShapeId = radioShape.getCheckedRadioButtonId();
             if (selectedShapeId == R.id.edit_shape_box) {
-                targetPoi.getTags().put("support", "pole");
-                targetPoi.getTags().put("post_box:type", "lamp");
+                currentTags.put("support", "pole");
+                currentTags.put("post_box:type", "lamp");
             } else if (selectedShapeId == R.id.edit_shape_pillar) {
-                targetPoi.getTags().put("support", "ground");
-                targetPoi.getTags().put("post_box:type", "pillar");
+                currentTags.put("support", "ground");
+                currentTags.put("post_box:type", "pillar");
             } else {
-                targetPoi.getTags().remove("support");
-                targetPoi.getTags().remove("post_box:type");
+                currentTags.remove("support");
+                currentTags.remove("post_box:type");
             }
 
             TextInputEditText refInput = findViewById(R.id.edit_ref_value);
             String newRef = refInput.getText() != null ? refInput.getText().toString().trim() : "";
             if (!newRef.isEmpty()) {
-                targetPoi.getTags().put("ref", newRef);
+                currentTags.put("ref", newRef);
             } else {
-                targetPoi.getTags().remove("ref");
+                currentTags.remove("ref");
             }
 
             if (layoutFallback.getVisibility() == View.VISIBLE) {
                 // パース失敗時（フォールバック表示中）は時刻タグを更新しない（位置のみ更新）
-                // 既に targetPoi.getTags() には元の値が入っている
             } else {
                 Map<String, List<String>> weeklyTable = new HashMap<>();
                 String[] dayKeys = {"Mo", "Sa", "Su", "PH"};
@@ -495,19 +495,19 @@ public class EditPoiActivity extends AppCompatActivity {
                 }
 
                 String collection = scheduleParser.format(weeklyTable, ScheduleParser.Amenity.POST_BOX);
-                targetPoi.getTags().put("collection_times", collection);
+                currentTags.put("collection_times", collection);
             }
         } else {
             // 不要なタグを削除
-            targetPoi.getTags().remove("collection_times");
-            targetPoi.getTags().remove("ref");
+            currentTags.remove("collection_times");
+            currentTags.remove("ref");
 
             if (layoutFallback.getVisibility() == View.VISIBLE && findViewById(R.id.edit_tag_layout).getVisibility() != View.VISIBLE) {
                 // パース失敗時（フォールバック表示中）かつ直接編集も表示されていない場合は営業時間タグを更新しない
             } else if (findViewById(R.id.edit_tag_layout).getVisibility() == View.VISIBLE) {
                 // タグ直接編集が表示されている場合はその値を反映
                 String manualText = tagInput.getText() != null ? tagInput.getText().toString().trim() : "";
-                targetPoi.getTags().put("opening_hours", manualText);
+                currentTags.put("opening_hours", manualText);
             } else {
                 Map<String, List<String>> weeklyTable = new HashMap<>();
                 
@@ -552,7 +552,7 @@ public class EditPoiActivity extends AppCompatActivity {
                 weeklyTable.put("PH", phTimes);
 
                 String openingHours = scheduleParser.format(weeklyTable, ScheduleParser.Amenity.POST_OFFICE);
-                targetPoi.getTags().put("opening_hours", openingHours);
+                currentTags.put("opening_hours", openingHours);
             }
         }
         
@@ -563,7 +563,7 @@ public class EditPoiActivity extends AppCompatActivity {
                 pos.getLatitude(),
                 pos.getLongitude(),
                 targetPoi.getType(),
-                targetPoi.getTags(),
+                currentTags,
                 targetPoi.getVer()
         );
 
