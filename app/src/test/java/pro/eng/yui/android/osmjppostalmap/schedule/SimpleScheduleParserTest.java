@@ -609,5 +609,27 @@ public class SimpleScheduleParserTest {
         ScheduleResult resultTu = parser.parse(tag, zdtTu.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_OFFICE);
         assertEquals(ScheduleResult.CurrentState.OPENING, resultTu.getCurrentState());
     }
-    
+
+    /**
+     * 次のイベントが本日の最後である場合に、翌日のイベントが followingEvent として取得できることの確認
+     */
+    @Test
+    public void testFollowingEventAcrossDays() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        String tag = "Mo-Su 10:00, 15:00";
+
+        // 2026-07-21 (火) 11:00
+        // 次回は本日 15:00。その次は翌日 10:00。
+        ZonedDateTime now = ZonedDateTime.of(2026, 7, 21, 11, 0, 0, 0, ZoneId.of("Asia/Tokyo"));
+        ScheduleResult result = parser.parse(tag, now.toInstant().toEpochMilli(), ScheduleParser.Amenity.POST_BOX);
+
+        assertNotNull("Next event should be today 15:00", result.getNextEvent());
+        assertEquals(15, LocalDateTime.ofInstant(Instant.ofEpochMilli(result.getNextEvent().getTimestamp()), ZoneId.of("Asia/Tokyo")).getHour());
+
+        assertNotNull("Following event should be tomorrow 10:00", result.getFollowingEvent());
+        ZonedDateTime followZdt = ZonedDateTime.ofInstant(Instant.ofEpochMilli(result.getFollowingEvent().getTimestamp()), ZoneId.of("Asia/Tokyo"));
+        assertEquals(22, followZdt.getDayOfMonth());
+        assertEquals(10, followZdt.getHour());
+    }
+
 }

@@ -169,8 +169,8 @@ public class SimpleScheduleParser implements ScheduleParser {
                 }
             }
             
-            // 明日以降のイベント検索（今日終わっている場合）
-            if (nextEvent == null) {
+            // 明日以降のイベント検索（今日終わっていない場合でも、followingEventが見つかっていないなら探す）
+            if (nextEvent == null || followingEvent == null) {
                 for (int i = 1; i <= 7; i++) {
                     ZonedDateTime nextDay = now.plusDays(i);
                     boolean nextDayIsHoliday = JpPostalUtil.isHoliday(nextDay.toLocalDate());
@@ -189,27 +189,25 @@ public class SimpleScheduleParser implements ScheduleParser {
                     }
 
                     if (nextDayTimes != null && !nextDayTimes.isEmpty()) {
-                        // 最初のイベントを取得
-                        String firstTime = nextDayTimes.get(0);
-                        String firstStartTime = firstTime.contains("-") ? firstTime.split("-")[0] : firstTime;
-                        int minutes = parseMinutes(firstStartTime);
-                        // 24:00 を超える分は、その日の深夜分として既に処理されているはずなのでスキップ
-                        if (minutes < 1440) {
-                            nextEvent = createEvent(nextDay, minutes, amenity == Amenity.POST_BOX ? 
-                                    ScheduleResult.EventType.COLLECTION : ScheduleResult.EventType.OPEN);
-                            
-                            // 2つ目のイベントがあれば取得
-                            if (nextDayTimes.size() > 1) {
-                                String secondTime = nextDayTimes.get(1);
-                                String secondStartTime = secondTime.contains("-") ? secondTime.split("-")[0] : secondTime;
-                                int m2 = parseMinutes(secondStartTime);
-                                if (m2 < 1440) {
-                                    followingEvent = createEvent(nextDay, m2, amenity == Amenity.POST_BOX ? 
+                        for (String timeStr : nextDayTimes) {
+                            String startTime = timeStr.contains("-") ? timeStr.split("-")[0] : timeStr;
+                            int minutes = parseMinutes(startTime);
+                            // 24:00 を超える分は、その日の深夜分として既に処理されているはずなのでスキップ
+                            if (minutes < 1440) {
+                                if (nextEvent == null) {
+                                    nextEvent = createEvent(nextDay, minutes, amenity == Amenity.POST_BOX ? 
                                             ScheduleResult.EventType.COLLECTION : ScheduleResult.EventType.OPEN);
+                                } else {
+                                    // nextEvent が既にある場合、次に見つかったものが followingEvent
+                                    followingEvent = createEvent(nextDay, minutes, amenity == Amenity.POST_BOX ? 
+                                            ScheduleResult.EventType.COLLECTION : ScheduleResult.EventType.OPEN);
+                                    break;
                                 }
                             }
-                            break;
                         }
+                    }
+                    if (nextEvent != null && followingEvent != null) {
+                        break;
                     }
                 }
             }
