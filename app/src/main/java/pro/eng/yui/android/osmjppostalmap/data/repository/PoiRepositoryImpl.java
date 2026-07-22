@@ -282,7 +282,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                 // 編集処理
                 JpPostalUtil.callOsmCreateOrModifyElement(accessToken, csInfoActive, poi);
                 // CS close
-                JpPostalUtil.callOsmCloseChangeset(accessToken, csInfo);
+                JpPostalUtil.callOsmCloseChangeset(accessToken, csInfoActive);
             } catch (IOException ioe) {
                 ioe.printStackTrace();
                 postError(callback, "入力内容の反映に失敗しました。リトライしてください");
