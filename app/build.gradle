@@ -94,7 +94,7 @@ dependencies {
     // Using signpost for OAuth 1.0a (OSM default)
     implementation 'oauth.signpost:signpost-core:2.1.1'
 
-    implementation 'pro.eng.yui.oss.osm.lib:jppostalcore:0.3.6'
+    implementation 'pro.eng.yui.oss.osm.lib:jppostalcore:0.3.7'
     
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.3.0'
