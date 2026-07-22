@@ -2,6 +2,7 @@ package pro.eng.yui.android.osmjppostalmap.domain.repository;
 
 import androidx.lifecycle.LiveData;
 import java.util.List;
+import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
 /**
@@ -13,6 +14,32 @@ public interface PoiRepository {
      * @param prefName 都道府県名
      */
     LiveData<List<OsmPoi>> getPois(String prefName);
+
+    /**
+     * 現在描画中のPOIリストを配信するLiveData（取得を伴わない購読用）。
+     */
+    LiveData<List<OsmPoi>> getPoisLiveData();
+
+    /**
+     * 表示範囲にかかる都道府県のPOIをキャッシュ優先で読み込む。
+     * 未キャッシュの都道府県のみネットワーク取得し、SQLiteへ保存する。
+     * 逆ジオコーディングとネットワークはバックグラウンドで実行される。
+     *
+     * @param latLonPoints 逆ジオコーディング対象の座標配列（各要素は {lat, lon}）。
+     *                     通常は表示範囲の4隅＋中心を渡す。
+     */
+    void loadPoisForArea(double[][] latLonPoints);
+
+    /**
+     * 指定した都道府県をキャッシュ有無に関わらずネットワークから再取得し、
+     * SQLiteを更新する（更新ダイアログの個別更新ボタン用）。
+     */
+    void refreshPrefecture(int prefCode, String prefName);
+
+    /**
+     * ローカルに保存済みの都道府県メタ情報の一覧を返す（更新ダイアログ表示用）。
+     */
+    List<PrefMeta> getSavedPrefectures();
 
     /**
      * 指定されたIDのPOIを取得する

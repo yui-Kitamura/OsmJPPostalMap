@@ -16,6 +16,8 @@ import java.util.Locale;
 
 import pro.eng.yui.android.osmjppostalmap.core.PoiDetailsDialog;
 import pro.eng.yui.android.osmjppostalmap.core.PoiMarker;
+import pro.eng.yui.android.osmjppostalmap.core.PrefRefreshDialog;
+import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 import pro.eng.yui.android.osmjppostalmap.R;
@@ -63,6 +65,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         
         authRepository = new AuthRepository(this);
+        // ローカルキャッシュ(SQLite)を初期化してからViewModel/リポジトリを利用する
+        PoiRepositoryImpl.init(getApplicationContext());
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
         viewModel.updateAccessToken(authRepository.getAccessToken());
         
@@ -184,14 +188,13 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        // Refresh Button
+        // Refresh Button → 更新ダイアログを開く
         CooldownRefreshButton refreshButton = findViewById(R.id.refresh_button);
         refreshButton.setOnClickListener(v -> {
             if (!initialLocationSet) {
                 initialLocationSet = true;
             }
-            updatePois();
-            Toast.makeText(this, "再取得しています...", Toast.LENGTH_SHORT).show();
+            PrefRefreshDialog.show(this, viewModel, this::updatePois);
         });
 
         viewModel.getCooldownRemaining().observe(this, remaining -> {
@@ -372,15 +375,16 @@ public class MainActivity extends AppCompatActivity {
         if (map == null || !map.isLayoutOccurred() || !initialLocationSet) {
             return;
         }
-        String currentPrefName = "東京都";
-        String query = String.format(Locale.US, 
-                "is_in(%f,%f)->.a;\n" +
-                "rel(pivot.a)[\"boundary\"=\"administrative\"][\"admin_level\"=\"4\"];\n",
-                map.getMapCenter().getLatitude(), map.getMapCenter().getLongitude());
-        try {
-            currentPrefName = JpPostalUtil.callOverpass(query, 3, 3).get(0).getTag("name");
-        } catch (IOException|IllegalStateException ignore) { }
-        viewModel.fetchPois(currentPrefName);
+        // 表示範囲の4隅＋中心を渡し、範囲にかかる都道府県すべてをキャッシュ優先で取得する
+        org.osmdroid.util.BoundingBox bb = map.getBoundingBox();
+        double[][] points = new double[][]{
+                {map.getMapCenter().getLatitude(), map.getMapCenter().getLongitude()},
+                {bb.getLatNorth(), bb.getLonWest()},
+                {bb.getLatNorth(), bb.getLonEast()},
+                {bb.getLatSouth(), bb.getLonWest()},
+                {bb.getLatSouth(), bb.getLonEast()},
+        };
+        viewModel.fetchPoisForArea(points);
     }
 
     private void requestLocationPermissions() {

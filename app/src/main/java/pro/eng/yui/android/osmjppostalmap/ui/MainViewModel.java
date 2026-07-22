@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel;
 import java.util.List;
 
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
+import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
@@ -24,8 +25,8 @@ public class MainViewModel extends ViewModel {
 
     public MainViewModel() {
         this.repository = PoiRepositoryImpl.getInstance();
-        
-        repository.getPois("東京都").observeForever(pois -> applyFilter());
+
+        repository.getPoisLiveData().observeForever(pois -> applyFilter());
         filterOpenOnly.observeForever(filter -> applyFilter());
         filterPostOfficeOnly.observeForever(filter -> applyFilter());
         repository.getError().observeForever(errorMessage::postValue);
@@ -41,7 +42,7 @@ public class MainViewModel extends ViewModel {
     }
 
     public LiveData<List<OsmPoi>> getPois() {
-        return repository.getPois("東京都");
+        return repository.getPoisLiveData();
     }
 
     public LiveData<List<OsmPoi>> getFilteredPois() {
@@ -57,7 +58,7 @@ public class MainViewModel extends ViewModel {
     }
 
     private void applyFilter() {
-        List<OsmPoi> allPois = repository.getPois("東京都").getValue();
+        List<OsmPoi> allPois = repository.getPoisLiveData().getValue();
         if (allPois == null) return;
 
         boolean openOnly = filterOpenOnly.getValue() != null && filterOpenOnly.getValue();
@@ -103,8 +104,22 @@ public class MainViewModel extends ViewModel {
         filteredPois.postValue(filtered);
     }
 
-    public void fetchPois(String prefName) {
-        repository.getPois(prefName);
+    /**
+     * 表示範囲にかかる都道府県のPOIをキャッシュ優先で読み込む。
+     * @param latLonPoints 逆ジオコーディング対象の座標（各要素 {lat, lon}）。通常は4隅＋中心。
+     */
+    public void fetchPoisForArea(double[][] latLonPoints) {
+        repository.loadPoisForArea(latLonPoints);
+    }
+
+    /** 指定都道府県を強制的に再取得する（更新ダイアログの個別更新用） */
+    public void refreshPrefecture(int prefCode, String prefName) {
+        repository.refreshPrefecture(prefCode, prefName);
+    }
+
+    /** ローカルに保存済みの都道府県一覧を返す（更新ダイアログ用） */
+    public List<PrefMeta> getSavedPrefectures() {
+        return repository.getSavedPrefectures();
     }
 
     public void updateAccessToken(String token) {
