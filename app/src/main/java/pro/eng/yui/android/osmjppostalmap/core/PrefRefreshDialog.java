@@ -1,6 +1,8 @@
 package pro.eng.yui.android.osmjppostalmap.core;
 
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -57,6 +59,10 @@ public class PrefRefreshDialog {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
         builder.setTitle("データの更新");
         builder.setView(view);
+        builder.setNeutralButton("更新状況", (d, which) -> {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://yui-kitamura.github.io/OsmJpPostalMapDataSource/"));
+            context.startActivity(intent);
+        });
         builder.setPositiveButton("閉じる", null);
         AlertDialog dialog = builder.create();
 
