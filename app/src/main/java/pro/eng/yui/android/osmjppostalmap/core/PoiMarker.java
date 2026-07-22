@@ -39,7 +39,7 @@ public class PoiMarker extends Marker {
         
         symbolPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         symbolPaint.setColor(0xFFFFFFFF);
-        symbolPaint.setTextSize(22f);
+        symbolPaint.setTextSize(30f);
         symbolPaint.setTextAlign(Paint.Align.CENTER);
 
         // ヒットテスト用の範囲を設定
@@ -156,7 +156,7 @@ public class PoiMarker extends Marker {
         // 〒 記号
         String symbol = "〒";
         if (schedule != null && schedule.getCurrentState() == ScheduleResult.CurrentState.UNKNOWN) {
-            symbol = "?";
+            symbol = "？";
         }
         canvas.drawText(symbol, screenPos.x, screenPos.y + (symbolPaint.getTextSize() / 3), symbolPaint);
     }
