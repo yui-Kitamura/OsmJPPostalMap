@@ -172,7 +172,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             return; // SQLiteの内容をそのまま利用（postCombinedで読み出す）
         }
         try {
-            List<OsmPoi> fetched = JpPostalUtil.getPoiData(String.format(Locale.US,"%02d",prefCode));
+            List<OsmPoi> fetched = JpPostalUtil.getPoiData(prefName);
             if (fetched.isEmpty()) {
                 // データソースに無い場合はOverpassフォールバック
                 try {
