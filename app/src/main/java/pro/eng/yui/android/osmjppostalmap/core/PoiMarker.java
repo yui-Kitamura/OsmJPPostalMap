@@ -2,9 +2,10 @@ package pro.eng.yui.android.osmjppostalmap.core;
 
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PathMeasure;
 import android.graphics.RectF;
 
-import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
 
@@ -145,8 +146,12 @@ public class PoiMarker extends Marker {
                     }
                 }
 
-                if (poiType == PoiType.POST_OFFICE && sweepAngle == 360f) {
-                    canvas.drawRoundRect(ringRect, 10f, 10f, ringPaint);
+                if (poiType == PoiType.POST_OFFICE) {
+                    if (sweepAngle == 360f) {
+                        canvas.drawRoundRect(ringRect, 10f, 10f, ringPaint);
+                    } else {
+                        drawSquareGauge(canvas, ringRect, sweepAngle / 360f, ringPaint);
+                    }
                 } else {
                     canvas.drawArc(ringRect, -90f, sweepAngle, false, ringPaint);
                 }
@@ -186,5 +191,29 @@ public class PoiMarker extends Marker {
                 ringPaint.setColor(0x00000000); // 透明
                 break;
         }
+    }
+
+    private void drawSquareGauge(Canvas canvas, RectF rect, float progress, Paint paint) {
+        Path path = new Path();
+        float rx = 10f;
+        float ry = 10f;
+
+        // 上部中央から開始して時計回りに描画
+        path.moveTo(rect.centerX(), rect.top);
+        path.lineTo(rect.right - rx, rect.top);
+        path.arcTo(new RectF(rect.right - 2 * rx, rect.top, rect.right, rect.top + 2 * ry), -90, 90);
+        path.lineTo(rect.right, rect.bottom - ry);
+        path.arcTo(new RectF(rect.right - 2 * rx, rect.bottom - 2 * ry, rect.right, rect.bottom), 0, 90);
+        path.lineTo(rect.left + rx, rect.bottom);
+        path.arcTo(new RectF(rect.left, rect.bottom - 2 * ry, rect.left + 2 * rx, rect.bottom), 90, 90);
+        path.lineTo(rect.left, rect.top + ry);
+        path.arcTo(new RectF(rect.left, rect.top, rect.left + 2 * rx, rect.top + 2 * ry), 180, 90);
+        path.lineTo(rect.centerX(), rect.top);
+
+        PathMeasure pm = new PathMeasure(path, false);
+        float length = pm.getLength();
+        Path dst = new Path();
+        pm.getSegment(0, length * progress, dst, true);
+        canvas.drawPath(dst, paint);
     }
 }
