@@ -11,6 +11,8 @@ import android.graphics.drawable.GradientDrawable;
 import androidx.core.content.ContextCompat;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -60,6 +62,7 @@ public class EditPoiActivity extends AppCompatActivity {
     private AuthRepository authRepository;
     private OsmPoi targetPoi;
     private Button btnSave;
+    private int lastCheckedShapeId = -1;
     private final ScheduleParser scheduleParser = new SimpleScheduleParser();
 
     private static class ReticleMarker extends Marker {
@@ -146,6 +149,8 @@ public class EditPoiActivity extends AppCompatActivity {
         View collectionLayout = findViewById(R.id.layout_collection_edit);
         View refLayout = findViewById(R.id.edit_ref_layout);
         TextInputEditText refInput = findViewById(R.id.edit_ref_value);
+        View shapeLayout = findViewById(R.id.layout_shape_edit);
+        RadioGroup radioShape = findViewById(R.id.edit_radio_shape);
         tableCollection = findViewById(R.id.table_collection);
         layoutFallback = findViewById(R.id.layout_fallback);
         textFallback = findViewById(R.id.text_fallback_value);
@@ -215,6 +220,35 @@ public class EditPoiActivity extends AppCompatActivity {
         title.setText(isPostBox ? "郵便ポストの編集" : "郵便局の編集");
 
         if (isPostBox) {
+            shapeLayout.setVisibility(View.VISIBLE);
+
+            for (int i = 0; i < radioShape.getChildCount(); i++) {
+                View v = radioShape.getChildAt(i);
+                if (v instanceof RadioButton) {
+                    v.setOnClickListener(view -> {
+                        if (view.getId() == lastCheckedShapeId) {
+                            radioShape.clearCheck();
+                            lastCheckedShapeId = -1;
+                        } else {
+                            lastCheckedShapeId = view.getId();
+                        }
+                    });
+                }
+            }
+
+            String support = targetPoi.getTag("support");
+            String pbType = targetPoi.getTag("post_box:type");
+            if ("pole".equals(support) && "lamp".equals(pbType)) {
+                radioShape.check(R.id.edit_shape_box);
+            } else if ("ground".equals(support) && "pillar".equals(pbType)) {
+                radioShape.check(R.id.edit_shape_pillar);
+            } else if (support != null || pbType != null) {
+                radioShape.check(R.id.edit_shape_other);
+            } else {
+                radioShape.clearCheck();
+            }
+            lastCheckedShapeId = radioShape.getCheckedRadioButtonId();
+
             refLayout.setVisibility(View.VISIBLE);
             String currentRef = targetPoi.getTag("ref");
             if (currentRef != null) {
@@ -298,25 +332,34 @@ public class EditPoiActivity extends AppCompatActivity {
                 editOhSaBreakEnd.setText(editOhWdBreakEnd.getText());
             });
             btnOhCopyToPh.setOnClickListener(v -> {
-                editOhPhOpen.setText(editOhWdOpen.getText());
-                editOhPhClose.setText(editOhWdClose.getText());
-                editOhPhBreakStart.setText(editOhWdBreakStart.getText());
-                editOhPhBreakEnd.setText(editOhWdBreakEnd.getText());
+                editOhPhOpen.setText(editOhSaOpen.getText());
+                editOhPhClose.setText(editOhSaClose.getText());
+                editOhPhBreakStart.setText(editOhSaBreakStart.getText());
+                editOhPhBreakEnd.setText(editOhSaBreakEnd.getText());
             });
 
             // 変更監視用
-            TextWatcher ohWatcher = new TextWatcher() {
-                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            class OhTextWatcher implements TextWatcher {
+                private final EditText editText;
+                private String originalValue = null;
+
+                public OhTextWatcher(EditText et) {
+                    this.editText = et;
+                }
+
+                @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    if (originalValue == null) {
+                        originalValue = s.toString();
+                    }
+                }
                 @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
                 @Override
                 public void afterTextChanged(Editable s) {
-                    // 何か入力されたらスタイルを適用
-                    View focused = getCurrentFocus();
-                    if (focused instanceof EditText) {
-                        applyCellStyles((EditText) focused, s.toString(), true);
-                    }
+                    boolean isModified = originalValue != null && !s.toString().equals(originalValue);
+                    applyCellStyles(editText, s.toString(), isModified);
                 }
-            };
+            }
+
             EditText[] ohEditors = {
                 editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd,
                 editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd,
@@ -324,7 +367,7 @@ public class EditPoiActivity extends AppCompatActivity {
             };
             for (EditText et : ohEditors) {
                 if (et != null) {
-                    et.addTextChangedListener(ohWatcher);
+                    et.addTextChangedListener(new OhTextWatcher(et));
                     applyCellStyles(et, et.getText().toString(), false);
                 }
             }
@@ -389,6 +432,19 @@ public class EditPoiActivity extends AppCompatActivity {
         if (isPostBox) {
             // 不要なタグを削除
             targetPoi.getTags().remove("opening_hours");
+
+            RadioGroup radioShape = findViewById(R.id.edit_radio_shape);
+            int selectedShapeId = radioShape.getCheckedRadioButtonId();
+            if (selectedShapeId == R.id.edit_shape_box) {
+                targetPoi.getTags().put("support", "pole");
+                targetPoi.getTags().put("post_box:type", "lamp");
+            } else if (selectedShapeId == R.id.edit_shape_pillar) {
+                targetPoi.getTags().put("support", "ground");
+                targetPoi.getTags().put("post_box:type", "pillar");
+            } else {
+                targetPoi.getTags().remove("support");
+                targetPoi.getTags().remove("post_box:type");
+            }
 
             TextInputEditText refInput = findViewById(R.id.edit_ref_value);
             String newRef = refInput.getText() != null ? refInput.getText().toString().trim() : "";
@@ -531,31 +587,30 @@ public class EditPoiActivity extends AppCompatActivity {
         });
     }
 
-    private void addNewRow() {
+    private void addNewRow(String initialValue1, String initialValue2, String initialValue3) {
         TableRow row = new TableRow(this);
         EditText[] rowEditors = new EditText[3];
+        String[] initialValues = {initialValue1, initialValue2, initialValue3};
         for (int i = 0; i < 3; i++) {
             EditText et = new EditText(this);
             et.setHint("--:--");
             et.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
             et.setGravity(Gravity.CENTER);
+            et.setText(initialValues[i]);
             
             // 初期の見た目設定
-            applyCellStyles(et, "", false);
+            applyCellStyles(et, initialValues[i], false);
 
+            final String finalInitialValue = initialValues[i];
             et.addTextChangedListener(new TextWatcher() {
-                private String originalValue = null;
+                private final String originalValue = finalInitialValue;
                 @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                    if (originalValue == null) {
-                        originalValue = s.toString();
-                    }
-                }
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
                 @Override
                 public void onTextChanged(CharSequence s, int start, int before, int count) {}
                 @Override
                 public void afterTextChanged(Editable s) {
-                    boolean isModified = originalValue != null && !s.toString().equals(originalValue);
+                    boolean isModified = !s.toString().equals(originalValue);
                     applyCellStyles(et, s.toString(), isModified);
                 }
             });
@@ -565,6 +620,10 @@ public class EditPoiActivity extends AppCompatActivity {
         }
         tableCollection.addView(row);
         timeRows.add(rowEditors);
+    }
+
+    private void addNewRow() {
+        addNewRow("", "", "");
     }
 
     private List<String> formatOpeningTimeRange(String open, String close, String bStart, String bEnd) {
@@ -698,19 +757,10 @@ public class EditPoiActivity extends AppCompatActivity {
             List<String> holidayCol = hasPH ? holiday : sunday;
             int maxRows = Math.max(weekday.size(), Math.max(saturday.size(), holidayCol.size()));
             for (int i = 0; i < maxRows; i++) {
-                addNewRow();
-                if (i < weekday.size()) {
-                    timeRows.get(i)[0].setText(weekday.get(i));
-                    applyCellStyles(timeRows.get(i)[0], weekday.get(i), false);
-                }
-                if (i < saturday.size()) {
-                    timeRows.get(i)[1].setText(saturday.get(i));
-                    applyCellStyles(timeRows.get(i)[1], saturday.get(i), false);
-                }
-                if (i < holidayCol.size()) {
-                    timeRows.get(i)[2].setText(holidayCol.get(i));
-                    applyCellStyles(timeRows.get(i)[2], holidayCol.get(i), false);
-                }
+                String val1 = i < weekday.size() ? weekday.get(i) : "";
+                String val2 = i < saturday.size() ? saturday.get(i) : "";
+                String val3 = i < holidayCol.size() ? holidayCol.get(i) : "";
+                addNewRow(val1, val2, val3);
             }
             return true;
         } catch (Exception e) {

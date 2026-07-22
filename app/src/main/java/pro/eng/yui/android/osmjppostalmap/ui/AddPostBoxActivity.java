@@ -45,6 +45,7 @@ public class AddPostBoxActivity extends AppCompatActivity {
     private AuthRepository authRepository;
     private PoiRepository repository;
     private Button btnSave;
+    private int lastCheckedShapeId = -1;
 
     private TableLayout tableCollection;
     private final List<EditText[]> timeRows = new ArrayList<>();
@@ -109,6 +110,21 @@ public class AddPostBoxActivity extends AppCompatActivity {
             return false;
         });
         RadioGroup radioShape = findViewById(R.id.radio_shape);
+        for (int i = 0; i < radioShape.getChildCount(); i++) {
+            View v = radioShape.getChildAt(i);
+            if (v instanceof RadioButton) {
+                v.setOnClickListener(view -> {
+                    if (view.getId() == lastCheckedShapeId) {
+                        radioShape.clearCheck();
+                        lastCheckedShapeId = -1;
+                    } else {
+                        lastCheckedShapeId = view.getId();
+                    }
+                });
+            }
+        }
+        lastCheckedShapeId = radioShape.getCheckedRadioButtonId();
+
         TextInputEditText inputBranch = findViewById(R.id.input_branch);
         TextInputEditText inputRef = findViewById(R.id.input_ref);
         TextInputEditText inputNote = findViewById(R.id.input_note);
@@ -179,11 +195,7 @@ public class AddPostBoxActivity extends AppCompatActivity {
             }
 
             int selectedShapeId = radioShape.getCheckedRadioButtonId();
-            if (selectedShapeId == -1) {
-                Toast.makeText(this, "ポストの形状を選択してください", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            String shape = ((RadioButton)findViewById(selectedShapeId)).getText().toString();
+            String shape = selectedShapeId != -1 ? ((RadioButton)findViewById(selectedShapeId)).getText().toString() : "";
             String branch = inputBranch.getText() != null ? inputBranch.getText().toString() : "";
             String ref = inputRef.getText() != null ? inputRef.getText().toString() : "";
             String note = inputNote.getText() != null ? inputNote.getText().toString() : "";
@@ -238,18 +250,14 @@ public class AddPostBoxActivity extends AppCompatActivity {
             applyCellStyles(et, "", false);
 
             et.addTextChangedListener(new TextWatcher() {
-                private String originalValue = null;
+                private final String originalValue = "";
                 @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                    if (originalValue == null) {
-                        originalValue = s.toString();
-                    }
-                }
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
                 @Override
                 public void onTextChanged(CharSequence s, int start, int before, int count) {}
                 @Override
                 public void afterTextChanged(Editable s) {
-                    boolean isModified = originalValue != null && !s.toString().equals(originalValue);
+                    boolean isModified = !s.toString().equals(originalValue);
                     applyCellStyles(et, s.toString(), isModified);
                 }
             });
