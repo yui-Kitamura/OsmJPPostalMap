@@ -10,6 +10,7 @@ import androidx.appcompat.widget.AppCompatImageButton;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
+import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.Days;
 
 public class ClockFilterButton extends AppCompatImageButton {
@@ -65,7 +66,7 @@ public class ClockFilterButton extends AppCompatImageButton {
         canvas.drawCircle(centerX, centerY, radius, paint);
 
         // 現在時刻の取得
-        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Tokyo"));
+        LocalDateTime now = LocalDateTime.now(JpPostalUtil.JST);
         int hours = now.getHour();
         int minutes = now.getMinute();
 
