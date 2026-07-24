@@ -7,9 +7,10 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.util.AttributeSet;
 import androidx.appcompat.widget.AppCompatImageButton;
-import java.time.LocalDate;
-import java.util.Calendar;
-import pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.Days;
 
 public class ClockFilterButton extends AppCompatImageButton {
 
@@ -64,30 +65,20 @@ public class ClockFilterButton extends AppCompatImageButton {
         canvas.drawCircle(centerX, centerY, radius, paint);
 
         // 現在時刻の取得
-        Calendar calendar = Calendar.getInstance();
-        float hours = calendar.get(Calendar.HOUR);
-        float minutes = calendar.get(Calendar.MINUTE);
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Tokyo"));
+        int hours = now.getHour();
+        int minutes = now.getMinute();
 
         // 曜日 or 祝の表示
-        String label;
-        SimpleScheduleParser parser = new SimpleScheduleParser();
-        pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult result = 
-            parser.parse("24/7", System.currentTimeMillis(), pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_BOX);
-
-        if (result.isHoliday()) {
-            label = "祝";
-        } else {
-            String[] weekDays = {"", "日", "月", "火", "水", "木", "金", "土"};
-            label = weekDays[calendar.get(Calendar.DAY_OF_WEEK)];
-        }
-
+        Days today = Days.values()[now.getDayOfWeek().getValue() -1];
+        String label = today.jaLabel;
         paint.setStyle(Paint.Style.FILL);
-        paint.setTextSize(radius * 0.5f);
+        paint.setTextSize(radius * 0.6f);
         paint.setFakeBoldText(true);
         
-        if (result.isHoliday() || calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+        if (today == Days.SUNDAY || today == Days.PUBLIC_HOLIDAY) {
             paint.setColor(Color.RED);
-        } else if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) {
+        } else if (today == Days.SATURDAY) {
             paint.setColor(Color.BLUE);
         } else {
             paint.setColor(Color.BLACK);
