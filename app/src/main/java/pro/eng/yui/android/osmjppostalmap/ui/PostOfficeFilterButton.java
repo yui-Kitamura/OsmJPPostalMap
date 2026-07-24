@@ -12,8 +12,8 @@ public class PostOfficeFilterButton extends AppCompatImageButton {
 
     private Paint paint;
     private boolean isFilterActive = false;
-    private int activeColor = 0xFF81C784; // Light Green 300
-    private int inactiveColor = Color.WHITE;
+    private final int activeColor = 0xFF81C784; // Light Green 300
+    private final int inactiveColor = Color.WHITE;
 
     public PostOfficeFilterButton(Context context) {
         super(context);

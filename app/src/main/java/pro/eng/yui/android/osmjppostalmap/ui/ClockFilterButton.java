@@ -8,7 +8,6 @@ import android.graphics.Rect;
 import android.util.AttributeSet;
 import androidx.appcompat.widget.AppCompatImageButton;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.Days;
@@ -17,8 +16,8 @@ public class ClockFilterButton extends AppCompatImageButton {
 
     private Paint paint;
     private boolean isFilterActive = false;
-    private int activeColor = 0xFF81C784; // Light Green 300
-    private int inactiveColor = Color.WHITE;
+    private final int activeColor = 0xFF81C784; // Light Green 300
+    private final int inactiveColor = Color.WHITE;
 
     public ClockFilterButton(Context context) {
         super(context);

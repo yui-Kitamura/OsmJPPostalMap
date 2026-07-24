@@ -13,8 +13,8 @@ public class CooldownRefreshButton extends AppCompatImageButton {
     private Paint paint;
     private long cooldownInterval = 1;
     private long cooldownRemaining = 0;
-    private int ringColor = 0xFFFF0000; // Red
-    private RectF arcBounds = new RectF();
+    private final int ringColor = 0xFFFF0000; // Red
+    private final RectF arcBounds = new RectF();
 
     public CooldownRefreshButton(Context context) {
         super(context);
