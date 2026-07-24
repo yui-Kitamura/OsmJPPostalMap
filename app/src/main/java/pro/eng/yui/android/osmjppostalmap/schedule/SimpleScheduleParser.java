@@ -12,7 +12,7 @@ public class SimpleScheduleParser implements ScheduleParser {
 
     @Override
     public ScheduleResult parse(TextValue tagValue, long currentTime, TimeType timeType) {
-        if (tagValue == null || tagValue.getOrigin().isEmpty()) {
+        if (tagValue == null || tagValue.getOrigin() == null || tagValue.getOrigin().isEmpty()) {
             return new ScheduleResult(null, null, "不明",
                     ScheduleResult.CurrentState.UNKNOWN,
                     new HashMap<>(), tagValue);
