@@ -11,7 +11,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 
 import pro.eng.yui.android.osmjppostalmap.R;
@@ -23,8 +22,11 @@ public class PoiDetailsDialog {
     public static void show(Context context, OsmPoi poi, ScheduleResult schedule) {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
         
-        String amenity = poi.getTag("amenity");
-        boolean isPostBox = "post_box".equals(amenity);
+        pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity amenity = 
+                "post_office".equals(poi.getTag("amenity")) ? 
+                pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_OFFICE : 
+                pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_BOX;
+        boolean isPostBox = (amenity == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_BOX);
         
         builder.setTitle(isPostBox ? "郵便ポスト" : poi.getTag("name"));
         
@@ -44,7 +46,7 @@ public class PoiDetailsDialog {
                 long now = System.currentTimeMillis();
 
                 if (schedule.getNextEvent() != null) {
-                    long timestamp = schedule.getNextEvent().getTimestamp();
+                    long timestamp = schedule.getNextEvent().getTimestamp().toInstant().toEpochMilli();
                     String timeStr = sdf.format(new Date(timestamp));
                     String dayPrefix = timestamp > getEndOfToday() ? "明日" : "本日";
                     
@@ -53,7 +55,8 @@ public class PoiDetailsDialog {
                     long m = remainingMinutes % 60;
                     String diffStr = (h > 0 ? h + "時間" : "") + m + "分後";
 
-                    if (schedule.getCurrentState() == ScheduleResult.CurrentState.TODAY_FINISHED) {
+                    if (schedule.getCurrentState() == ScheduleResult.CurrentState.TODAY_FINISHED ||
+                        schedule.getNextEvent().getTimestamp().toLocalDate().isAfter(java.time.LocalDate.now())) {
                         msg.append("次回 ").append(dayPrefix).append(" ").append(timeStr).append(" (").append(diffStr).append(")");
                     } else {
                         msg.append(diffStr);
@@ -61,7 +64,7 @@ public class PoiDetailsDialog {
                 }
 
                 if (schedule.getFollowingEvent() != null) {
-                    long fTimestamp = schedule.getFollowingEvent().getTimestamp();
+                    long fTimestamp = schedule.getFollowingEvent().getTimestamp().toInstant().toEpochMilli();
                     String followTime = sdf.format(new Date(fTimestamp));
                     String fPrefix = fTimestamp > getEndOfToday() ? "明日" : "本日";
                     
@@ -83,7 +86,7 @@ public class PoiDetailsDialog {
             } else {
                 // ポスト以外（郵便局など）
                 if (schedule.getNextEvent() != null) {
-                    long remainingMinutes = (schedule.getNextEvent().getTimestamp() - System.currentTimeMillis()) / 60000;
+                    long remainingMinutes = (schedule.getNextEvent().getTimestamp().toInstant().toEpochMilli() - System.currentTimeMillis()) / 60000;
                     long h = remainingMinutes / 60;
                     long m = remainingMinutes % 60;
                     String diffStr = (h > 0 ? h + "時間" : "") + m + "分後";
@@ -110,27 +113,32 @@ public class PoiDetailsDialog {
                 
                 TextView timeView = new TextView(context);
                 // そのグループの時間を取得（代表する曜日またはPHから）
-                List<String> times = null;
+                pro.eng.yui.oss.osm.lib.jppostalcore.types.IDaySchedule daySchedule = null;
                 boolean foundDay = false;
                 for (String day : groupDays[i]) {
-                    if (schedule.getWeeklyTable().containsKey(day)) {
-                        times = schedule.getWeeklyTable().get(day);
+                    pro.eng.yui.oss.osm.lib.jppostalcore.types.Days d = pro.eng.yui.oss.osm.lib.jppostalcore.types.Days.valueOf(day);
+                    if (schedule.getWeeklyTable().containsKey(d)) {
+                        daySchedule = schedule.getWeeklyTable().get(d);
                         foundDay = true;
                         break;
                     }
                 }
                 
                 String displayTime;
-                if (!foundDay) {
+                if (!foundDay || daySchedule == null) {
                     displayTime = "不明";
-                } else if (times == null || times.isEmpty()) {
+                } else if (daySchedule.schedule().isEmpty()) {
                     if (isPostBox) {
                         displayTime = "収集なし";
                     } else {
                         displayTime = "休業";
                     }
                 } else {
-                    displayTime = String.join(", ", times);
+                    java.util.List<String> timeStrings = new java.util.ArrayList<>();
+                    for (Object part : daySchedule.schedule()) {
+                        timeStrings.add(part.toString());
+                    }
+                    displayTime = String.join(", ", timeStrings);
                 }
                 timeView.setText(displayTime);
                 timeView.setPadding(8, 4, 8, 4);

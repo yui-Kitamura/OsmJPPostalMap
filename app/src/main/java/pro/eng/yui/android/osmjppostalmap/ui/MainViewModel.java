@@ -8,11 +8,14 @@ import java.util.List;
 
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
 import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.CollectionTimes;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.OpeningHours;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
 import pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.TextValue;
 
 public class MainViewModel extends ViewModel {
 
@@ -93,9 +96,16 @@ public class MainViewModel extends ViewModel {
                     ScheduleParser.Amenity.POST_OFFICE :
                     ScheduleParser.Amenity.POST_BOX;
 
-                String tag = (amenity == ScheduleParser.Amenity.POST_OFFICE) ?
+                String tagName = (amenity == ScheduleParser.Amenity.POST_OFFICE) ?
                     "opening_hours" : "collection_times";
-                ScheduleResult res = parser.parse(poi.getTag(tag), now, amenity);
+                ScheduleParser.TimeType timeType = (amenity == ScheduleParser.Amenity.POST_OFFICE) ?
+                        ScheduleParser.TimeType.OPENING_HOURS : ScheduleParser.TimeType.COLLECTION_TIMES;
+
+                TextValue tagValue = (amenity == ScheduleParser.Amenity.POST_OFFICE) ?
+                        new OpeningHours(poi.getTag(tagName)) :
+                        new CollectionTimes(poi.getTag(tagName));
+
+                ScheduleResult res = parser.parse(tagValue, now, timeType);
 
                 if (!(res.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
                     res.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON ||

@@ -16,6 +16,8 @@ import pro.eng.yui.android.osmjppostalmap.core.PoiDetailsDialog;
 import pro.eng.yui.android.osmjppostalmap.core.PoiMarker;
 import pro.eng.yui.android.osmjppostalmap.core.PrefRefreshDialog;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.CollectionTimes;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.OpeningHours;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 import pro.eng.yui.android.osmjppostalmap.R;
 
@@ -39,6 +41,7 @@ import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
 import pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.TextValue;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -153,10 +156,17 @@ public class MainActivity extends AppCompatActivity {
                 PoiMarker marker = new PoiMarker(map, type);
                 marker.setPosition(new GeoPoint(poi.getLat(), poi.getLon()));
                 
-                String tag = (amenity == ScheduleParser.Amenity.POST_OFFICE) ? 
+                String tagName = (amenity == ScheduleParser.Amenity.POST_OFFICE) ? 
                         "opening_hours" : "collection_times";
+                ScheduleParser.TimeType timeType = (amenity == ScheduleParser.Amenity.POST_OFFICE) ?
+                        ScheduleParser.TimeType.OPENING_HOURS : ScheduleParser.TimeType.COLLECTION_TIMES;
+                
+                TextValue tagValue = (amenity == ScheduleParser.Amenity.POST_OFFICE) ?
+                        new OpeningHours(poi.getTag(tagName)) :
+                        new CollectionTimes(poi.getTag(tagName));
+
                 marker.setSchedule(new SimpleScheduleParser()
-                        .parse(poi.getTag(tag), System.currentTimeMillis(), amenity));
+                        .parse(tagValue, System.currentTimeMillis(), timeType));
                 
                 marker.setOnMarkerClickListener((m, mapView) -> {
                     PoiDetailsDialog.show(this, poi, ((PoiMarker)m).getSchedule());
@@ -175,7 +185,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 // 同一ステータスの場合はイベント時刻が近い方を優先（後に描画）
                 if (a.getSchedule().getNextEvent() != null && b.getSchedule().getNextEvent() != null) {
-                    return Long.compare(b.getSchedule().getNextEvent().getTimestamp(), a.getSchedule().getNextEvent().getTimestamp());
+                    return b.getSchedule().getNextEvent().getTimestamp().compareTo(a.getSchedule().getNextEvent().getTimestamp());
                 }
                 return 0;
             });

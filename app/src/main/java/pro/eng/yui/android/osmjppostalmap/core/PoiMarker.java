@@ -11,6 +11,8 @@ import org.osmdroid.views.overlay.Marker;
 
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
 
+import java.util.Calendar;
+
 /**
  * 郵便局とポストのカスタムマーカー
  */
@@ -101,7 +103,7 @@ public class PoiMarker extends Marker {
             RectF ringRect = new RectF(screenPos.x - ringSize, screenPos.y - ringSize, screenPos.x + ringSize, screenPos.y + ringSize);
 
             if (schedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON && schedule.getNextEvent() != null) {
-                long remainingMillis = schedule.getNextEvent().getTimestamp() - now;
+                long remainingMillis = schedule.getNextEvent().getTimestamp().toEpochSecond() - now;
                 float remainingMinutes = remainingMillis / 60000f;
                 if (remainingMinutes < 0) remainingMinutes = 0;
                 if (remainingMinutes > 60) remainingMinutes = 60;
@@ -121,10 +123,8 @@ public class PoiMarker extends Marker {
                     canvas.drawArc(ringRect, -90f, 360f, false, ringPaint);
                 }
                 
-                java.util.Calendar cal = java.util.Calendar.getInstance();
-                cal.setTimeInMillis(schedule.getNextEvent().getTimestamp());
-                int hour = cal.get(java.util.Calendar.HOUR);
-                int minute = cal.get(java.util.Calendar.MINUTE);
+                int hour = schedule.getNextEvent().getTimestamp().getHour();
+                int minute = schedule.getNextEvent().getTimestamp().getMinute();
                 float angle = (hour + minute / 60f) * 30f - 90f;
                 
                 Paint dotPaint = new Paint(ringPaint);

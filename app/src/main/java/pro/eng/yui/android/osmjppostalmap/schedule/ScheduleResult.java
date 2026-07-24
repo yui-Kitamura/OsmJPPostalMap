@@ -1,6 +1,9 @@
 package pro.eng.yui.android.osmjppostalmap.schedule;
 
-import java.util.List;
+import androidx.annotation.Nullable;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.*;
+
+import java.time.ZonedDateTime;
 import java.util.Map;
 
 /**
@@ -28,49 +31,50 @@ public class ScheduleResult {
     }
     
     public static class Event {
-        private final long timestamp;
+        private final ZonedDateTime timestamp;
         private final EventType type;
 
-        public Event(long timestamp, EventType type) {
+        public Event(ZonedDateTime timestamp, EventType type) {
             this.timestamp = timestamp;
             this.type = type;
         }
 
-        public long getTimestamp() { return timestamp; }
+        public ZonedDateTime getTimestamp() { return timestamp; }
         public EventType getType() { return type; }
+
+        @Override
+        public boolean equals(@Nullable Object obj) {
+            if (obj == null || getClass() != obj.getClass()) {
+                return false;
+            }
+            Event other = (Event) obj;
+            return timestamp.equals(other.timestamp) && type == other.type;
+        }
     }
 
     private final Event nextEvent;
     private final Event followingEvent;
     private final String todayStatus;
     private final CurrentState currentState;
-    private final Map<String, List<String>> weeklyTable; // 曜日 -> 時間リスト
-    private final String rawTagValue;
-    private final boolean isHoliday;
+    private final Map<Days, ? extends IDaySchedule> weeklyTable; // 曜日 -> 時間リスト
+    private final TextValue rawTagValue;
 
-    public ScheduleResult(Event nextEvent, Event followingEvent, String todayStatus, 
-                          CurrentState currentState, Map<String, List<String>> weeklyTable,
-                          String rawTagValue, boolean isHoliday) {
+    public ScheduleResult(Event nextEvent, Event followingEvent, String todayStatus,
+                          CurrentState currentState, Map<Days, ? extends IDaySchedule> weeklyTable,
+                          TextValue rawTagValue) {
         this.nextEvent = nextEvent;
         this.followingEvent = followingEvent;
         this.todayStatus = todayStatus;
         this.currentState = currentState;
         this.weeklyTable = weeklyTable;
         this.rawTagValue = rawTagValue;
-        this.isHoliday = isHoliday;
-    }
-
-    public ScheduleResult(Event nextEvent, Event followingEvent, String todayStatus,
-                          CurrentState currentState, Map<String, List<String>> weeklyTable,
-                          String rawTagValue) {
-        this(nextEvent, followingEvent, todayStatus, currentState, weeklyTable, rawTagValue, false);
     }
 
     public Event getNextEvent() { return nextEvent; }
     public Event getFollowingEvent() { return followingEvent; }
+    /** UI用状態ラベル */
     public String getTodayStatus() { return todayStatus; }
     public CurrentState getCurrentState() { return currentState; }
-    public Map<String, List<String>> getWeeklyTable() { return weeklyTable; }
-    public String getRawTagValue() { return rawTagValue; }
-    public boolean isHoliday() { return isHoliday; }
+    public Map<Days, ? extends IDaySchedule> getWeeklyTable() { return weeklyTable; }
+    public TextValue getRawTagValue() { return rawTagValue; }
 }

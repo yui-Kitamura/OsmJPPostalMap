@@ -33,7 +33,7 @@ import androidx.core.graphics.Insets;
 import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
-import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.*;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
 import pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser;
@@ -206,8 +206,12 @@ public class EditPoiActivity extends AppCompatActivity {
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
-        String amenity = targetPoi.getTag("amenity");
-        boolean isPostBox = "post_box".equals(amenity);
+        String amenityTag = targetPoi.getTag("amenity");
+        pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity amenity = 
+                "post_office".equals(amenityTag) ? 
+                pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_OFFICE : 
+                pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_BOX;
+        boolean isPostBox = (amenity == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_BOX);
 
         // クレンジング：不要なタグを除去
         if (isPostBox) {
@@ -427,8 +431,8 @@ public class EditPoiActivity extends AppCompatActivity {
         }
         // タグの更新と位置の更新をリポジトリ経由で行う
         Map<String, String> currentTags = new HashMap<>(targetPoi.getTags());
-        String amenity = currentTags.get("amenity");
-        boolean isPostBox = "post_box".equals(amenity);
+        String amenityTag = currentTags.get("amenity");
+        boolean isPostBox = "post_box".equals(amenityTag);
         
         if (isPostBox) {
             // 不要なタグを削除
@@ -458,10 +462,9 @@ public class EditPoiActivity extends AppCompatActivity {
             if (layoutFallback.getVisibility() == View.VISIBLE) {
                 // パース失敗時（フォールバック表示中）は時刻タグを更新しない（位置のみ更新）
             } else {
-                Map<String, List<String>> weeklyTable = new HashMap<>();
-                String[] dayKeys = {"Mo", "Sa", "Su", "PH"};
+                Map<Days, List<? extends ITagPart>> weeklyTable = new HashMap<>();
                 for (int col = 0; col < 3; col++) {
-                    List<String> targetList = new ArrayList<>();
+                    List<CollectionTime> targetList = new ArrayList<>();
                     int lastMinutes = -1;
                     for (int r = 0; r < timeRows.size(); r++) {
                         String val = timeRows.get(r)[col].getText().toString().trim();
@@ -477,24 +480,24 @@ public class EditPoiActivity extends AppCompatActivity {
                             Toast.makeText(this, "時刻は昇順で入力してください", Toast.LENGTH_SHORT).show();
                             return;
                         }
-                        targetList.add(val);
+                        targetList.add(new CollectionTime(val));
                         lastMinutes = minutes;
                     }
                     if (col == 0) {
-                        weeklyTable.put("Mo", targetList);
-                        weeklyTable.put("Tu", targetList);
-                        weeklyTable.put("We", targetList);
-                        weeklyTable.put("Th", targetList);
-                        weeklyTable.put("Fr", targetList);
+                        weeklyTable.put(Days.MONDAY, targetList);
+                        weeklyTable.put(Days.TUESDAY, targetList);
+                        weeklyTable.put(Days.WEDNESDAY, targetList);
+                        weeklyTable.put(Days.THURSDAY, targetList);
+                        weeklyTable.put(Days.FRIDAY, targetList);
                     } else if (col == 1) {
-                        weeklyTable.put("Sa", targetList);
+                        weeklyTable.put(Days.SATURDAY, targetList);
                     } else {
-                        weeklyTable.put("Su", targetList);
-                        weeklyTable.put("PH", targetList);
+                        weeklyTable.put(Days.SUNDAY, targetList);
+                        weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
                     }
                 }
 
-                String collection = scheduleParser.format(weeklyTable, ScheduleParser.Amenity.POST_BOX);
+                String collection = scheduleParser.format(weeklyTable, ScheduleParser.TimeType.COLLECTION_TIMES);
                 currentTags.put("collection_times", collection);
             }
         } else {
@@ -509,49 +512,45 @@ public class EditPoiActivity extends AppCompatActivity {
                 String manualText = tagInput.getText() != null ? tagInput.getText().toString().trim() : "";
                 currentTags.put("opening_hours", manualText);
             } else {
-                Map<String, List<String>> weeklyTable = new HashMap<>();
+                Map<Days, List<? extends ITagPart>> weeklyTable = new HashMap<>();
                 
                 // 平日
-                List<String> wdTimes;
-                if (checkOhWdOff.isChecked()) {
-                    wdTimes = new ArrayList<>();
-                } else {
+                List<ITagPart> wdTimes = new ArrayList<>();
+                if (!checkOhWdOff.isChecked()) {
                     String wdOpen = editOhWdOpen.getText().toString().trim();
                     String wdClose = editOhWdClose.getText().toString().trim();
                     String wdBreakStart = editOhWdBreakStart.getText().toString().trim();
                     String wdBreakEnd = editOhWdBreakEnd.getText().toString().trim();
-                    wdTimes = formatOpeningTimeRange(wdOpen, wdClose, wdBreakStart, wdBreakEnd);
+                    wdTimes.addAll(formatOpeningTimeRange(wdOpen, wdClose, wdBreakStart, wdBreakEnd));
                 }
-                for (String d : new String[]{"Mo", "Tu", "We", "Th", "Fr"}) weeklyTable.put(d, wdTimes);
+                for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
+                    weeklyTable.put(Days.valueOf(d), wdTimes);
+                }
                 
                 // 土曜
-                List<String> saTimes;
-                if (checkOhSaOff.isChecked()) {
-                    saTimes = new ArrayList<>();
-                } else {
+                List<ITagPart> saTimes = new ArrayList<>();
+                if (!checkOhSaOff.isChecked()) {
                     String saOpen = editOhSaOpen.getText().toString().trim();
                     String saClose = editOhSaClose.getText().toString().trim();
                     String saBreakStart = editOhSaBreakStart.getText().toString().trim();
                     String saBreakEnd = editOhSaBreakEnd.getText().toString().trim();
-                    saTimes = formatOpeningTimeRange(saOpen, saClose, saBreakStart, saBreakEnd);
+                    saTimes.addAll(formatOpeningTimeRange(saOpen, saClose, saBreakStart, saBreakEnd));
                 }
-                weeklyTable.put("Sa", saTimes);
+                weeklyTable.put(Days.SATURDAY, saTimes);
                 
                 // 日祝
-                List<String> phTimes;
-                if (checkOhPhOff.isChecked()) {
-                    phTimes = new ArrayList<>();
-                } else {
+                List<ITagPart> phTimes = new ArrayList<>();
+                if (!checkOhPhOff.isChecked()) {
                     String phOpen = editOhPhOpen.getText().toString().trim();
                     String phClose = editOhPhClose.getText().toString().trim();
                     String phBreakStart = editOhPhBreakStart.getText().toString().trim();
                     String phBreakEnd = editOhPhBreakEnd.getText().toString().trim();
-                    phTimes = formatOpeningTimeRange(phOpen, phClose, phBreakStart, phBreakEnd);
+                    phTimes.addAll(formatOpeningTimeRange(phOpen, phClose, phBreakStart, phBreakEnd));
                 }
-                weeklyTable.put("Su", phTimes);
-                weeklyTable.put("PH", phTimes);
+                weeklyTable.put(Days.SUNDAY, phTimes);
+                weeklyTable.put(Days.PUBLIC_HOLIDAY, phTimes);
 
-                String openingHours = scheduleParser.format(weeklyTable, ScheduleParser.Amenity.POST_OFFICE);
+                String openingHours = scheduleParser.format(weeklyTable, ScheduleParser.TimeType.OPENING_HOURS);
                 currentTags.put("opening_hours", openingHours);
             }
         }
@@ -626,14 +625,14 @@ public class EditPoiActivity extends AppCompatActivity {
         addNewRow("", "", "");
     }
 
-    private List<String> formatOpeningTimeRange(String open, String close, String bStart, String bEnd) {
-        List<String> times = new ArrayList<>();
+    private List<OpenCloseTime> formatOpeningTimeRange(String open, String close, String bStart, String bEnd) {
+        List<OpenCloseTime> times = new ArrayList<>();
         if (!open.isEmpty() && !close.isEmpty()) {
             if (!bStart.isEmpty() && !bEnd.isEmpty()) {
-                times.add(open + "-" + bStart);
-                times.add(bEnd + "-" + close);
+                times.add(new OpenCloseTime(open, bStart));
+                times.add(new OpenCloseTime(bEnd, close));
             } else {
-                times.add(open + "-" + close);
+                times.add(new OpenCloseTime(open, close));
             }
         }
         return times;
@@ -669,11 +668,15 @@ public class EditPoiActivity extends AppCompatActivity {
 
     private boolean parseAndFillOpeningHours(String tag) {
         try {
-            pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult result = scheduleParser.parse(tag, System.currentTimeMillis(), ScheduleParser.Amenity.POST_OFFICE);
-            Map<String, List<String>> weeklyTable = result.getWeeklyTable();
+            pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult result = scheduleParser.parse(new OpeningHours(tag), System.currentTimeMillis(), ScheduleParser.TimeType.OPENING_HOURS);
+            Map<Days, ? extends IDaySchedule> weeklyTable = result.getWeeklyTable();
             if (weeklyTable.isEmpty() && !tag.isEmpty()) return false;
 
-            String[] dayGroups = {"Mo", "Sa", "Su"};
+            Days[] dayGroups = {
+                Days.MONDAY,
+                Days.SATURDAY,
+                Days.SUNDAY
+            };
             EditText[][] editors = {
                 {editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd},
                 {editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd},
@@ -681,10 +684,10 @@ public class EditPoiActivity extends AppCompatActivity {
             };
 
             for (int i = 0; i < dayGroups.length; i++) {
-                List<String> times = weeklyTable.getOrDefault(dayGroups[i], new ArrayList<>());
+                IDaySchedule daySchedule = weeklyTable.get(dayGroups[i]);
                 android.widget.CheckBox checkOff = (i == 0) ? checkOhWdOff : (i == 1 ? checkOhSaOff : checkOhPhOff);
                 
-                if (times.isEmpty() && !tag.isEmpty()) {
+                if ((daySchedule == null || daySchedule.schedule().isEmpty()) && !tag.isEmpty()) {
                     checkOff.setChecked(true);
                     editors[i][0].setText("");
                     editors[i][1].setText("");
@@ -693,20 +696,19 @@ public class EditPoiActivity extends AppCompatActivity {
                 } else {
                     checkOff.setChecked(false);
                     String open = "", close = "", bStart = "", bEnd = "";
-                    if (times.size() == 1) {
-                        String[] range = times.get(0).split("-");
-                        if (range.length == 2) {
-                            open = range[0].trim();
-                            close = range[1].trim();
-                        }
-                    } else if (times.size() >= 2) {
-                        String[] range1 = times.get(0).split("-");
-                        String[] range2 = times.get(1).split("-");
-                        if (range1.length == 2 && range2.length == 2) {
-                            open = range1[0].trim();
-                            bStart = range1[1].trim();
-                            bEnd = range2[0].trim();
-                            close = range2[1].trim();
+                    if (daySchedule != null) {
+                        List<? extends ITagPart> times = daySchedule.schedule();
+                        if (times.size() == 1) {
+                            OpenCloseTime oct = (OpenCloseTime) times.get(0);
+                            open = oct.openAt.value;
+                            close = oct.closeAt.value;
+                        } else if (times.size() >= 2) {
+                            OpenCloseTime oct1 = (OpenCloseTime) times.get(0);
+                            OpenCloseTime oct2 = (OpenCloseTime) times.get(1);
+                            open = oct1.openAt.value;
+                            bStart = oct1.closeAt.value;
+                            bEnd = oct2.openAt.value;
+                            close = oct2.closeAt.value;
                         }
                     }
                     editors[i][0].setText(open);
@@ -724,26 +726,30 @@ public class EditPoiActivity extends AppCompatActivity {
 
     private boolean parseAndFillCollectionTimes(String tag) {
         try {
-            pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult result = scheduleParser.parse(tag, System.currentTimeMillis(), ScheduleParser.Amenity.POST_BOX);
-            Map<String, List<String>> weeklyTable = result.getWeeklyTable();
+            pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult result = scheduleParser.parse(new CollectionTimes(tag), System.currentTimeMillis(), ScheduleParser.TimeType.COLLECTION_TIMES);
+            Map<Days, ? extends IDaySchedule> weeklyTable = result.getWeeklyTable();
             if (weeklyTable.isEmpty() && !tag.isEmpty()) return false;
 
-            List<String> weekday = weeklyTable.getOrDefault("Mo", new ArrayList<>());
-            List<String> saturday = weeklyTable.getOrDefault("Sa", new ArrayList<>());
-            List<String> sunday = weeklyTable.getOrDefault("Su", new ArrayList<>());
-            List<String> holiday = weeklyTable.getOrDefault("PH", new ArrayList<>());
+            IDaySchedule wdSched = weeklyTable.get(Days.MONDAY);
+            IDaySchedule saSched = weeklyTable.get(Days.SATURDAY);
+            IDaySchedule suSched = weeklyTable.get(Days.SUNDAY);
+            IDaySchedule phSched = weeklyTable.get(Days.PUBLIC_HOLIDAY);
+
+            List<String> weekday = schedToList(wdSched);
+            List<String> saturday = schedToList(saSched);
+            List<String> sunday = schedToList(suSched);
+            List<String> holiday = schedToList(phSched);
 
             // 火〜金のスケジュールが月曜日と一致するか確認
-            for (String day : new String[]{"Tu", "We", "Th", "Fr"}) {
-                if (!weekday.equals(weeklyTable.getOrDefault(day, new ArrayList<>()))) return false;
+            for (String day : new String[]{"TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
+                if (!weekday.equals(schedToList(weeklyTable.get(Days.valueOf(day))))) return false;
             }
 
-            // 日曜と祝日が同じかチェック（UI上は「日祝」列にまとめているため）
+            // 日曜と祝日が同じかチェック
             boolean hasPH = tag.contains("PH");
             if (hasPH && !sunday.equals(holiday)) return false;
 
             if (!hasPH) {
-                // PHがない場合、警告を表示する準備をする
                 findViewById(R.id.layout_holiday_warning).setVisibility(View.VISIBLE);
                 TextView header = findViewById(R.id.header_sun_ph);
                 if (header != null) header.setTextColor(android.graphics.Color.RED);
@@ -766,5 +772,15 @@ public class EditPoiActivity extends AppCompatActivity {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private List<String> schedToList(IDaySchedule sched) {
+        List<String> list = new ArrayList<>();
+        if (sched != null) {
+            for (Object p : sched.schedule()) {
+                list.add(p.toString());
+            }
+        }
+        return list;
     }
 }
