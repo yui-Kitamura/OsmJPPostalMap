@@ -14,6 +14,8 @@ import java.util.Date;
 import java.util.Locale;
 
 import pro.eng.yui.android.osmjppostalmap.R;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.Days;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.IDaySchedule;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
 
@@ -113,10 +115,10 @@ public class PoiDetailsDialog {
                 
                 TextView timeView = new TextView(context);
                 // そのグループの時間を取得（代表する曜日またはPHから）
-                pro.eng.yui.oss.osm.lib.jppostalcore.types.IDaySchedule daySchedule = null;
+                IDaySchedule daySchedule = null;
                 boolean foundDay = false;
                 for (String day : groupDays[i]) {
-                    pro.eng.yui.oss.osm.lib.jppostalcore.types.Days d = pro.eng.yui.oss.osm.lib.jppostalcore.types.Days.valueOf(day);
+                    Days d = Days.getFromLabel(day);
                     if (schedule.getWeeklyTable().containsKey(d)) {
                         daySchedule = schedule.getWeeklyTable().get(d);
                         foundDay = true;
