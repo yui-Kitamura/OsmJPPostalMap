@@ -57,14 +57,4 @@
 
     </LinearLayout>
 
-    <ImageButton
-        android:id="@+id/dialog_open_osm"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@android:drawable/ic_menu_info_details"
-        android:contentDescription="Open in OSM" />
-
 </RelativeLayout>

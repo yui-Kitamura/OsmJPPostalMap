@@ -40,15 +40,10 @@ public class PoiDetailsDialog {
                 ScheduleParser.Amenity.POST_BOX;
         boolean isPostBox = (amenity == ScheduleParser.Amenity.POST_BOX);
         
-        builder.setTitle(isPostBox ? "郵便ポスト" : poi.getTag("name"));
-        
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_poi_details, null);
-        TextView statusText = view.findViewById(R.id.dialog_status);
-        TextView nextEventText = view.findViewById(R.id.dialog_next_event);
-        TableLayout table = view.findViewById(R.id.dialog_weekly_table);
-        TextView rawTagText = view.findViewById(R.id.dialog_raw_tag);
-        TextView checkDateText = view.findViewById(R.id.dialog_check_date);
-        ImageButton openOsmButton = view.findViewById(R.id.dialog_open_osm);
+        View titleView = LayoutInflater.from(context).inflate(R.layout.dialog_poi_details_title, null);
+        TextView titleText = titleView.findViewById(R.id.dialog_title_text);
+        titleText.setText(isPostBox ? "郵便ポスト" : poi.getTag("name"));
+        ImageButton openOsmButton = titleView.findViewById(R.id.dialog_open_osm);
 
         openOsmButton.setOnClickListener(v -> {
             String type = poi.getType(); // node or way
@@ -57,6 +52,15 @@ public class PoiDetailsDialog {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
             context.startActivity(intent);
         });
+
+        builder.setCustomTitle(titleView);
+        
+        View view = LayoutInflater.from(context).inflate(R.layout.dialog_poi_details, null);
+        TextView statusText = view.findViewById(R.id.dialog_status);
+        TextView nextEventText = view.findViewById(R.id.dialog_next_event);
+        TableLayout table = view.findViewById(R.id.dialog_weekly_table);
+        TextView rawTagText = view.findViewById(R.id.dialog_raw_tag);
+        TextView checkDateText = view.findViewById(R.id.dialog_check_date);
 
         if (schedule != null) {
             statusText.setText(schedule.getTodayStatus());
