@@ -52,10 +52,16 @@ public class MainActivity extends AppCompatActivity {
     private LocationManager locationManager;
     private Location lastLocation;
     private static final int PERMISSION_REQUEST_LOCATION = 100;
+    private static final double GPS_MIN_ZOOM = 15.0;
+    private static final double GPS_MAX_ZOOM = 19.0;
+    private static final int GPS_MAX_VISIBLE_POIS = 30;
 
     private final android.os.Handler debounceHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable debounceRunnable = null;
     private boolean initialLocationSet = false;
+    private boolean gpsZoomAdjustmentPending = false;
+    private GeoPoint gpsZoomCenter;
+    private org.osmdroid.util.BoundingBox gpsZoomMinBounds;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -116,7 +122,7 @@ public class MainActivity extends AppCompatActivity {
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
         // OSM JP Tile Server
-        map.setTileSource(new XYTileSource("OSMJP", 0, 18, 256, ".png", 
+        map.setTileSource(new XYTileSource("OSMJP", 0, 19, 256, ".png",
                 new String[] { "https://tile.openstreetmap.jp/" }));
         map.setMultiTouchControls(true);
 
@@ -146,6 +152,7 @@ public class MainActivity extends AppCompatActivity {
         
         // Observe Filtered POIs
         viewModel.getFilteredPois().observe(this, pois -> {
+            adjustGpsZoomForPoiCount(pois);
             map.getOverlays().removeIf(overlay -> overlay instanceof PoiMarker);
             viewModel.updateAccessToken(authRepository.getAccessToken());
             
@@ -254,12 +261,18 @@ public class MainActivity extends AppCompatActivity {
         // GPS Button
         findViewById(R.id.gps_button).setOnClickListener(v -> {
             if (lastLocation != null) {
-                map.getController().animateTo(new GeoPoint(lastLocation.getLatitude(), lastLocation.getLongitude()));
-                map.getController().setZoom(15.0); // 2km四方くらい (Zoom 15 is roughly 2.4km span at latitude 35)
-                if (!initialLocationSet) {
+                gpsZoomCenter = new GeoPoint(lastLocation.getLatitude(), lastLocation.getLongitude());
+                map.getController().setZoom(GPS_MIN_ZOOM);
+                map.getController().animateTo(gpsZoomCenter);
+
+                // 移動後のZoom 15表示範囲を取得してからPOIをロードする。
+                // ロード完了時に、実際に画面内へ描画されるPOI数から最終ズームを決める。
+                map.postDelayed(() -> {
+                    gpsZoomMinBounds = map.getBoundingBox();
+                    gpsZoomAdjustmentPending = true;
                     initialLocationSet = true;
                     updatePois();
-                }
+                }, 500);
             } else {
                 Toast.makeText(this, "現在地を取得中です...", Toast.LENGTH_SHORT).show();
             }
@@ -338,47 +351,44 @@ public class MainActivity extends AppCompatActivity {
         debounceHandler.postDelayed(debounceRunnable, 1500);
     }
 
-    private static class SearchAdapter extends RecyclerView.Adapter<SearchAdapter.ViewHolder> {
-        private final java.util.List<OsmPoi> items;
-        private final OnItemClickListener listener;
-
-        interface OnItemClickListener {
-            void onItemClick(OsmPoi poi);
+    /**
+     * GPS移動先のPOI密度に応じて、描画数が過密にならない最小ズームを選ぶ。
+     * Zoomが1上がるごとに表示範囲の縦横が半分になる前提で、各候補の
+     * 画面内POI数を実座標から数える。
+     */
+    private void adjustGpsZoomForPoiCount(List<OsmPoi> pois) {
+        if (!gpsZoomAdjustmentPending || gpsZoomCenter == null || gpsZoomMinBounds == null) {
+            return;
         }
+        gpsZoomAdjustmentPending = false;
 
-        SearchAdapter(java.util.List<OsmPoi> items, OnItemClickListener listener) {
-            this.items = items;
-            this.listener = listener;
+        double targetZoom = GPS_MAX_ZOOM;
+        for (int zoom = (int) GPS_MIN_ZOOM; zoom <= (int) GPS_MAX_ZOOM; zoom++) {
+            double scale = Math.pow(2.0, zoom - GPS_MIN_ZOOM);
+            double halfLatitudeSpan = gpsZoomMinBounds.getLatitudeSpan() / (2.0 * scale);
+            double halfLongitudeSpan = gpsZoomMinBounds.getLongitudeSpan() / (2.0 * scale);
+            int visibleCount = 0;
+
+            for (OsmPoi poi : pois) {
+                if (Math.abs(poi.getLat() - gpsZoomCenter.getLatitude()) <= halfLatitudeSpan
+                        && longitudeDistance(poi.getLon(), gpsZoomCenter.getLongitude()) <= halfLongitudeSpan) {
+                    visibleCount++;
+                    if (visibleCount > GPS_MAX_VISIBLE_POIS) {
+                        break;
+                    }
+                }
+            }
+            if (visibleCount <= GPS_MAX_VISIBLE_POIS) {
+                targetZoom = zoom;
+                break;
+            }
         }
+        map.getController().setZoom(targetZoom);
+    }
 
-        @Override
-        public ViewHolder onCreateViewHolder(android.view.ViewGroup parent, int viewType) {
-            TextView tv = new TextView(parent.getContext());
-            tv.setLayoutParams(new android.view.ViewGroup.LayoutParams(
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT, 
-                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT));
-            tv.setPadding(32, 32, 32, 32);
-            tv.setTextSize(16f);
-            return new ViewHolder(tv);
-        }
-
-        @Override
-        public void onBindViewHolder(ViewHolder holder, int position) {
-            OsmPoi poi = items.get(position);
-            String name = poi.getTag("name");
-            if (name == null) name = poi.getTag("addr:full");
-            if (name == null) name = "位置: " + poi.getLat() + ", " + poi.getLon();
-            holder.textView.setText(name);
-            holder.itemView.setOnClickListener(v -> listener.onItemClick(poi));
-        }
-
-        @Override
-        public int getItemCount() { return items.size(); }
-
-        static class ViewHolder extends RecyclerView.ViewHolder {
-            TextView textView;
-            ViewHolder(TextView v) { super(v); textView = v; }
-        }
+    private static double longitudeDistance(double longitude1, double longitude2) {
+        double distance = Math.abs(longitude1 - longitude2);
+        return Math.min(distance, 360.0 - distance);
     }
 
     private void updatePois() {
