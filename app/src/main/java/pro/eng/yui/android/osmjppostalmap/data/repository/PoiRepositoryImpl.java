@@ -311,6 +311,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             try {
                 csId = JpPostalUtil.callOsmCreateChangeset(accessToken, csInfo);
             } catch (IOException ioe) {
+                System.err.println(ioe.getMessage());
                 ioe.printStackTrace();
                 postError(callback, "ChangeSetの登録開始処理に失敗しました。リトライしてください");
                 return;
@@ -322,6 +323,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                 // CS close
                 JpPostalUtil.callOsmCloseChangeset(accessToken, csInfoActive);
             } catch (IOException ioe) {
+                System.err.println(ioe.getMessage());
                 ioe.printStackTrace();
                 postError(callback, "入力内容の反映に失敗しました。リトライしてください");
                 return;
