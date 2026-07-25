@@ -24,6 +24,7 @@ import java.util.Locale;
 import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
 import pro.eng.yui.android.osmjppostalmap.ui.MainActivity;
+import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.Days;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.IDaySchedule;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
@@ -61,6 +62,7 @@ public class PoiDetailsDialog {
         TableLayout table = view.findViewById(R.id.dialog_weekly_table);
         TextView rawTagText = view.findViewById(R.id.dialog_raw_tag);
         TextView checkDateText = view.findViewById(R.id.dialog_check_date);
+        TextView addressText = view.findViewById(R.id.dialog_address);
 
         if (schedule != null) {
             statusText.setText(schedule.getTodayStatus());
@@ -206,6 +208,8 @@ public class PoiDetailsDialog {
             checkDateText.setText("最終確認日: 不明");
         }
         checkDateText.setVisibility(View.VISIBLE);
+
+        addressText.setText(JpPostalUtil.getAddressText(poi.getTags()));
 
         builder.setView(view);
         builder.setPositiveButton("閉じる", null);
