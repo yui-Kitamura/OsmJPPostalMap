@@ -3,8 +3,12 @@ package pro.eng.yui.android.osmjppostalmap.core;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.text.Editable;
+import android.text.SpannableString;
+import android.text.Spanned;
 import android.text.TextWatcher;
+import android.text.style.StyleSpan;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -16,6 +20,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -195,6 +200,7 @@ public class AddressEditDialog {
         EditText fullInput = view.findViewById(R.id.address_full_input);
         Button expandButton = view.findViewById(R.id.address_expand_hierarchy);
         LinearLayout hierarchy = view.findViewById(R.id.address_hierarchy);
+        applyPlaceholderStyle(context, fullInput);
 
         String currentLabel = current.toString();
         currentText.setText(currentLabel.isEmpty() ? "データなし" : currentLabel);
@@ -260,6 +266,14 @@ public class AddressEditDialog {
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             boolean useHierarchy = hierarchy.getVisibility() == View.VISIBLE;
             JpAddress edited = useHierarchy ? snapshot(inputs) : fullOnly(fullInput);
+
+            // 起動時から値が変わっていなければ保存すべきものが無い。
+            // リスナを呼ぶと詳細ダイアログ側が「編集画面で保存」を促してしまうため、黙って閉じる
+            if (isUnchanged(current, edited)) {
+                dialog.dismiss();
+                return;
+            }
+
             // addr:full は空判定のみでNGにならないため、full入力時は検証対象が無い
             List<String> invalid = useHierarchy ? collectInvalid(inputs, edited) : new ArrayList<>();
 
@@ -298,6 +312,7 @@ public class AddressEditDialog {
 
         EditText input = new EditText(context);
         input.setHint(field.tagKey);
+        applyPlaceholderStyle(context, input);
         input.setTextSize(14f);
         input.setSingleLine(true);
         input.setText(field.getter.apply(current));
@@ -309,6 +324,22 @@ public class AddressEditDialog {
         row.addView(labelView);
         row.addView(input);
         return row;
+    }
+
+    /**
+     * placeholder を斜体＋淡色にして、入力済みの値と視覚的に区別する。
+     *
+     * <p>{@code android:textStyle="italic"} は入力済みの文字まで斜体にしてしまうため、
+     * ヒント文字列に {@link StyleSpan} を張って placeholder だけを斜体にする。</p>
+     */
+    private static void applyPlaceholderStyle(Context context, EditText input) {
+        CharSequence hint = input.getHint();
+        if (hint == null) { return; }
+        SpannableString styled = new SpannableString(hint.toString());
+        styled.setSpan(new StyleSpan(Typeface.ITALIC), 0, styled.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        input.setHint(styled);
+        input.setHintTextColor(ContextCompat.getColor(context, R.color.input_placeholder));
     }
 
     /** 階層の入力欄から JpAddress を組み立てる。検証にも保存にも使う。 */
@@ -326,6 +357,31 @@ public class AddressEditDialog {
         JpAddress address = new JpAddress();
         address.setFull(fullInput.getText().toString());
         return address;
+    }
+
+    /**
+     * ダイアログ起動時の値と編集結果を、full と各階層フィールドで突き合わせる。
+     *
+     * @return 全フィールドが一致していれば true
+     */
+    private static boolean isUnchanged(JpAddress before, JpAddress after) {
+        if (!sameValue(before.getFull(), after.getFull())) {
+            return false;
+        }
+        for (Field field : Field.values()) {
+            if (!sameValue(field.getter.apply(before), field.getter.apply(after))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * null・空文字・前後空白のみの差は「同じ」とみなす。
+     * {@link #putOrRemove} が trim して空ならタグを消す仕様と揃えている。
+     */
+    private static boolean sameValue(String a, String b) {
+        return (a == null ? "" : a.trim()).equals(b == null ? "" : b.trim());
     }
 
     /** 検証NGのフィールドと、その入力ルールを集める。 */

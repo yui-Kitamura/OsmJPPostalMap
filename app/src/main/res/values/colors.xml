@@ -10,4 +10,6 @@
     <color name="gray_light">#FFBDBDBD</color>
     <color name="gray_bg">#FFF5F5F5</color>
     <color name="blue_frame">#FF2196F3</color>
+    <!-- 入力欄のplaceholder。既定のヒント色(38%)より薄くして入力済みの値と見分ける -->
+    <color name="input_placeholder">#40000000</color>
 </resources>

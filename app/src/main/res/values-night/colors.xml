@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ダークテーマでは黒の半透明だと沈むため、白の半透明で同じ薄さを出す -->
+    <color name="input_placeholder">#40FFFFFF</color>
+</resources>
