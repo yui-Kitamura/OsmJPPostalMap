@@ -127,6 +127,7 @@ public class MainActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
         viewModel.updateAccessToken(authRepository.getAccessToken());
         viewModel.setFilterOpenOnly(false); // 初期化トリガー
+        viewModel.fetchDataDate(); // データ鮮度情報の取得を開始
         
         // 初回表示トリガー：レイアウト完了後に一度 updatePois を実行する
         map.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {

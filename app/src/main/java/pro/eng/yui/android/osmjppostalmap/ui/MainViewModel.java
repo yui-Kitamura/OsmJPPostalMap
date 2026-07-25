@@ -5,7 +5,7 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import java.util.List;
-
+import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateResponse;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
 import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.CollectionTimes;
@@ -25,6 +25,7 @@ public class MainViewModel extends ViewModel {
     private final MutableLiveData<Boolean> filterOpenOnly = new MutableLiveData<>(false);
     private final MutableLiveData<Boolean> filterPostOfficeOnly = new MutableLiveData<>(false);
     private final MutableLiveData<List<OsmPoi>> filteredPois = new MutableLiveData<>();
+    private final MutableLiveData<DataDateResponse> dataDate = new MutableLiveData<>();
 
     public MainViewModel() {
         this.repository = PoiRepositoryImpl.getInstance();
@@ -130,6 +131,24 @@ public class MainViewModel extends ViewModel {
     /** 指定都道府県を強制的に再取得する（更新ダイアログの個別更新用） */
     public void refreshPrefecture(int prefCode, String prefName) {
         repository.refreshPrefecture(prefCode, prefName);
+    }
+
+    public void fetchDataDate() {
+        repository.fetchDataDate(new PoiRepository.DataDateCallback() {
+            @Override
+            public void onSuccess(DataDateResponse response) {
+                dataDate.postValue(response);
+            }
+
+            @Override
+            public void onError(String message) {
+                errorMessage.postValue(message);
+            }
+        });
+    }
+
+    public LiveData<DataDateResponse> getDataDate() {
+        return dataDate;
     }
 
     /** ローカルに保存済みの都道府県一覧を返す（更新ダイアログ用） */

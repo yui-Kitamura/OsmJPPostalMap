@@ -18,8 +18,14 @@ import java.util.concurrent.Executors;
 
 import pro.eng.yui.android.osmjppostalmap.BuildConfig;
 import pro.eng.yui.android.osmjppostalmap.data.local.PoiLocalDataSource;
+import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateApi;
+import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateResponse;
 import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
+import retrofit2.Call;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class PoiRepositoryImpl implements PoiRepository {
 
@@ -185,6 +191,31 @@ public class PoiRepositoryImpl implements PoiRepository {
     public List<PrefMeta> getSavedPrefectures() {
         if (local == null) { return new ArrayList<>(); }
         return local.getAllPrefMeta();
+    }
+
+    @Override
+    public void fetchDataDate(DataDateCallback callback) {
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("https://yui-kitamura.github.io/OsmJpPostalMapDataSource/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+
+        DataDateApi api = retrofit.create(DataDateApi.class);
+        api.getDataDate().enqueue(new retrofit2.Callback<DataDateResponse>() {
+            @Override
+            public void onResponse(Call<DataDateResponse> call, Response<DataDateResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    callback.onSuccess(response.body());
+                } else {
+                    callback.onError("データ鮮度情報の取得に失敗しました");
+                }
+            }
+
+            @Override
+            public void onFailure(Call<DataDateResponse> call, Throwable t) {
+                callback.onError("ネットワークエラーが発生しました: " + t.getMessage());
+            }
+        });
     }
 
     /**

@@ -16,12 +16,16 @@ import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import pro.eng.yui.android.osmjppostalmap.R;
+import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateResponse;
 import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
 import pro.eng.yui.android.osmjppostalmap.ui.MainViewModel;
 
@@ -51,9 +55,26 @@ public class PrefRefreshDialog {
             emptyText.setVisibility(View.VISIBLE);
         }
 
+        Map<String, Long> remoteDates = new HashMap<>();
+        DataDateResponse remoteData = viewModel.getDataDate().getValue();
+        SimpleDateFormat remoteSdf = new SimpleDateFormat("yyyy/MM/dd'T'HH:mm:ss", Locale.JAPAN);
+        if (remoteData != null && remoteData.getPrefectures() != null) {
+            for (DataDateResponse.PrefectureDate pd : remoteData.getPrefectures()) {
+                try {
+                    Date date = remoteSdf.parse(pd.getLastModified());
+                    if (date != null) {
+                        remoteDates.put(pd.getName(), date.getTime());
+                    }
+                } catch (ParseException ignored) {
+                }
+            }
+        }
+
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.JAPAN);
         for (PrefMeta meta : metas) {
-            container.addView(buildRow(context, viewModel, meta, sdf));
+            Long remoteTime = remoteDates.get(meta.getName());
+            boolean hasUpdate = remoteTime != null && remoteTime > meta.getLastUpdated();
+            container.addView(buildRow(context, viewModel, meta, sdf, hasUpdate));
         }
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
@@ -77,7 +98,7 @@ public class PrefRefreshDialog {
         dialog.show();
     }
 
-    private static View buildRow(Context context, MainViewModel viewModel, PrefMeta meta, SimpleDateFormat sdf) {
+    private static View buildRow(Context context, MainViewModel viewModel, PrefMeta meta, SimpleDateFormat sdf, boolean hasUpdate) {
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -96,6 +117,9 @@ public class PrefRefreshDialog {
 
         Button updateButton = new Button(context);
         updateButton.setText("更新");
+        if (hasUpdate) {
+            updateButton.setBackgroundResource(R.drawable.bg_button_update_highlight);
+        }
         updateButton.setOnClickListener(v -> {
             viewModel.refreshPrefecture(meta.getPrefCode(), meta.getName());
             Toast.makeText(context, meta.getName() + "を更新しています...", Toast.LENGTH_SHORT).show();

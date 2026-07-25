@@ -2,6 +2,7 @@ package pro.eng.yui.android.osmjppostalmap.domain.repository;
 
 import androidx.lifecycle.LiveData;
 import java.util.List;
+import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateResponse;
 import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
@@ -40,6 +41,16 @@ public interface PoiRepository {
      * ローカルに保存済みの都道府県メタ情報の一覧を返す（更新ダイアログ表示用）。
      */
     List<PrefMeta> getSavedPrefectures();
+
+    /**
+     * データ鮮度情報 (date.json) を取得する
+     */
+    void fetchDataDate(DataDateCallback callback);
+
+    interface DataDateCallback {
+        void onSuccess(DataDateResponse response);
+        void onError(String message);
+    }
 
     /**
      * 指定されたIDのPOIを取得する
