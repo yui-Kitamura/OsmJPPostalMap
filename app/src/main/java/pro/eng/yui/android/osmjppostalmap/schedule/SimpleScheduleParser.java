@@ -123,6 +123,7 @@ public class SimpleScheduleParser implements ScheduleParser {
 
                 Map<Days, CollectionTimeParser.DaySchedule> parsedMap = JpPostalUtil.decodeCollectionTimes((CollectionTimes) tagValue);
                 if (parsedMap == null) {
+                    System.out.println("full value:"+ tagValue.getOrigin());
                     return new ScheduleResult(null, null, "データ解釈エラー",
                             ScheduleResult.CurrentState.UNKNOWN,
                             new HashMap<>(), tagValue);
