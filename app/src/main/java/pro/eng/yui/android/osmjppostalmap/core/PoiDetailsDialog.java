@@ -9,14 +9,18 @@ import android.widget.TextView;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
 
 import pro.eng.yui.android.osmjppostalmap.R;
+import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
+import pro.eng.yui.android.osmjppostalmap.ui.MainActivity;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.Days;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.IDaySchedule;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
@@ -27,11 +31,11 @@ public class PoiDetailsDialog {
     public static void show(Context context, OsmPoi poi, ScheduleResult schedule) {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
         
-        pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity amenity = 
+        ScheduleParser.Amenity amenity = 
                 "post_office".equals(poi.getTag("amenity")) ? 
-                pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_OFFICE : 
-                pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_BOX;
-        boolean isPostBox = (amenity == pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser.Amenity.POST_BOX);
+                ScheduleParser.Amenity.POST_OFFICE : 
+                ScheduleParser.Amenity.POST_BOX;
+        boolean isPostBox = (amenity == ScheduleParser.Amenity.POST_BOX);
         
         builder.setTitle(isPostBox ? "郵便ポスト" : poi.getTag("name"));
         
@@ -198,15 +202,15 @@ public class PoiDetailsDialog {
             intent.putExtra("POI_VER", poi.getVer());
             
             // すべてのタグを渡す
-            if (poi.getTags() instanceof java.io.Serializable) {
-                intent.putExtra("POI_TAGS", (java.io.Serializable) poi.getTags());
+            if (poi.getTags() instanceof Serializable) {
+                intent.putExtra("POI_TAGS", (Serializable) poi.getTags());
             } else {
                 // Serializable でない場合は HashMap にコピーして渡す
-                intent.putExtra("POI_TAGS", new java.util.HashMap<>(poi.getTags()));
+                intent.putExtra("POI_TAGS", new HashMap<>(poi.getTags()));
             }
 
-            if (context instanceof pro.eng.yui.android.osmjppostalmap.ui.MainActivity) {
-                pro.eng.yui.android.osmjppostalmap.ui.MainActivity activity = (pro.eng.yui.android.osmjppostalmap.ui.MainActivity) context;
+            if (context instanceof MainActivity) {
+                MainActivity activity = (MainActivity) context;
                 org.osmdroid.views.MapView map = activity.findViewById(R.id.map);
                 if (map != null) {
                     intent.putExtra("ZOOM_LEVEL", map.getZoomLevelDouble());
@@ -218,11 +222,4 @@ public class PoiDetailsDialog {
         builder.show();
     }
 
-    private static long getEndOfToday() {
-        java.util.Calendar cal = java.util.Calendar.getInstance();
-        cal.set(java.util.Calendar.HOUR_OF_DAY, 23);
-        cal.set(java.util.Calendar.MINUTE, 59);
-        cal.set(java.util.Calendar.SECOND, 59);
-        return cal.getTimeInMillis();
-    }
 }
