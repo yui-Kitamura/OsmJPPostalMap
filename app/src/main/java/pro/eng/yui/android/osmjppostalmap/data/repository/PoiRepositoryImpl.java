@@ -15,6 +15,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import pro.eng.yui.android.osmjppostalmap.BuildConfig;
 import pro.eng.yui.android.osmjppostalmap.data.local.PoiLocalDataSource;
@@ -44,6 +45,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     private static final int MAX_RENDER = 500;
     private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private volatile String currentOperation;
     private Runnable cooldownRunnable;
 
     /** ローカルキャッシュ（{@link #init(Context)} で初期化） */
@@ -90,7 +92,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     @Override
     public LiveData<List<OsmPoi>> getPois(String prefName) {
         // 互換用。バックグラウンドでキャッシュ優先の単一県読み込みを行う。
-        runOnExecutor(() -> {
+        runOnExecutor("都道府県データを読み込み中", () -> {
             Map<String, Integer> prefs = JpPostalUtil.getPrefectures();
             Integer code = prefs.get(prefName);
             if (code == null || code < 0) { return; }
@@ -105,12 +107,15 @@ public class PoiRepositoryImpl implements PoiRepository {
      * 単一スレッドExecutor上でタスクを実行する。タスクが例外を投げても
      * Executorのワーカースレッドが死なないよう保護する。
      */
-    private void runOnExecutor(Runnable task) {
+    private void runOnExecutor(String operation, Runnable task) {
         executor.execute(() -> {
+            currentOperation = operation;
             try {
                 task.run();
             } catch (Exception e) {
                 errorLiveData.postValue("処理中にエラーが発生しました");
+            } finally {
+                currentOperation = null;
             }
         });
     }
@@ -119,7 +124,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     public void loadPoisForArea(double[][] latLonPoints) {
         if (latLonPoints == null || latLonPoints.length == 0) { return; }
 
-        runOnExecutor(() -> {
+        runOnExecutor("地図データを読み込み中", () -> {
             // 1. まずは現在のキャッシュ分（全アクティブ県）を全出力。
             // 描画範囲で絞り込むとズームアウト時にマーカーが消えるため、全吐き出しとする。
             postCombined();
@@ -181,7 +186,7 @@ public class PoiRepositoryImpl implements PoiRepository {
         lastFetchTime = currentTime;
         startCooldownTimer();
 
-        runOnExecutor(() -> {
+        runOnExecutor("都道府県データを更新中", () -> {
             loadPref(prefCode, prefName, true); // 強制ネットワーク取得
             postCombined();
         });
@@ -250,7 +255,7 @@ public class PoiRepositoryImpl implements PoiRepository {
      * アプリ起動時、SQLiteに保存されているすべての都道府県を読み込む。
      */
     private void loadAllFromCache() {
-        runOnExecutor(() -> {
+        runOnExecutor("ローカルデータを読み込み中", () -> {
             if (local == null) return;
             List<PrefMeta> saved = local.getAllPrefMeta();
             if (saved.isEmpty()) return;
@@ -316,7 +321,7 @@ public class PoiRepositoryImpl implements PoiRepository {
         lastFetchTime = currentTime;
         startCooldownTimer();
 
-        runOnExecutor(() -> {
+        runOnExecutor("POI情報を取得中", () -> {
             try {
                 List<OsmPoi> poiList = JpPostalUtil.callOverpass(query, 3, 5);
                 poiLiveData.postValue(poiList.get(0));
@@ -331,7 +336,9 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public void savePoi(OsmPoi poi, String comment, PoiSaveCallback callback) {
-        runOnExecutor(() -> {
+        AtomicBoolean started = showWaitingProgress(callback);
+        runOnExecutor("POIを保存中", () -> {
+            started.set(true);
             // 1. Create Changeset
             postProgress(callback, "Changesetを作成中…");
             ChangeSetInfo csInfo = new ChangeSetInfo(0, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, new HashMap<>());
@@ -366,7 +373,9 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public void addPostBox(double lat, double lon, String shape, String branch, String postboxRef, String collectionTimes, String note, PoiSaveCallback callback) {
-        runOnExecutor(() -> {
+        AtomicBoolean started = showWaitingProgress(callback);
+        runOnExecutor("郵便ポストを保存中", () -> {
+            started.set(true);
             Map<String, String> csTags = new HashMap<>();
             ChangeSetInfo createInfo = new ChangeSetInfo(0L, "郵便ポストの追加",
                     "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, csTags);
@@ -500,6 +509,24 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     private void postProgress(PoiSaveCallback callback, String message) {
         handler.post(() -> callback.onProgress(message));
+    }
+
+    /** 保存タスクがExecutorで開始されるまで、先行処理の内容を定期的に通知する。 */
+    private AtomicBoolean showWaitingProgress(PoiSaveCallback callback) {
+        AtomicBoolean started = new AtomicBoolean(false);
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (started.get()) { return; }
+                String operation = currentOperation;
+                if (operation == null) {
+                    operation = "先行処理の完了待ち";
+                }
+                callback.onProgress("処理を開始中…（現在：" + operation + "）");
+                handler.postDelayed(this, 1000);
+            }
+        });
+        return started;
     }
 
     @Override
