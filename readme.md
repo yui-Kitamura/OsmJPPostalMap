@@ -1,6 +1,8 @@
 # OSM郵便マップ
 OpenStreetMapベースの日本郵便マップ表示・編集アプリ for Android
 
+[![Get it on Google Play](https://raw.githubusercontent.com/yui-Kitamura/OsmJPPostalMap/refs/heads/main/GetItOnGooglePlay_Badge_ja.png)](https://play.google.com/store/apps/details?id=pro.eng.yui.android.osmjppostalmap)
+
 ## アプリストア向け紹介文
 
 「OSM郵便マップ」は、日本国内の郵便局や郵便ポストをOpenStreetMap (OSM) データに基づいて地図上に表示し、その情報を誰でも簡単に更新・追加できるアプリです。
