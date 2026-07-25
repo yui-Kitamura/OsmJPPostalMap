@@ -103,7 +103,7 @@ public class PoiMarker extends Marker {
             RectF ringRect = new RectF(screenPos.x - ringSize, screenPos.y - ringSize, screenPos.x + ringSize, screenPos.y + ringSize);
 
             if (schedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON && schedule.getNextEvent() != null) {
-                long remainingMillis = schedule.getNextEvent().getTimestamp().toEpochSecond() - now;
+                long remainingMillis = schedule.getNextEvent().getTimestamp().toInstant().toEpochMilli() - now;
                 float remainingMinutes = remainingMillis / 60000f;
                 if (remainingMinutes < 0) remainingMinutes = 0;
                 if (remainingMinutes > 60) remainingMinutes = 60;

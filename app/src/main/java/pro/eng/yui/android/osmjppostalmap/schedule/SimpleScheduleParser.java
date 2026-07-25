@@ -159,10 +159,10 @@ public class SimpleScheduleParser implements ScheduleParser {
                 String todayStats;
                 ScheduleResult.CurrentState currentState;
                 if (next.getTimestamp().toLocalDate().isEqual(now.toLocalDate())) {
-                    if (now.plusHours(1).isBefore(next.getTimestamp())){
-                        currentState = ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON;
-                    }else {
+                    if (now.plusHours(1).isAfter(next.getTimestamp())){
                         currentState = ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON;
+                    }else {
+                        currentState = ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON;
                     }
                     todayStats = "次回 " + String.format("%02d:%02d", next.getTimestamp().getHour(), next.getTimestamp().getMinute());
                 }else {
