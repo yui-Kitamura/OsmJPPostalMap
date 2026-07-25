@@ -10,6 +10,9 @@ import android.widget.TextView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Locale;
 
@@ -50,8 +53,18 @@ public class PoiDetailsDialog {
                 if (schedule.getNextEvent() != null) {
                     long timestamp = schedule.getNextEvent().getTimestamp().toInstant().toEpochMilli();
                     String timeStr = sdf.format(new Date(timestamp));
-                    String dayPrefix = timestamp > getEndOfToday() ? "明日" : "本日";
-                    
+                    LocalDate eventDate = schedule.getNextEvent().getTimestamp().toLocalDate();
+                    long daysDiff = ChronoUnit.DAYS.between(LocalDate.now(), eventDate);
+
+                    String dayPrefix;
+                    if (daysDiff == 0) {
+                        dayPrefix = "本日";
+                    } else if (daysDiff == 1) {
+                        dayPrefix = "明日";
+                    } else {
+                        dayPrefix = eventDate.format(DateTimeFormatter.ofPattern("dd日"));
+                    }
+
                     long remainingMinutes = (timestamp - now) / 60000;
                     long h = remainingMinutes / 60;
                     long m = remainingMinutes % 60;
@@ -68,8 +81,18 @@ public class PoiDetailsDialog {
                 if (schedule.getFollowingEvent() != null) {
                     long fTimestamp = schedule.getFollowingEvent().getTimestamp().toInstant().toEpochMilli();
                     String followTime = sdf.format(new Date(fTimestamp));
-                    String fPrefix = fTimestamp > getEndOfToday() ? "明日" : "本日";
-                    
+                    LocalDate fEventDate = schedule.getFollowingEvent().getTimestamp().toLocalDate();
+                    long fDaysDiff = ChronoUnit.DAYS.between(LocalDate.now(), fEventDate);
+
+                    String fPrefix;
+                    if (fDaysDiff == 0) {
+                        fPrefix = "本日";
+                    } else if (fDaysDiff == 1) {
+                        fPrefix = "明日";
+                    } else {
+                        fPrefix = fEventDate.format(DateTimeFormatter.ofPattern("dd日"));
+                    }
+
                     long fRemainingMinutes = (fTimestamp - now) / 60000;
                     long fh = fRemainingMinutes / 60;
                     long fm = fRemainingMinutes % 60;
