@@ -635,5 +635,15 @@ public class SimpleScheduleParserTest {
         assertEquals(22, followZdt.getDayOfMonth());
         assertEquals(10, followZdt.getHour());
     }
-
+    
+    @Test
+    public void testEventALot(){
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        String tag = "Mo-Su,PH 7:30,8:50,12:30,13:55,15:40,19:00;";
+        ZonedDateTime now = ZonedDateTime.of(2026,7,25,9,0,0,0,JpPostalUtil.JST);
+        ScheduleResult result = parser.parse(new CollectionTimes(tag), now.toInstant().toEpochMilli(), ScheduleParser.TimeType.COLLECTION_TIMES);
+        
+        assertNotNull(result.getNextEvent());
+    
+    }
 }
