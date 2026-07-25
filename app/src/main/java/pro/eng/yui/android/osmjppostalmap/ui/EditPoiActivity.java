@@ -116,6 +116,12 @@ public class EditPoiActivity extends AppCompatActivity {
         });
 
         authRepository = new AuthRepository(this);
+        if (authRepository.getAccessToken() == null) {
+            Toast.makeText(this, "編集するにはログインが必要です", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
         repository = PoiRepositoryImpl.getInstance();
         ((PoiRepositoryImpl)repository).setAccessToken(authRepository.getAccessToken());
 

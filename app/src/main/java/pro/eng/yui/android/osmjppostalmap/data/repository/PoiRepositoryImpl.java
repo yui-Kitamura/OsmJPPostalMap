@@ -300,10 +300,6 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public void savePoi(OsmPoi poi, String comment, PoiSaveCallback callback) {
-        if (accessToken == null) {
-            postError(callback, "ログインが必要です");
-            return;
-        }
         runOnExecutor(() -> {
             // 1. Create Changeset
             postProgress(callback, "Changesetを作成中…");
@@ -339,10 +335,6 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public void addPostBox(double lat, double lon, String shape, String branch, String postboxRef, String collectionTimes, String note, PoiSaveCallback callback) {
-        if (accessToken == null) {
-            postError(callback, "ログインが必要です");
-            return;
-        }
         runOnExecutor(() -> {
             Map<String, String> csTags = new HashMap<>();
             ChangeSetInfo createInfo = new ChangeSetInfo(0L, "郵便ポストの追加",

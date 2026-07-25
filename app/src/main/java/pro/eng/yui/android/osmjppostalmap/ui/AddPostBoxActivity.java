@@ -96,6 +96,12 @@ public class AddPostBoxActivity extends AppCompatActivity {
         });
 
         authRepository = new AuthRepository(this);
+        if (authRepository.getAccessToken() == null) {
+            Toast.makeText(this, "追加するにはログインが必要です", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
         repository = PoiRepositoryImpl.getInstance();
         ((PoiRepositoryImpl)repository).setAccessToken(authRepository.getAccessToken());
 
@@ -184,11 +190,6 @@ public class AddPostBoxActivity extends AppCompatActivity {
         });
 
         btnSave.setOnClickListener(v -> {
-            if (!authRepository.isLoggedIn()) {
-                Toast.makeText(this, "ログインが必要です", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
             int selectedShapeId = radioShape.getCheckedRadioButtonId();
             String shape = selectedShapeId != -1 ? ((RadioButton)findViewById(selectedShapeId)).getText().toString() : "";
             String branch = inputBranch.getText() != null ? inputBranch.getText().toString() : "";
