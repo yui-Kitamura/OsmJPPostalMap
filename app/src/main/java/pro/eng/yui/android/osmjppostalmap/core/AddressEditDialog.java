@@ -58,6 +58,9 @@ public class AddressEditDialog {
     /** addr:full のタグキー。階層入力に切り替えた場合はこのタグを削除する。 */
     private static final String TAG_FULL = "addr:full";
 
+    /** 階層展開中に確保する、画面高さに対するダイアログ本文の割合。 */
+    private static final float HIERARCHY_HEIGHT_RATIO = 0.85f;
+
     /**
      * JpAddress の各フィールドと、対応するタグキー・アクセサ・検証メソッドの対応。
      *
@@ -199,6 +202,7 @@ public class AddressEditDialog {
         View fullRow = view.findViewById(R.id.address_full_row);
         EditText fullInput = view.findViewById(R.id.address_full_input);
         Button expandButton = view.findViewById(R.id.address_expand_hierarchy);
+        Button collapseButton = view.findViewById(R.id.address_collapse_hierarchy);
         LinearLayout hierarchy = view.findViewById(R.id.address_hierarchy);
         applyPlaceholderStyle(context, fullInput);
 
@@ -220,6 +224,14 @@ public class AddressEditDialog {
             hierarchy.addView(buildRow(context, current, field, inputs, defaultTints));
         }
 
+        // 階層は縦に長いため、展開中はダイアログを画面の高さいっぱいまで伸ばす。
+        // 末尾の行が途中で切れて見えることで、下にまだ入力欄が続くことを認知させる。
+        // 実際の高さは AlertDialog 側で利用可能な領域に切り詰められるので、大きめの値でよい。
+        Runnable stretchForHierarchy = () -> view.setMinimumHeight(
+                hierarchy.getVisibility() == View.VISIBLE ? (int)
+                        (context.getResources().getDisplayMetrics().heightPixels * HIERARCHY_HEIGHT_RATIO)
+                        : 0);
+
         // county / suburb は他フィールドに依存するため、どの欄を編集しても全体を検証し直す
         Runnable revalidate = () -> {
             JpAddress form = snapshot(inputs);
@@ -231,6 +243,10 @@ public class AddressEditDialog {
                         ? ColorStateList.valueOf(Color.RED)
                         : defaultTints.get(field));
             }
+            // full へ戻せるのは階層が全空欄のときだけ。入力済みの値を黙って捨てさせない
+            collapseButton.setVisibility(
+                    hierarchy.getVisibility() == View.VISIBLE && isHierarchyEmpty(form)
+                            ? View.VISIBLE : View.GONE);
         };
         for (EditText input : inputs.values()) {
             input.addTextChangedListener(new TextWatcher() {
@@ -245,6 +261,7 @@ public class AddressEditDialog {
             });
         }
         revalidate.run();
+        stretchForHierarchy.run();
 
         expandButton.setOnClickListener(v -> {
             hierarchy.setVisibility(View.VISIBLE);
@@ -252,6 +269,19 @@ public class AddressEditDialog {
             // 元の full 値は転記の参考に残しつつ、保存対象からは外れることを示す
             fullInput.setEnabled(false);
             fullRow.setAlpha(0.5f);
+            revalidate.run();
+            stretchForHierarchy.run();
+        });
+
+        collapseButton.setOnClickListener(v -> {
+            hierarchy.setVisibility(View.GONE);
+            // full が無かったPOIでも full 入力へ切り替えられるよう、行ごと出し直す
+            fullRow.setVisibility(View.VISIBLE);
+            fullInput.setEnabled(true);
+            fullRow.setAlpha(1f);
+            expandButton.setVisibility(View.VISIBLE);
+            revalidate.run();
+            stretchForHierarchy.run();
         });
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(context)
@@ -350,6 +380,17 @@ public class AddressEditDialog {
             entry.getKey().setter.accept(address, entry.getValue().getText().toString());
         }
         return address;
+    }
+
+    /** 階層フィールドが1つも埋まっていないか。full 入力へ戻せるかの判定に使う。 */
+    private static boolean isHierarchyEmpty(JpAddress address) {
+        for (Field field : Field.values()) {
+            String value = field.getter.apply(address);
+            if (value != null && !value.trim().isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** full のみを持つ JpAddress を組み立てる。 */

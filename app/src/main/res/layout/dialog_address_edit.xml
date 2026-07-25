@@ -58,6 +58,15 @@
             android:layout_marginBottom="8dp"
             android:text="タグ階層で入力をする" />
 
+        <!-- 階層が全空欄のときだけ表示する。入力済みの値を失わせないため -->
+        <Button
+            android:id="@+id/address_collapse_hierarchy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="full入力に戻る"
+            android:visibility="gone" />
+
         <!-- JpAddress の各フィールドの行を AddressEditDialog から追加する -->
         <LinearLayout
             android:id="@+id/address_hierarchy"
