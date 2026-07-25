@@ -64,6 +64,7 @@ public class EditPoiActivity extends AppCompatActivity {
     private Button btnSave;
     private int lastCheckedShapeId = -1;
     private final ScheduleParser scheduleParser = new SimpleScheduleParser();
+    private androidx.appcompat.app.AlertDialog progressDialog;
 
     private static class ReticleMarker extends Marker {
         private final android.graphics.Paint paint;
@@ -418,6 +419,10 @@ public class EditPoiActivity extends AppCompatActivity {
                 .setTitle("保存の確認")
                 .setMessage("OSMにこの内容を保存しますか？")
                 .setPositiveButton("保存", (dialog, which) -> {
+                    if (btnSave != null) {
+                        btnSave.setEnabled(false);
+                    }
+                    showProgress("処理を開始中…");
                     saveChanges();
                 })
                 .setNegativeButton("キャンセル", null)
@@ -569,6 +574,7 @@ public class EditPoiActivity extends AppCompatActivity {
         repository.savePoi(updatedPoi, "update " + (updatedPoi.getTag("name") != null ? updatedPoi.getTag("name") : updatedPoi.getType()), new PoiRepository.PoiSaveCallback() {
             @Override
             public void onSuccess() {
+                dismissProgress();
                 if (btnSave != null) {
                     btnSave.setEnabled(true);
                 }
@@ -578,12 +584,43 @@ public class EditPoiActivity extends AppCompatActivity {
 
             @Override
             public void onError(String message) {
+                dismissProgress();
                 if (btnSave != null) {
                     btnSave.setEnabled(true);
                 }
                 Toast.makeText(EditPoiActivity.this, "保存エラー: " + message, Toast.LENGTH_SHORT).show();
             }
+
+            @Override
+            public void onProgress(String message) {
+                showProgress(message);
+            }
         });
+    }
+
+    private void showProgress(String message) {
+        if (progressDialog == null) {
+            View view = getLayoutInflater().inflate(R.layout.dialog_progress, null);
+            TextView tvMessage = view.findViewById(R.id.progress_message);
+            tvMessage.setText(message);
+            progressDialog = new MaterialAlertDialogBuilder(this)
+                    .setView(view)
+                    .setCancelable(false)
+                    .create();
+            progressDialog.show();
+        } else {
+            TextView tvMessage = progressDialog.findViewById(R.id.progress_message);
+            if (tvMessage != null) {
+                tvMessage.setText(message);
+            }
+        }
+    }
+
+    private void dismissProgress() {
+        if (progressDialog != null && progressDialog.isShowing()) {
+            progressDialog.dismiss();
+            progressDialog = null;
+        }
     }
 
     private void addNewRow(String initialValue1, String initialValue2, String initialValue3) {

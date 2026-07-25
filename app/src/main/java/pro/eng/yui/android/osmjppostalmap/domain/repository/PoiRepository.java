@@ -84,6 +84,7 @@ public interface PoiRepository {
     interface PoiSaveCallback {
         void onSuccess();
         void onError(String message);
+        default void onProgress(String message) {}
     }
 
     /**

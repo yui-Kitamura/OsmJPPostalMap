@@ -7,14 +7,8 @@ import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
 import android.view.Gravity;
+import android.widget.*;
 import androidx.core.content.ContextCompat;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
-import android.widget.TableLayout;
-import android.widget.TableRow;
-import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
@@ -46,6 +40,7 @@ public class AddPostBoxActivity extends AppCompatActivity {
     private PoiRepository repository;
     private Button btnSave;
     private int lastCheckedShapeId = -1;
+    private androidx.appcompat.app.AlertDialog progressDialog;
 
     private TableLayout tableCollection;
     private final List<EditText[]> timeRows = new ArrayList<>();
@@ -213,10 +208,12 @@ public class AddPostBoxActivity extends AppCompatActivity {
                     if (btnSave != null) {
                         btnSave.setEnabled(false);
                     }
+                    showProgress("処理を開始中…");
                     GeoPoint pos = marker.getPosition();
                     repository.addPostBox(pos.getLatitude(), pos.getLongitude(), shape, branch, ref, collection, note, new PoiRepository.PoiSaveCallback() {
                         @Override
                         public void onSuccess() {
+                            dismissProgress();
                             if (btnSave != null) {
                                 btnSave.setEnabled(true);
                             }
@@ -225,16 +222,46 @@ public class AddPostBoxActivity extends AppCompatActivity {
                         }
                         @Override
                         public void onError(String message) {
+                            dismissProgress();
                             if (btnSave != null) {
                                 btnSave.setEnabled(true);
                             }
                             Toast.makeText(AddPostBoxActivity.this, "エラー: " + message, Toast.LENGTH_SHORT).show();
+                        }
+                        @Override
+                        public void onProgress(String message) {
+                            showProgress(message);
                         }
                     });
                 })
                 .setNegativeButton("キャンセル", null)
                 .show();
         });
+    }
+
+    private void showProgress(String message) {
+        if (progressDialog == null) {
+            View view = getLayoutInflater().inflate(R.layout.dialog_progress, null);
+            TextView tvMessage = view.findViewById(R.id.progress_message);
+            tvMessage.setText(message);
+            progressDialog = new MaterialAlertDialogBuilder(this)
+                    .setView(view)
+                    .setCancelable(false)
+                    .create();
+            progressDialog.show();
+        } else {
+            TextView tvMessage = progressDialog.findViewById(R.id.progress_message);
+            if (tvMessage != null) {
+                tvMessage.setText(message);
+            }
+        }
+    }
+
+    private void dismissProgress() {
+        if (progressDialog != null && progressDialog.isShowing()) {
+            progressDialog.dismiss();
+            progressDialog = null;
+        }
     }
 
     private void addNewRow() {

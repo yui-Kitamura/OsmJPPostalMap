@@ -306,6 +306,7 @@ public class PoiRepositoryImpl implements PoiRepository {
         }
         runOnExecutor(() -> {
             // 1. Create Changeset
+            postProgress(callback, "Changesetを作成中…");
             ChangeSetInfo csInfo = new ChangeSetInfo(0, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, new HashMap<>());
             long csId;
             try {
@@ -319,8 +320,10 @@ public class PoiRepositoryImpl implements PoiRepository {
             ChangeSetInfo csInfoActive = new ChangeSetInfo(csId, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, new HashMap<>());
             try {
                 // 編集処理
+                postProgress(callback, "入力内容を送信中…");
                 JpPostalUtil.callOsmCreateOrModifyElement(accessToken, csInfoActive, poi);
                 // CS close
+                postProgress(callback, "Changesetを確定中…");
                 JpPostalUtil.callOsmCloseChangeset(accessToken, csInfoActive);
             } catch (IOException ioe) {
                 System.err.println(ioe.getMessage());
@@ -345,6 +348,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             ChangeSetInfo createInfo = new ChangeSetInfo(0L, "郵便ポストの追加",
                     "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, csTags);
             try {
+                postProgress(callback, "Changesetを作成中…");
                 long csId = JpPostalUtil.callOsmCreateChangeset(accessToken, createInfo);
                 ChangeSetInfo csIdInfo = new ChangeSetInfo(csId);
 
@@ -375,7 +379,9 @@ public class PoiRepositoryImpl implements PoiRepository {
 
                 OsmPoi newPoi = new OsmPoi(lat, lon, "node", poiTags);
                 // OSM API call
+                postProgress(callback, "入力内容を送信中…");
                 JpPostalUtil.callOsmCreateOrModifyElement(accessToken, csIdInfo, newPoi);
+                postProgress(callback, "Changesetを確定中…");
                 JpPostalUtil.callOsmCloseChangeset(accessToken, csIdInfo);
 
                 // ローカルSQLiteへ即時反映。
@@ -467,6 +473,10 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     private void postError(PoiSaveCallback callback, String message) {
         handler.post(() -> callback.onError(message));
+    }
+
+    private void postProgress(PoiSaveCallback callback, String message) {
+        handler.post(() -> callback.onProgress(message));
     }
 
     @Override
