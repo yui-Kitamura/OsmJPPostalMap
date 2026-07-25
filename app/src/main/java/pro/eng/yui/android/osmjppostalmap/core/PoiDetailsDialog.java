@@ -173,7 +173,7 @@ public class PoiDetailsDialog {
                 table.addView(row);
             }
             
-            rawTagText.setText("Raw: " + schedule.getRawTagValue());
+            rawTagText.setText("Raw: " + schedule.getRawTagValue().getOrigin());
         } else {
             statusText.setText("解析不可");
             rawTagText.setText("Raw: " + poi.getTag(isPostBox ? "collection_times" : "opening_hours"));
