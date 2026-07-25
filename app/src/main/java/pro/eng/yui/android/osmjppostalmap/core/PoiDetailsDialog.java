@@ -9,7 +9,6 @@ import android.widget.ImageButton;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -20,7 +19,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 
 import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
@@ -28,7 +26,6 @@ import pro.eng.yui.android.osmjppostalmap.ui.MainActivity;
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.Days;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.IDaySchedule;
-import pro.eng.yui.oss.osm.lib.jppostalcore.types.JpAddress;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
 
@@ -37,12 +34,7 @@ public class PoiDetailsDialog {
     public static void show(Context context, OsmPoi poi, ScheduleResult schedule) {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
 
-        // OsmPoi#getTags() は内部のMapをそのまま返すため、編集用に複製を持つ。
-        // 住所編集の結果はここに溜め、「編集」で EditPoiActivity へ引き継ぐ。
-        Map<String, String> workingTags =
-                poi.getTags() != null ? new HashMap<>(poi.getTags()) : new HashMap<>();
-
-        ScheduleParser.Amenity amenity = 
+        ScheduleParser.Amenity amenity =
                 "post_office".equals(poi.getTag("amenity")) ? 
                 ScheduleParser.Amenity.POST_OFFICE : 
                 ScheduleParser.Amenity.POST_BOX;
@@ -70,7 +62,6 @@ public class PoiDetailsDialog {
         TextView rawTagText = view.findViewById(R.id.dialog_raw_tag);
         TextView checkDateText = view.findViewById(R.id.dialog_check_date);
         TextView addressText = view.findViewById(R.id.dialog_address);
-        ImageButton addressEditButton = view.findViewById(R.id.dialog_address_edit);
 
         if (schedule != null) {
             statusText.setText(schedule.getTodayStatus());
@@ -217,14 +208,8 @@ public class PoiDetailsDialog {
         }
         checkDateText.setVisibility(View.VISIBLE);
         
-        showAddress(addressText, workingTags);
-
-        addressEditButton.setOnClickListener(v ->
-                AddressEditDialog.show(context, JpAddress.of(workingTags), edited -> {
-                    AddressEditDialog.applyTo(workingTags, edited);
-                    showAddress(addressText, workingTags);
-                    Toast.makeText(context, "住所を更新しました。「編集」から保存してください", Toast.LENGTH_SHORT).show();
-                }));
+        String displayAddress = JpPostalUtil.getAddressText(poi.getTags());
+        addressText.setText(displayAddress.isEmpty() ? "データなし" : displayAddress);
 
         builder.setView(view);
         builder.setPositiveButton("閉じる", null);
@@ -236,8 +221,9 @@ public class PoiDetailsDialog {
             intent.putExtra("POI_LON", poi.getLon());
             intent.putExtra("POI_VER", poi.getVer());
             
-            // すべてのタグを渡す（住所編集ダイアログでの変更を含む）
-            intent.putExtra("POI_TAGS", new HashMap<>(workingTags));
+            // すべてのタグを渡す（住所は編集画面側の住所編集ダイアログで編集する）
+            intent.putExtra("POI_TAGS",
+                    poi.getTags() != null ? new HashMap<>(poi.getTags()) : new HashMap<String, String>());
 
             if (context instanceof MainActivity) {
                 MainActivity activity = (MainActivity) context;
@@ -250,13 +236,6 @@ public class PoiDetailsDialog {
         });
         
         builder.show();
-    }
-
-    /** 住所欄にタグ由来の表示テキストを反映する。 */
-    private static void showAddress(TextView addressText, Map<String, String> tags) {
-        String displayAddress = JpPostalUtil.getAddressText(tags);
-        if (displayAddress.isEmpty()) { displayAddress = "データなし"; }
-        addressText.setText(displayAddress);
     }
 
 }

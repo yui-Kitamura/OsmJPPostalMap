@@ -31,8 +31,10 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.graphics.Insets;
 import pro.eng.yui.android.osmjppostalmap.R;
+import pro.eng.yui.android.osmjppostalmap.core.AddressEditDialog;
 import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
+import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.*;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
@@ -62,6 +64,7 @@ public class EditPoiActivity extends AppCompatActivity {
     private AuthRepository authRepository;
     private OsmPoi targetPoi;
     private Button btnSave;
+    private TextView addressValue;
     private int lastCheckedShapeId = -1;
     private final ScheduleParser scheduleParser = new SimpleScheduleParser();
     private androidx.appcompat.app.AlertDialog progressDialog;
@@ -171,6 +174,8 @@ public class EditPoiActivity extends AppCompatActivity {
             return false;
         });
         btnSave = findViewById(R.id.btn_save);
+        addressValue = findViewById(R.id.edit_address_value);
+        View btnAddressEdit = findViewById(R.id.btn_address_edit);
 
         // Opening Hours UI
         View ohLayout = findViewById(R.id.layout_opening_hours_edit);
@@ -229,6 +234,15 @@ public class EditPoiActivity extends AppCompatActivity {
         }
 
         title.setText(isPostBox ? "郵便ポストの編集" : "郵便局の編集");
+
+        // 住所は addr:* の集合なので専用ダイアログで編集し、結果を targetPoi のタグへ直接書き戻す。
+        // saveChanges() は targetPoi.getTags() を写して送信するため、これで保存対象に乗る
+        showAddress();
+        btnAddressEdit.setOnClickListener(v ->
+                AddressEditDialog.show(this, JpAddress.of(targetPoi.getTags()), edited -> {
+                    AddressEditDialog.applyTo(targetPoi.getTags(), edited);
+                    showAddress();
+                }));
 
         if (isPostBox) {
             shapeLayout.setVisibility(View.VISIBLE);
@@ -434,6 +448,12 @@ public class EditPoiActivity extends AppCompatActivity {
                 .setNegativeButton("キャンセル", null)
                 .show();
         });
+    }
+
+    /** 住所欄に現在の addr:* タグ由来の表示テキストを反映する。 */
+    private void showAddress() {
+        String text = JpPostalUtil.getAddressText(targetPoi.getTags());
+        addressValue.setText(text.isEmpty() ? "データなし" : text);
     }
 
     private void saveChanges() {
