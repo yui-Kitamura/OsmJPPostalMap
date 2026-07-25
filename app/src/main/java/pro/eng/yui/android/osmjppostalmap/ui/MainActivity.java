@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import org.osmdroid.config.Configuration;
 import org.osmdroid.tileprovider.tilesource.XYTileSource;
+import org.osmdroid.util.BoundingBox;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 
@@ -36,7 +37,6 @@ import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.graphics.Insets;
-import androidx.recyclerview.widget.RecyclerView;
 import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
 import pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser;
@@ -55,6 +55,11 @@ public class MainActivity extends AppCompatActivity {
     private static final double GPS_MIN_ZOOM = 15.0;
     private static final double GPS_MAX_ZOOM = 19.0;
     private static final int GPS_MAX_VISIBLE_POIS = 30;
+    // 日本の領域（離島を含む）を収める表示可能範囲。
+    private static final BoundingBox JAPAN_BOUNDS =
+            new BoundingBox(45.60, 154.00, 20.20, 122.70);
+    public static final GeoPoint TOKYO_CENTRAL_POST_OFFICE =
+            new GeoPoint(35.68124, 139.76494);
 
     private final android.os.Handler debounceHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable debounceRunnable = null;
@@ -127,8 +132,9 @@ public class MainActivity extends AppCompatActivity {
         map.setTileSource(new XYTileSource("OSMJP", 0, 19, 256, ".png",
                 new String[] { "https://tile.openstreetmap.jp/" }));
         map.setMultiTouchControls(true);
+        map.setScrollableAreaLimitDouble(JAPAN_BOUNDS);
 
-        GeoPoint startPoint = new GeoPoint(35.68238, 139.76556); // 東京駅前郵便局
+        GeoPoint startPoint = TOKYO_CENTRAL_POST_OFFICE;
         map.getController().setZoom(17.0);
         map.getController().setCenter(startPoint);
 
@@ -262,7 +268,7 @@ public class MainActivity extends AppCompatActivity {
         // GPS Button
         findViewById(R.id.gps_button).setOnClickListener(v -> {
             if (lastLocation != null) {
-                gpsZoomCenter = new GeoPoint(lastLocation.getLatitude(), lastLocation.getLongitude());
+                gpsZoomCenter = mapTargetFor(lastLocation);
                 // 押下時より広域にはしない。15未満の場合だけ最小値の15まで拡大する。
                 gpsZoomBase = Math.min(GPS_MAX_ZOOM,
                         Math.max(GPS_MIN_ZOOM, map.getZoomLevelDouble()));
@@ -401,6 +407,18 @@ public class MainActivity extends AppCompatActivity {
         return Math.min(distance, 360.0 - distance);
     }
 
+    private static GeoPoint mapTargetFor(Location location) {
+        double latitude = location.getLatitude();
+        double longitude = location.getLongitude();
+        if (latitude >= JAPAN_BOUNDS.getLatSouth()
+                && latitude <= JAPAN_BOUNDS.getLatNorth()
+                && longitude >= JAPAN_BOUNDS.getLonWest()
+                && longitude <= JAPAN_BOUNDS.getLonEast()) {
+            return new GeoPoint(latitude, longitude);
+        }
+        return TOKYO_CENTRAL_POST_OFFICE;
+    }
+
     private void updatePois() {
         if (!canLoadPois() || map == null || !map.isLayoutOccurred()) {
             return;
@@ -442,7 +460,7 @@ public class MainActivity extends AppCompatActivity {
                 if (loc != null) {
                     updateCurrentLocation(loc);
                     // 初期表示を現在地に
-                    map.getController().setCenter(new GeoPoint(loc.getLatitude(), loc.getLongitude()));
+                    map.getController().setCenter(mapTargetFor(loc));
                     if (!initialLocationSet) {
                         initialLocationSet = true;
                         updatePois();
@@ -455,7 +473,7 @@ public class MainActivity extends AppCompatActivity {
                 if (loc != null && lastLocation == null) {
                     updateCurrentLocation(loc);
                     // 初期表示を現在地に
-                    map.getController().setCenter(new GeoPoint(loc.getLatitude(), loc.getLongitude()));
+                    map.getController().setCenter(mapTargetFor(loc));
                     if (!initialLocationSet) {
                         initialLocationSet = true;
                         updatePois();
@@ -473,7 +491,7 @@ public class MainActivity extends AppCompatActivity {
             updateCurrentLocation(location);
             if (!initialLocationSet) {
                 initialLocationSet = true;
-                map.getController().setCenter(new GeoPoint(location.getLatitude(), location.getLongitude()));
+                map.getController().setCenter(mapTargetFor(location));
                 updatePois();
             }
         }

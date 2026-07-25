@@ -134,8 +134,8 @@ public class EditPoiActivity extends AppCompatActivity {
         long ver = getIntent().getLongExtra("POI_VER", 0L);
         
         // 既存の座標があればそれを使用、なければデフォルト
-        double initialLat = getIntent().getDoubleExtra("POI_LAT", 35.6812);
-        double initialLon = getIntent().getDoubleExtra("POI_LON", 139.7671);
+        double initialLat = getIntent().getDoubleExtra("POI_LAT", MainActivity.TOKYO_CENTRAL_POST_OFFICE.getLatitude());
+        double initialLon = getIntent().getDoubleExtra("POI_LON", MainActivity.TOKYO_CENTRAL_POST_OFFICE.getLongitude());
         
         java.util.Map<String, String> tags;
         if (getIntent().hasExtra("POI_TAGS")) {
