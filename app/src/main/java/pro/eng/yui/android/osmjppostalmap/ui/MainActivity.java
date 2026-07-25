@@ -133,7 +133,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
                 map.removeOnLayoutChangeListener(this);
-                updatePois();
+                // GPS利用許可がある場合は、位置確定を待ってからロードするため、ここでは実行しない。
+                // 許可がない場合のみ、デフォルト位置(東京)でロードを開始する。
+                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    updatePois();
+                }
             }
         });
 
@@ -463,6 +467,9 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == PERMISSION_REQUEST_LOCATION) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startLocationUpdates();
+            } else {
+                // 許可が得られなかった場合は、デフォルト位置（東京）でロードを開始する
+                updatePois();
             }
         }
     }
