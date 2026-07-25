@@ -87,6 +87,9 @@ public interface PoiRepository {
      */
     LiveData<Long> getCooldownRemaining();
 
+    /** リポジトリのバックグラウンド処理が実行中かどうか。 */
+    LiveData<Boolean> getLoading();
+
     /**
      * クールダウンの全期間をミリ秒で取得する
      */

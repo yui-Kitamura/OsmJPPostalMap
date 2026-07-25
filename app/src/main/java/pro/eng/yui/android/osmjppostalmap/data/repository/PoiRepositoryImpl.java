@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import pro.eng.yui.android.osmjppostalmap.BuildConfig;
 import pro.eng.yui.android.osmjppostalmap.data.local.PoiLocalDataSource;
@@ -34,6 +35,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final MutableLiveData<String> errorLiveData = new MutableLiveData<>();
     private final MutableLiveData<String> successLiveData = new MutableLiveData<>();
     private final MutableLiveData<Long> cooldownRemainingLiveData = new MutableLiveData<>(0L);
+    private final MutableLiveData<Boolean> loadingLiveData = new MutableLiveData<>(false);
     private String accessToken;
     public void setAccessToken(String token) {
         this.accessToken = token;
@@ -47,6 +49,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private volatile String currentOperation;
     private Runnable cooldownRunnable;
+    private final AtomicInteger pendingOperations = new AtomicInteger();
 
     /** ローカルキャッシュ（{@link #init(Context)} で初期化） */
     private PoiLocalDataSource local;
@@ -108,6 +111,9 @@ public class PoiRepositoryImpl implements PoiRepository {
      * Executorのワーカースレッドが死なないよう保護する。
      */
     private void runOnExecutor(String operation, Runnable task) {
+        if (pendingOperations.getAndIncrement() == 0) {
+            loadingLiveData.postValue(true);
+        }
         executor.execute(() -> {
             currentOperation = operation;
             try {
@@ -116,6 +122,9 @@ public class PoiRepositoryImpl implements PoiRepository {
                 errorLiveData.postValue("処理中にエラーが発生しました");
             } finally {
                 currentOperation = null;
+                if (pendingOperations.decrementAndGet() == 0) {
+                    loadingLiveData.postValue(false);
+                }
             }
         });
     }
@@ -470,6 +479,11 @@ public class PoiRepositoryImpl implements PoiRepository {
     @Override
     public LiveData<Long> getCooldownRemaining() {
         return cooldownRemainingLiveData;
+    }
+
+    @Override
+    public LiveData<Boolean> getLoading() {
+        return loadingLiveData;
     }
 
     @Override

@@ -183,6 +183,10 @@ public class MainViewModel extends ViewModel {
         return repository.getCooldownRemaining();
     }
 
+    public LiveData<Boolean> getLoading() {
+        return repository.getLoading();
+    }
+
     public long getCooldownInterval() {
         return repository.getCooldownInterval();
     }

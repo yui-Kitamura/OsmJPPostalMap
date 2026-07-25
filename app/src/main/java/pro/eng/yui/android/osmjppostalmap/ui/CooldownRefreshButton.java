@@ -13,6 +13,8 @@ public class CooldownRefreshButton extends AppCompatImageButton {
     private Paint paint;
     private long cooldownInterval = 1;
     private long cooldownRemaining = 0;
+    private boolean loading;
+    private float loadingRotation;
     private final int ringColor = 0xFFFF0000; // Red
     private final RectF arcBounds = new RectF();
 
@@ -42,11 +44,19 @@ public class CooldownRefreshButton extends AppCompatImageButton {
         invalidate();
     }
 
+    public void setLoading(boolean loading) {
+        this.loading = loading;
+        if (loading) {
+            loadingRotation = 0f;
+        }
+        invalidate();
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        if (cooldownRemaining <= 0) {
+        if (!loading && cooldownRemaining <= 0) {
             return;
         }
 
@@ -57,13 +67,17 @@ public class CooldownRefreshButton extends AppCompatImageButton {
 
         arcBounds.set(padding, padding, width - padding, height - padding);
 
-        float sweepAngle = 360f * cooldownRemaining / cooldownInterval;
+        float sweepAngle = loading ? 280f : 360f * cooldownRemaining / cooldownInterval;
         
         paint.setColor(ringColor);
         paint.setStrokeWidth(strokeWidth);
         paint.setStrokeCap(Paint.Cap.ROUND);
         
         // 上(270度)から時計回りに描画
-        canvas.drawArc(arcBounds, 270f, -sweepAngle, false, paint);
+        canvas.drawArc(arcBounds, 270f + loadingRotation, -sweepAngle, false, paint);
+        if (loading) {
+            loadingRotation = (loadingRotation + 8f) % 360f;
+            postInvalidateOnAnimation();
+        }
     }
 }

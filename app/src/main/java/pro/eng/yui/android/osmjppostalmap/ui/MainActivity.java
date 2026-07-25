@@ -12,6 +12,10 @@ import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import pro.eng.yui.android.osmjppostalmap.core.PoiDetailsDialog;
 import pro.eng.yui.android.osmjppostalmap.core.PoiMarker;
@@ -69,6 +73,8 @@ public class MainActivity extends AppCompatActivity {
     private GeoPoint gpsZoomCenter;
     private org.osmdroid.util.BoundingBox gpsZoomMinBounds;
     private double gpsZoomBase = GPS_MIN_ZOOM;
+    private final ExecutorService markerStateExecutor = Executors.newSingleThreadExecutor();
+    private final AtomicInteger markerRenderGeneration = new AtomicInteger();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -159,6 +165,7 @@ public class MainActivity extends AppCompatActivity {
         
         // Observe Filtered POIs
         viewModel.getFilteredPois().observe(this, pois -> {
+            int renderGeneration = markerRenderGeneration.incrementAndGet();
             adjustGpsZoomForPoiCount(pois);
             map.getOverlays().removeIf(overlay -> overlay instanceof PoiMarker);
             viewModel.updateAccessToken(authRepository.getAccessToken());
@@ -175,18 +182,6 @@ public class MainActivity extends AppCompatActivity {
                 PoiMarker marker = new PoiMarker(map, type);
                 marker.setPosition(new GeoPoint(poi.getLat(), poi.getLon()));
                 
-                String tagName = (amenity == ScheduleParser.Amenity.POST_OFFICE) ? 
-                        "opening_hours" : "collection_times";
-                ScheduleParser.TimeType timeType = (amenity == ScheduleParser.Amenity.POST_OFFICE) ?
-                        ScheduleParser.TimeType.OPENING_HOURS : ScheduleParser.TimeType.COLLECTION_TIMES;
-                
-                TextValue tagValue = (amenity == ScheduleParser.Amenity.POST_OFFICE) ?
-                        new OpeningHours(poi.getTag(tagName)) :
-                        new CollectionTimes(poi.getTag(tagName));
-
-                marker.setSchedule(new SimpleScheduleParser()
-                        .parse(tagValue, System.currentTimeMillis(), timeType));
-                
                 marker.setOnMarkerClickListener((m, mapView) -> {
                     PoiDetailsDialog.show(this, poi, ((PoiMarker)m).getSchedule());
                     return true;
@@ -194,23 +189,9 @@ public class MainActivity extends AppCompatActivity {
                 markers.add(marker);
             }
 
-            // 優先度順にソート（重なり順を制御）
-            // 優先度の低いものから順に追加することで、優先度の高いものが上に描画される
-            markers.sort((a, b) -> {
-                int pA = getPriorityForSorting(a.getSchedule());
-                int pB = getPriorityForSorting(b.getSchedule());
-                if (pA != pB) {
-                    return Integer.compare(pA, pB); // 優先度昇順
-                }
-                // 同一ステータスの場合はイベント時刻が近い方を優先（後に描画）
-                if (a.getSchedule().getNextEvent() != null && b.getSchedule().getNextEvent() != null) {
-                    return b.getSchedule().getNextEvent().getTimestamp().compareTo(a.getSchedule().getNextEvent().getTimestamp());
-                }
-                return 0;
-            });
-
             map.getOverlays().addAll(markers);
             map.invalidate();
+            updateMarkerStatesAsync(pois, markers, renderGeneration);
         });
 
         // Menu Button
@@ -231,12 +212,20 @@ public class MainActivity extends AppCompatActivity {
 
         viewModel.getCooldownRemaining().observe(this, remaining -> {
             refreshButton.setCooldown(remaining, viewModel.getCooldownInterval());
-            refreshButton.setEnabled(remaining <= 0);
+            boolean loading = Boolean.TRUE.equals(viewModel.getLoading().getValue());
+            refreshButton.setEnabled(remaining <= 0 && !loading);
             if (remaining > 0) {
                 refreshButton.setAlpha(0.5f);
             } else {
                 refreshButton.setAlpha(1.0f);
             }
+        });
+
+        viewModel.getLoading().observe(this, loadingValue -> {
+            boolean loading = Boolean.TRUE.equals(loadingValue);
+            refreshButton.setLoading(loading);
+            Long remaining = viewModel.getCooldownRemaining().getValue();
+            refreshButton.setEnabled(!loading && (remaining == null || remaining <= 0));
         });
 
 
@@ -572,6 +561,70 @@ public class MainActivity extends AppCompatActivity {
             locationOverlay.disableMyLocation();
         }
         updateHandler.removeCallbacks(updateRunnable);
+    }
+
+    @Override
+    protected void onDestroy() {
+        markerRenderGeneration.incrementAndGet();
+        markerStateExecutor.shutdownNow();
+        super.onDestroy();
+    }
+
+    /**
+     * マーカー本体を先に表示し、時間の掛かるスケジュール解析結果を小分けに反映する。
+     */
+    private void updateMarkerStatesAsync(List<OsmPoi> pois, ArrayList<PoiMarker> markers,
+                                         int renderGeneration) {
+        markerStateExecutor.execute(() -> {
+            final int batchSize = 25;
+            for (int start = 0; start < pois.size(); start += batchSize) {
+                if (markerRenderGeneration.get() != renderGeneration) return;
+
+                int end = Math.min(start + batchSize, pois.size());
+                ArrayList<ScheduleResult> results = new ArrayList<>(end - start);
+                for (int i = start; i < end; i++) {
+                    OsmPoi poi = pois.get(i);
+                    boolean postOffice = "post_office".equals(poi.getTag("amenity"));
+                    TextValue tagValue = postOffice
+                            ? new OpeningHours(poi.getTag("opening_hours"))
+                            : new CollectionTimes(poi.getTag("collection_times"));
+                    ScheduleParser.TimeType timeType = postOffice
+                            ? ScheduleParser.TimeType.OPENING_HOURS
+                            : ScheduleParser.TimeType.COLLECTION_TIMES;
+                    results.add(new SimpleScheduleParser().parse(
+                            tagValue, System.currentTimeMillis(), timeType));
+                }
+
+                int batchStart = start;
+                runOnUiThread(() -> {
+                    if (markerRenderGeneration.get() != renderGeneration) return;
+                    for (int i = 0; i < results.size(); i++) {
+                        markers.get(batchStart + i).setSchedule(results.get(i));
+                    }
+                    map.invalidate();
+                });
+            }
+
+            runOnUiThread(() -> {
+                if (markerRenderGeneration.get() != renderGeneration) return;
+                markers.sort((a, b) -> compareMarkerPriority(a, b));
+                map.getOverlays().removeAll(markers);
+                map.getOverlays().addAll(markers);
+                map.invalidate();
+            });
+        });
+    }
+
+    private int compareMarkerPriority(PoiMarker a, PoiMarker b) {
+        int priority = Integer.compare(
+                getPriorityForSorting(a.getSchedule()), getPriorityForSorting(b.getSchedule()));
+        if (priority != 0) return priority;
+        if (a.getSchedule() != null && b.getSchedule() != null
+                && a.getSchedule().getNextEvent() != null && b.getSchedule().getNextEvent() != null) {
+            return b.getSchedule().getNextEvent().getTimestamp()
+                    .compareTo(a.getSchedule().getNextEvent().getTimestamp());
+        }
+        return 0;
     }
 
     private int getPriorityForSorting(ScheduleResult schedule) {
