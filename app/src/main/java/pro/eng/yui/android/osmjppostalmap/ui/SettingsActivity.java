@@ -22,6 +22,7 @@ import androidx.core.graphics.Insets;
 import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.android.osmjppostalmap.BuildConfig;
 import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
+import org.osmdroid.tileprovider.modules.SqlTileWriter;
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -91,6 +92,17 @@ public class SettingsActivity extends AppCompatActivity {
         findViewById(R.id.btn_github_repo).setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.url_github_repo)));
             startActivity(intent);
+        });
+
+        findViewById(R.id.btn_delete_cache).setOnClickListener(v -> {
+            new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.settings_map_cache_title)
+                .setMessage(R.string.settings_delete_map_cache_confirm)
+                .setPositiveButton("はい", (dialog, which) -> {
+                    deleteMapCache();
+                })
+                .setNegativeButton("いいえ", null)
+                .show();
         });
 
         TextView appVersionInfo = findViewById(R.id.app_version_info);
@@ -180,6 +192,21 @@ public class SettingsActivity extends AppCompatActivity {
                 Toast.makeText(SettingsActivity.this, "ネットワークエラー", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void deleteMapCache() {
+        try {
+            SqlTileWriter writer = new SqlTileWriter();
+            boolean success = writer.purgeCache();
+            if (success) {
+                Toast.makeText(this, R.string.settings_delete_map_cache_success, Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, R.string.settings_delete_map_cache_fail, Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, R.string.settings_delete_map_cache_fail, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void fetchUserDetails(String token, TextView loginStatus, Button btnLogin, Button btnUserPage, Button btnLogout) {

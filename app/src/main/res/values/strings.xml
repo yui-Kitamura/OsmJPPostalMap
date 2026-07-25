@@ -6,4 +6,9 @@
     <string name="settings_github_link">GitHubリポジトリ (ソースコード)</string>
     <string name="url_osm_copyright">https://www.openstreetmap.org/copyright</string>
     <string name="url_github_repo">https://github.com/yui-Kitamura/OsmJPPostalMap</string>
+    <string name="settings_map_cache_title">地図キャッシュ</string>
+    <string name="settings_delete_map_cache">地図キャッシュを削除</string>
+    <string name="settings_delete_map_cache_confirm">地図キャッシュを削除しますか？\n削除すると再度ダウンロードが必要になります。</string>
+    <string name="settings_delete_map_cache_success">地図キャッシュを削除しました</string>
+    <string name="settings_delete_map_cache_fail">地図キャッシュの削除に失敗しました</string>
 </resources>
