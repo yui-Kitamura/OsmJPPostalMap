@@ -1,8 +1,11 @@
 package pro.eng.yui.android.osmjppostalmap.core;
 
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
@@ -45,6 +48,15 @@ public class PoiDetailsDialog {
         TableLayout table = view.findViewById(R.id.dialog_weekly_table);
         TextView rawTagText = view.findViewById(R.id.dialog_raw_tag);
         TextView checkDateText = view.findViewById(R.id.dialog_check_date);
+        ImageButton openOsmButton = view.findViewById(R.id.dialog_open_osm);
+
+        openOsmButton.setOnClickListener(v -> {
+            String type = poi.getType(); // node or way
+            long id = poi.getId();
+            String url = "https://www.openstreetmap.org/" + type + "/" + id;
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            context.startActivity(intent);
+        });
 
         if (schedule != null) {
             statusText.setText(schedule.getTodayStatus());
