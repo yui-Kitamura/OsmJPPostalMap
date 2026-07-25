@@ -62,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean gpsZoomAdjustmentPending = false;
     private GeoPoint gpsZoomCenter;
     private org.osmdroid.util.BoundingBox gpsZoomMinBounds;
+    private double gpsZoomBase = GPS_MIN_ZOOM;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -262,10 +263,13 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.gps_button).setOnClickListener(v -> {
             if (lastLocation != null) {
                 gpsZoomCenter = new GeoPoint(lastLocation.getLatitude(), lastLocation.getLongitude());
-                map.getController().setZoom(GPS_MIN_ZOOM);
+                // 押下時より広域にはしない。15未満の場合だけ最小値の15まで拡大する。
+                gpsZoomBase = Math.min(GPS_MAX_ZOOM,
+                        Math.max(GPS_MIN_ZOOM, map.getZoomLevelDouble()));
+                map.getController().setZoom(gpsZoomBase);
                 map.getController().animateTo(gpsZoomCenter);
 
-                // 移動後のZoom 15表示範囲を取得してからPOIをロードする。
+                // 移動後の基準ズーム表示範囲を取得してからPOIをロードする。
                 // ロード完了時に、実際に画面内へ描画されるPOI数から最終ズームを決める。
                 map.postDelayed(() -> {
                     gpsZoomMinBounds = map.getBoundingBox();
@@ -363,8 +367,9 @@ public class MainActivity extends AppCompatActivity {
         gpsZoomAdjustmentPending = false;
 
         double targetZoom = GPS_MAX_ZOOM;
-        for (int zoom = (int) GPS_MIN_ZOOM; zoom <= (int) GPS_MAX_ZOOM; zoom++) {
-            double scale = Math.pow(2.0, zoom - GPS_MIN_ZOOM);
+        double candidateZoom = gpsZoomBase;
+        while (candidateZoom <= GPS_MAX_ZOOM) {
+            double scale = Math.pow(2.0, candidateZoom - gpsZoomBase);
             double halfLatitudeSpan = gpsZoomMinBounds.getLatitudeSpan() / (2.0 * scale);
             double halfLongitudeSpan = gpsZoomMinBounds.getLongitudeSpan() / (2.0 * scale);
             int visibleCount = 0;
@@ -379,9 +384,14 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
             if (visibleCount <= GPS_MAX_VISIBLE_POIS) {
-                targetZoom = zoom;
+                targetZoom = candidateZoom;
                 break;
             }
+            if (candidateZoom >= GPS_MAX_ZOOM) {
+                break;
+            }
+            // 最初の候補には押下時の小数ズームも使い、以降は整数ズームで評価する。
+            candidateZoom = Math.min(GPS_MAX_ZOOM, Math.floor(candidateZoom) + 1.0);
         }
         map.getController().setZoom(targetZoom);
     }
