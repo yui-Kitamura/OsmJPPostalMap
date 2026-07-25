@@ -210,7 +210,7 @@ public class PoiDetailsDialog {
         checkDateText.setVisibility(View.VISIBLE);
         
         String displayAddress = JpPostalUtil.getAddressText(poi.getTags());
-        if (displayAddress == null){ displayAddress = "データなし"; }
+        if (displayAddress.isEmpty()){ displayAddress = "データなし"; }
         addressText.setText(displayAddress);
 
         builder.setView(view);
