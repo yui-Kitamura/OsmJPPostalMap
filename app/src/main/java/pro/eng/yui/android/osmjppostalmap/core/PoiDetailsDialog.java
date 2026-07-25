@@ -208,8 +208,10 @@ public class PoiDetailsDialog {
             checkDateText.setText("最終確認日: 不明");
         }
         checkDateText.setVisibility(View.VISIBLE);
-
-        addressText.setText(JpPostalUtil.getAddressText(poi.getTags()));
+        
+        String displayAddress = JpPostalUtil.getAddressText(poi.getTags());
+        if (displayAddress == null){ displayAddress = "データなし"; }
+        addressText.setText(displayAddress);
 
         builder.setView(view);
         builder.setPositiveButton("閉じる", null);
