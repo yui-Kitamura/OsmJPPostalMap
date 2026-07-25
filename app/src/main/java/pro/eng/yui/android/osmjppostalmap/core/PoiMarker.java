@@ -160,8 +160,12 @@ public class PoiMarker extends Marker {
 
         // 〒 記号
         String symbol = "〒";
-        if (schedule != null && schedule.getCurrentState() == ScheduleResult.CurrentState.UNKNOWN) {
-            symbol = "？";
+        if (schedule != null) {
+            if (schedule.getCurrentState() == ScheduleResult.CurrentState.UNKNOWN) {
+                symbol = "？";
+            } else if (schedule.getCurrentState() == ScheduleResult.CurrentState.PARSE_ERROR) {
+                symbol = "△";
+            }
         }
         canvas.drawText(symbol, screenPos.x, screenPos.y + (symbolPaint.getTextSize() / 3), symbolPaint);
     }

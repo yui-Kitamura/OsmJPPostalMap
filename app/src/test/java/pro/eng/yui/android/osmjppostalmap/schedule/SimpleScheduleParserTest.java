@@ -209,13 +209,13 @@ public class SimpleScheduleParserTest {
     /**
      * 解析不能な入力
      * 入力条件: "Invalid Tag Value"
-     * 出力期待値: {@link ScheduleResult.CurrentState#UNKNOWN}
+     * 出力期待値: {@link ScheduleResult.CurrentState#PARSE_ERROR}
      */
     @Test
-    public void testUnparseableReturnsUnknown() {
+    public void testUnparseableReturnsParseError() {
         SimpleScheduleParser parser = new SimpleScheduleParser();
         ScheduleResult result = parser.parse(new OpeningHours("Invalid Tag Value"), System.currentTimeMillis(), ScheduleParser.TimeType.OPENING_HOURS);
-        assertEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
+        assertEquals(ScheduleResult.CurrentState.PARSE_ERROR, result.getCurrentState());
     }
 
     /**

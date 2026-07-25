@@ -25,7 +25,7 @@ public class SimpleScheduleParser implements ScheduleParser {
                 Map<Days, OpeningHoursParser.DaySchedule> parsedMap = JpPostalUtil.decodeOpeningHours((OpeningHours) tagValue);
                 if (parsedMap == null) {
                     return new ScheduleResult(null, null, "データ解釈エラー",
-                            ScheduleResult.CurrentState.UNKNOWN,
+                            ScheduleResult.CurrentState.PARSE_ERROR,
                             new HashMap<>(), tagValue);
                 }
                 Days today = JpPostalUtil.getDays(now.toLocalDate());
@@ -125,7 +125,7 @@ public class SimpleScheduleParser implements ScheduleParser {
                 if (parsedMap == null) {
                     System.out.println("full value:"+ tagValue.getOrigin());
                     return new ScheduleResult(null, null, "データ解釈エラー",
-                            ScheduleResult.CurrentState.UNKNOWN,
+                            ScheduleResult.CurrentState.PARSE_ERROR,
                             new HashMap<>(), tagValue);
                 }
 

@@ -27,7 +27,9 @@ public class ScheduleResult {
         /** 営業開始前（本日開始予定あり） */
         CLOSING_BUT_OPEN_SOON,
         /** 情報なし（タグ未登録など） */
-        UNKNOWN
+        UNKNOWN,
+        /** パース失敗 */
+        PARSE_ERROR
     }
     
     public static class Event {
