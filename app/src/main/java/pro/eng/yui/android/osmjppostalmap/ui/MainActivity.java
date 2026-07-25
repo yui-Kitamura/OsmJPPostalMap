@@ -59,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
     private final android.os.Handler debounceHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable debounceRunnable = null;
     private boolean initialLocationSet = false;
+    private boolean locationPermissionResolved = false;
     private boolean gpsZoomAdjustmentPending = false;
     private GeoPoint gpsZoomCenter;
     private org.osmdroid.util.BoundingBox gpsZoomMinBounds;
@@ -141,9 +142,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
                 map.removeOnLayoutChangeListener(this);
-                // GPS利用許可がある場合は、位置確定を待ってからロードするため、ここでは実行しない。
-                // 許可がない場合のみ、デフォルト位置(東京)でロードを開始する。
-                if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                // 位置がレイアウトより先に確定した場合、または位置情報が不許可と確定した場合にロードする。
+                if (canLoadPois()) {
                     updatePois();
                 }
             }
@@ -402,7 +402,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updatePois() {
-        if (map == null || !map.isLayoutOccurred()) {
+        if (!canLoadPois() || map == null || !map.isLayoutOccurred()) {
             return;
         }
         // 表示範囲の4隅＋中心を渡し、範囲にかかる都道府県すべてをキャッシュ優先で取得する
@@ -419,10 +419,19 @@ public class MainActivity extends AppCompatActivity {
 
     private void requestLocationPermissions() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            locationPermissionResolved = false;
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST_LOCATION);
         } else {
+            locationPermissionResolved = true;
             startLocationUpdates();
         }
+    }
+
+    private boolean canLoadPois() {
+        return initialLocationSet
+                || (locationPermissionResolved
+                && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED);
     }
 
     private void startLocationUpdates() {
@@ -486,6 +495,7 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSION_REQUEST_LOCATION) {
+            locationPermissionResolved = true;
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startLocationUpdates();
             } else {
