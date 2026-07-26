@@ -1,6 +1,7 @@
 package pro.eng.yui.android.osmjppostalmap.schedule;
 
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.*;
@@ -9,10 +10,19 @@ import java.time.*;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SimpleScheduleParserTest {
 
+    @BeforeAll
+    static void waitHolidays() throws InterruptedException {
+        int retry = 0;
+        while (!JpPostalUtil.isHolidaysLoaded() && retry < 100) {
+            Thread.sleep(100);
+            retry++;
+        }
+    }
+    
     /**
      * 入力条件: タグが null または空文字列
      * 出力期待値: {@link ScheduleResult.CurrentState#UNKNOWN}, ステータス "不明"
@@ -89,7 +99,7 @@ public class SimpleScheduleParserTest {
         assertNotNull(result.getNextEvent());
         assertEquals(10, result.getNextEvent().getTimestamp().getHour());
         
-        assertNotNull("Following event should not be null", result.getFollowingEvent());
+        assertNotNull(result.getFollowingEvent(), "Following event should not be null");
         assertEquals(15, result.getFollowingEvent().getTimestamp().getHour());
     }
 
@@ -421,22 +431,22 @@ public class SimpleScheduleParserTest {
         // 月曜日 (Mo)
         ZonedDateTime zdtMo = ZonedDateTime.of(2026, 7, 13, 9, 0, 0, 0,JpPostalUtil.JST);
         ScheduleResult resultMo = parser.parse(new CollectionTimes(tag), zdtMo.toInstant().toEpochMilli(), ScheduleParser.TimeType.COLLECTION_TIMES);
-        assertTrue("Monday should have 10:00", resultMo.getTodayStatus().contains("10:00"));
+        assertTrue(resultMo.getTodayStatus().contains("10:00"), "Monday should have 10:00");
 
         // 金曜日 (Fr)
         ZonedDateTime zdtFr = ZonedDateTime.of(2026, 7, 17, 9, 0, 0, 0,JpPostalUtil.JST);
         ScheduleResult resultFr = parser.parse(new CollectionTimes(tag), zdtFr.toInstant().toEpochMilli(), ScheduleParser.TimeType.COLLECTION_TIMES);
-        assertTrue("Friday should have 10:30", resultFr.getTodayStatus().contains("10:30"));
+        assertTrue(resultFr.getTodayStatus().contains("10:30"), "Friday should have 10:30");
 
         // 土曜日 (Sa)
         ZonedDateTime zdtSa = ZonedDateTime.of(2026, 7, 18, 9, 0, 0, 0,JpPostalUtil.JST);
         ScheduleResult resultSa = parser.parse(new CollectionTimes(tag), zdtSa.toInstant().toEpochMilli(), ScheduleParser.TimeType.COLLECTION_TIMES);
-        assertTrue("Saturday should have 11:00", resultSa.getTodayStatus().contains("11:00"));
+        assertTrue(resultSa.getTodayStatus().contains("11:00"), "Saturday should have 11:00");
 
         // 祝日 (2026-07-20 PH)
         ZonedDateTime zdtPh = ZonedDateTime.of(2026, 7, 20, 9, 0, 0, 0,JpPostalUtil.JST);
         ScheduleResult resultPh = parser.parse(new CollectionTimes(tag), zdtPh.toInstant().toEpochMilli(), ScheduleParser.TimeType.COLLECTION_TIMES);
-        assertTrue("Holiday should have 11:00", resultPh.getTodayStatus().contains("11:00"));
+        assertTrue(resultPh.getTodayStatus().contains("11:00"), "Holiday should have 11:00");
     }
 
     /**
@@ -478,8 +488,8 @@ public class SimpleScheduleParserTest {
         ScheduleResult result = parser.parse(new CollectionTimes(tag), zdt.toInstant().toEpochMilli(), ScheduleParser.TimeType.COLLECTION_TIMES);
 
         // 祝日なので 11:00 が採用されるべき
-        assertTrue("Should contain 11:00 on holiday", result.getTodayStatus().contains("11:00"));
-        assertFalse("Should NOT contain 10:00 (Monday time) on holiday", result.getTodayStatus().contains("10:00"));
+        assertTrue(result.getTodayStatus().contains("11:00"));
+        assertFalse(result.getTodayStatus().contains("10:00"));
     }
 
     @Test
@@ -526,8 +536,7 @@ public class SimpleScheduleParserTest {
         ScheduleResult result = parser.parse(new CollectionTimes(tag), zdt.toInstant().toEpochMilli(), ScheduleParser.TimeType.COLLECTION_TIMES);
 
         // 期待値: 祝日判定され、PHがないため UNKNOWN になり、NextEvent は翌営業日の収集時刻 になるべき
-        assertEquals("Should be UNKNOWN because it is a holiday with no PH tag", 
-                ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
+        assertEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
         assertEquals(new ScheduleResult.Event(ZonedDateTime.of(2026,7,21,10,0,0,0,JpPostalUtil.JST), ScheduleResult.EventType.COLLECTION), result.getNextEvent());
     }
 
@@ -582,7 +591,7 @@ public class SimpleScheduleParserTest {
         ScheduleResult result = parser.parse(new OpeningHours(tag), zdtSa.toInstant().toEpochMilli(), ScheduleParser.TimeType.OPENING_HOURS);
         
         // 12:00 で終了しているはずなので TODAY_FINISHED
-        assertEquals("Saturday 15:00 should be closed", ScheduleResult.CurrentState.TODAY_FINISHED, result.getCurrentState());
+        assertEquals(ScheduleResult.CurrentState.TODAY_FINISHED, result.getCurrentState());
         
         // 24/7; PH off;
         // 祝日は休みであるべき
@@ -625,10 +634,10 @@ public class SimpleScheduleParserTest {
         ZonedDateTime now = ZonedDateTime.of(2026, 7, 21, 11, 0, 0, 0,JpPostalUtil.JST);
         ScheduleResult result = parser.parse(new CollectionTimes(tag), now.toInstant().toEpochMilli(), ScheduleParser.TimeType.COLLECTION_TIMES);
 
-        assertNotNull("Next event should be today 15:00", result.getNextEvent());
+        assertNotNull(result.getNextEvent());
         assertEquals(15, result.getNextEvent().getTimestamp().getHour());
 
-        assertNotNull("Following event should be tomorrow 10:00", result.getFollowingEvent());
+        assertNotNull(result.getFollowingEvent());
         ZonedDateTime followZdt = result.getFollowingEvent().getTimestamp();
         assertEquals(22, followZdt.getDayOfMonth());
         assertEquals(10, followZdt.getHour());

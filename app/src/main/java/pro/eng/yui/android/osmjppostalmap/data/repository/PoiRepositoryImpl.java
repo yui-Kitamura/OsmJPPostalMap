@@ -96,7 +96,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     public LiveData<List<OsmPoi>> getPois(String prefName) {
         // 互換用。バックグラウンドでキャッシュ優先の単一県読み込みを行う。
         runOnExecutor("都道府県データを読み込み中", () -> {
-            Map<String, Integer> prefs = JpPostalUtil.getPrefectures();
+            Map<String, Integer> prefs = JpPostalUtil.getPrefectures().join();
             Integer code = prefs.get(prefName);
             if (code == null || code < 0) { return; }
             currentPrefCodes.clear();
@@ -141,7 +141,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             if (prefNames.isEmpty()) { return; }
 
             // 新規フェッチが必要な県を特定
-            Map<String, Integer> prefs = JpPostalUtil.getPrefectures();
+            Map<String, Integer> prefs = JpPostalUtil.getPrefectures().join();
             List<String> neededPrefNames = new ArrayList<>();
             for (String name : prefNames) {
                 Integer code = prefs.get(name);
@@ -243,13 +243,13 @@ public class PoiRepositoryImpl implements PoiRepository {
             return; // SQLiteの内容をそのまま利用（postCombinedで読み出す）
         }
         try {
-            List<OsmPoi> fetched = JpPostalUtil.getPoiData(prefName);
+            List<OsmPoi> fetched = JpPostalUtil.getPoiData(prefName).join();
             if (fetched.isEmpty()) {
                 // データソースに無い場合はOverpassフォールバック
                 try {
                     fetched = JpPostalUtil.callOverpass(
-                            OverpassQuery.getPostSearchQuery(prefName), 3, 5);
-                } catch (IOException | IllegalStateException ignore) { }
+                            OverpassQuery.getPostSearchQuery(prefName), 3, 5).join();
+                } catch (IllegalStateException ignore) { }
             }
             if (local != null) {
                 local.upsertPrefecture(prefCode, prefName, fetched, System.currentTimeMillis());
@@ -305,13 +305,13 @@ public class PoiRepositoryImpl implements PoiRepository {
 
         Set<String> names = new LinkedHashSet<>();
         try {
-            for (OsmPoi rel : JpPostalUtil.callOverpass(body.toString(), 3, 3)) {
+            for (OsmPoi rel : JpPostalUtil.callOverpass(body.toString(), 3, 3).join()) {
                 String name = rel.getTag("name");
                 if (name != null && !name.isEmpty()) {
                     names.add(name);
                 }
             }
-        } catch (IOException | RuntimeException ignore) {
+        } catch (RuntimeException ignore) {
             // IllegalStateException(429/リトライ超過), IllegalArgumentException(400) 等を含めて無視
         }
         return names;
@@ -331,9 +331,9 @@ public class PoiRepositoryImpl implements PoiRepository {
 
         runOnExecutor("POI情報を取得中", () -> {
             try {
-                List<OsmPoi> poiList = JpPostalUtil.callOverpass(query, 3, 5);
+                List<OsmPoi> poiList = JpPostalUtil.callOverpass(query, 3, 5).join();
                 poiLiveData.postValue(poiList.get(0));
-            } catch (IOException | RuntimeException e) {
+            } catch (RuntimeException e) {
                 poiLiveData.postValue(null);
             }
         });
@@ -351,25 +351,18 @@ public class PoiRepositoryImpl implements PoiRepository {
             postProgress(callback, "Changesetを作成中…");
             ChangeSetInfo csInfo = new ChangeSetInfo(0, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, new HashMap<>());
             long csId;
-            try {
-                csId = JpPostalUtil.callOsmCreateChangeset(accessToken, csInfo);
-            } catch (IOException ioe) {
-                System.err.println(ioe.getMessage());
-                ioe.printStackTrace();
-                postError(callback, "ChangeSetの登録開始処理に失敗しました。リトライしてください");
-                return;
-            }
+            csId = JpPostalUtil.callOsmCreateChangeset(accessToken, csInfo).join();
             ChangeSetInfo csInfoActive = new ChangeSetInfo(csId, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, new HashMap<>());
             try {
                 // 編集処理
                 postProgress(callback, "入力内容を送信中…");
-                JpPostalUtil.callOsmCreateOrModifyElement(accessToken, csInfoActive, poi);
+                JpPostalUtil.callOsmCreateOrModifyElement(accessToken, csInfoActive, poi).join();
                 // CS close
                 postProgress(callback, "Changesetを確定中…");
-                JpPostalUtil.callOsmCloseChangeset(accessToken, csInfoActive);
-            } catch (IOException ioe) {
-                System.err.println(ioe.getMessage());
-                ioe.printStackTrace();
+                JpPostalUtil.callOsmCloseChangeset(accessToken, csInfoActive).join();
+            } catch (RuntimeException e) {
+                System.err.println(e.getMessage());
+                e.printStackTrace();
                 postError(callback, "入力内容の反映に失敗しました。リトライしてください");
                 return;
             }
@@ -389,7 +382,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                     "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, csTags);
             try {
                 postProgress(callback, "Changesetを作成中…");
-                long csId = JpPostalUtil.callOsmCreateChangeset(accessToken, createInfo);
+                long csId = JpPostalUtil.callOsmCreateChangeset(accessToken, createInfo).join();
                 ChangeSetInfo csIdInfo = new ChangeSetInfo(csId);
 
                 Map<String, String> poiTags = new HashMap<>();
@@ -434,7 +427,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                 OsmPoi cachePoi = new OsmPoi(tempId, lat, lon, "node", poiTags, 0);
                 cacheEditedPoi(cachePoi);
                 postSuccess(callback);
-            } catch (IOException e) {
+            } catch (RuntimeException e) {
                 postError(callback, "通信エラー: " + e.getMessage());
             }
         });
@@ -450,7 +443,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             Set<String> names = reverseGeocodePrefectures(new double[][]{{poi.getLat(), poi.getLon()}});
             if (names.isEmpty()) { return; }
             String name = names.iterator().next();
-            Integer code = JpPostalUtil.getPrefectures().get(name);
+            Integer code = JpPostalUtil.getPrefectures().join().get(name);
             if (code == null || code < 0) { return; }
             local.upsertPoi(code, poi);
             // 表示中であれば再構成
