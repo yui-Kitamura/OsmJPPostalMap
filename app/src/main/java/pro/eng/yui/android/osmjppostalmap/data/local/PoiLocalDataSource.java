@@ -157,7 +157,7 @@ public class PoiLocalDataSource {
         List<PrefMeta> result = new ArrayList<>();
         try (Cursor c = db.query(PoiDbHelper.TABLE_PREF_META, null,
                 null, null, null, null,
-                PoiDbHelper.COL_META_NAME + " ASC")) {
+                PoiDbHelper.COL_META_PREF_CODE + " ASC")) {
             int iCode = c.getColumnIndexOrThrow(PoiDbHelper.COL_META_PREF_CODE);
             int iName = c.getColumnIndexOrThrow(PoiDbHelper.COL_META_NAME);
             int iTs = c.getColumnIndexOrThrow(PoiDbHelper.COL_META_LAST_UPDATED);
