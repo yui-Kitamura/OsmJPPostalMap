@@ -63,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
     private static final BoundingBox JAPAN_BOUNDS =
             new BoundingBox(45.60, 154.00, 20.20, 122.70);
     public static final GeoPoint TOKYO_CENTRAL_POST_OFFICE =
-            new GeoPoint(35.68124, 139.76494);
+            new GeoPoint(35.6801350, 139.7646546);
 
     private final android.os.Handler debounceHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable debounceRunnable = null;
