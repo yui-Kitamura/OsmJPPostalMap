@@ -580,7 +580,9 @@ public class MainActivity extends AppCompatActivity {
             postOfficeFilterButton.invalidate();
         }
 
-        updateHandler.post(updateRunnable);
+        // 初期ロードは onCreate/位置確定時に実行済み。ここで即時実行すると同じ範囲の
+        // ロードが直列に二重投入され、更新表示が長時間消えないため、次回周期から開始する。
+        updateHandler.postDelayed(updateRunnable, 60000);
     }
 
     @Override
