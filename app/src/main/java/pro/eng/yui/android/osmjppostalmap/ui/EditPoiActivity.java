@@ -68,6 +68,7 @@ public class EditPoiActivity extends AppCompatActivity {
     private int lastCheckedShapeId = -1;
     private final ScheduleParser scheduleParser = new SimpleScheduleParser();
     private androidx.appcompat.app.AlertDialog progressDialog;
+    private static final double MIN_ZOOM = 15.0;
 
     private static class ReticleMarker extends Marker {
         private final android.graphics.Paint paint;
@@ -399,9 +400,10 @@ public class EditPoiActivity extends AppCompatActivity {
         }
 
         // 地図の初期化
-        map.setTileSource(new XYTileSource("OSMJP", 0, 18, 256, ".png", 
+        map.setTileSource(new XYTileSource("OSMJP", (int) MIN_ZOOM, 18, 256, ".png", 
                 new String[] { "https://tile.openstreetmap.jp/" }));
         map.setMultiTouchControls(true);
+        map.setMinZoomLevel(MIN_ZOOM);
         GeoPoint startPoint = new GeoPoint(targetPoi.getLat(), targetPoi.getLon());
         double zoom = getIntent().getDoubleExtra("ZOOM_LEVEL", 19.0);
         map.getController().setZoom(zoom);

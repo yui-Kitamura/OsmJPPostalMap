@@ -46,6 +46,8 @@ public class AddPostBoxActivity extends AppCompatActivity {
     private final List<EditText[]> timeRows = new ArrayList<>();
     private static final Pattern TIME_PATTERN = Pattern.compile("^([01]?[0-9]|2[0-3]):[0-5][0-9]$");
 
+    private static final double MIN_ZOOM = 15.0;
+
     private static class ReticleMarker extends Marker {
         private final android.graphics.Paint paint;
 
@@ -157,9 +159,10 @@ public class AddPostBoxActivity extends AppCompatActivity {
         });
 
         // 地図の初期化 (MainActivityからの遷移時はその中心座標を使用)
-        map.setTileSource(new XYTileSource("OSMJP", 0, 18, 256, ".png", 
+        map.setTileSource(new XYTileSource("OSMJP", (int) MIN_ZOOM, 18, 256, ".png", 
                 new String[] { "https://tile.openstreetmap.jp/" }));
         map.setMultiTouchControls(true);
+        map.setMinZoomLevel(MIN_ZOOM);
         double lat = getIntent().getDoubleExtra("LATITUDE", 35.6812);
         double lon = getIntent().getDoubleExtra("LONGITUDE", 139.7671);
         double zoom = getIntent().getDoubleExtra("ZOOM_LEVEL", 18.0);
