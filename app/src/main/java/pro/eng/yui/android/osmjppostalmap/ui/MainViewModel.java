@@ -133,6 +133,11 @@ public class MainViewModel extends ViewModel {
         repository.refreshPrefecture(prefCode, prefName);
     }
 
+    /** 指定都道府県のローカルキャッシュを削除する。 */
+    public void deletePrefectureCache(int prefCode) {
+        repository.deletePrefectureCache(prefCode);
+    }
+
     public void fetchDataDate() {
         repository.fetchDataDate(new PoiRepository.DataDateCallback() {
             @Override

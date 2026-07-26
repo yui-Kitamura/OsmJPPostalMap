@@ -37,6 +37,9 @@ public interface PoiRepository {
      */
     void refreshPrefecture(int prefCode, String prefName);
 
+    /** 指定した都道府県のローカルキャッシュを削除する。 */
+    void deletePrefectureCache(int prefCode);
+
     /**
      * ローカルに保存済みの都道府県メタ情報の一覧を返す（更新ダイアログ表示用）。
      */

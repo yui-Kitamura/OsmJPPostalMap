@@ -68,6 +68,24 @@ public class PoiLocalDataSource {
                 toValues(prefCode, poi), SQLiteDatabase.CONFLICT_REPLACE);
     }
 
+    /**
+     * 指定した都道府県のPOIとメタ情報をまとめて削除する。
+     */
+    public void deletePrefecture(int prefCode) {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            String[] args = new String[]{String.valueOf(prefCode)};
+            db.delete(PoiDbHelper.TABLE_POI,
+                    PoiDbHelper.COL_PREF_CODE + " = ?", args);
+            db.delete(PoiDbHelper.TABLE_PREF_META,
+                    PoiDbHelper.COL_META_PREF_CODE + " = ?", args);
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
     /* ---------- 読み込み ---------- */
 
     public boolean hasPrefecture(int prefCode) {

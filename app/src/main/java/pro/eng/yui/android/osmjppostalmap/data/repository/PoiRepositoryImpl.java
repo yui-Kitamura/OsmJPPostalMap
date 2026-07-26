@@ -202,6 +202,16 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     @Override
+    public void deletePrefectureCache(int prefCode) {
+        runOnExecutor("都道府県キャッシュを削除中", () -> {
+            if (local == null) { return; }
+            local.deletePrefecture(prefCode);
+            currentPrefCodes.remove(prefCode);
+            postCombined();
+        });
+    }
+
+    @Override
     public List<PrefMeta> getSavedPrefectures() {
         if (local == null) { return new ArrayList<>(); }
         return local.getAllPrefMeta();

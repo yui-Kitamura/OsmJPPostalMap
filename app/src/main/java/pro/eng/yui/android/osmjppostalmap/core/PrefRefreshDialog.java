@@ -8,6 +8,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -125,9 +126,28 @@ public class PrefRefreshDialog {
             Toast.makeText(context, meta.getName() + "を更新しています...", Toast.LENGTH_SHORT).show();
         });
 
+        ImageButton deleteButton = new ImageButton(context);
+        deleteButton.setImageResource(R.drawable.ic_delete_24);
+        deleteButton.setContentDescription(context.getString(R.string.pref_cache_delete));
+        deleteButton.setBackgroundResource(android.R.drawable.list_selector_background);
+        int buttonSize = (int) (48 * context.getResources().getDisplayMetrics().density + 0.5f);
+        deleteButton.setLayoutParams(new LinearLayout.LayoutParams(buttonSize, buttonSize));
+        deleteButton.setOnClickListener(v -> new MaterialAlertDialogBuilder(context)
+                .setMessage(context.getString(R.string.pref_cache_delete_confirm, meta.getName()))
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.delete, (dialog, which) -> {
+                    viewModel.deletePrefectureCache(meta.getPrefCode());
+                    ViewGroup parent = (ViewGroup) row.getParent();
+                    if (parent != null) {
+                        parent.removeView(row);
+                    }
+                })
+                .show());
+
         row.addView(nameView);
         row.addView(dateView);
         row.addView(updateButton);
+        row.addView(deleteButton);
         return row;
     }
 }
