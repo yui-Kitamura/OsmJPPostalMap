@@ -74,7 +74,7 @@
         android:layout_height="wrap_content"
         android:text="@string/settings_delete_map_cache"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:textColor="#FF0000" />
+        android:textColor="@color/jp_post_red" />
 
     <View
         android:layout_width="match_parent"

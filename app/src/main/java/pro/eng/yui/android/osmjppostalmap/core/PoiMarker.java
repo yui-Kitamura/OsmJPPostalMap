@@ -9,6 +9,8 @@ import android.graphics.RectF;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
 
+import androidx.core.content.ContextCompat;
+import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
 
 import java.util.Calendar;
@@ -38,7 +40,8 @@ public class PoiMarker extends Marker {
         ringPaint.setStrokeWidth(8f);
         
         bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        bgPaint.setColor(0xCCFF0000); // 日本郵便カラー (Red) with alpha
+        int logoRed = ContextCompat.getColor(mapView.getContext(), R.color.jp_post_red);
+        bgPaint.setColor((logoRed & 0x00FFFFFF) | 0xCC000000); // 日本郵便カラー (Red) with alpha
         
         symbolPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         symbolPaint.setColor(0xFFFFFFFF);

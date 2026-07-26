@@ -54,7 +54,7 @@ public class AddPostBoxActivity extends AppCompatActivity {
         public ReticleMarker(MapView mapView) {
             super(mapView);
             paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-            paint.setColor(0xFFFF0000); // 赤
+            paint.setColor(ContextCompat.getColor(AddPostBoxActivity.this, R.color.jp_post_red)); // 赤
             paint.setStyle(android.graphics.Paint.Style.STROKE);
             paint.setStrokeWidth(5f);
         }

@@ -8,6 +8,9 @@ import android.graphics.RectF;
 import android.util.AttributeSet;
 import androidx.appcompat.widget.AppCompatImageButton;
 
+import androidx.core.content.ContextCompat;
+import pro.eng.yui.android.osmjppostalmap.R;
+
 public class CooldownRefreshButton extends AppCompatImageButton {
 
     private Paint paint;
@@ -15,7 +18,7 @@ public class CooldownRefreshButton extends AppCompatImageButton {
     private long cooldownRemaining = 0;
     private boolean loading;
     private float loadingRotation;
-    private final int ringColor = 0xFFFF0000; // Red
+    private int ringColor; // Red
     private final RectF arcBounds = new RectF();
 
     public CooldownRefreshButton(Context context) {
@@ -36,6 +39,7 @@ public class CooldownRefreshButton extends AppCompatImageButton {
     private void init() {
         paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setStyle(Paint.Style.STROKE);
+        ringColor = ContextCompat.getColor(getContext(), R.color.jp_post_red);
     }
 
     public void setCooldown(long remaining, long interval) {
