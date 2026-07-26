@@ -56,7 +56,7 @@ public class PrefRefreshDialog {
             emptyText.setVisibility(View.VISIBLE);
         }
 
-        Map<String, Long> remoteDates = new HashMap<>();
+        Map<String, Date> remoteDates = new HashMap<>();
         DataDateResponse remoteData = viewModel.getDataDate().getValue();
         SimpleDateFormat remoteSdf = new SimpleDateFormat("yyyy/MM/dd'T'HH:mm:ss", Locale.JAPAN);
         if (remoteData != null && remoteData.getPrefectures() != null) {
@@ -64,7 +64,7 @@ public class PrefRefreshDialog {
                 try {
                     Date date = remoteSdf.parse(pd.getLastModified());
                     if (date != null) {
-                        remoteDates.put(pd.getName(), date.getTime());
+                        remoteDates.put(pd.getName(), date);
                     }
                 } catch (ParseException ignored) {
                 }
@@ -73,9 +73,10 @@ public class PrefRefreshDialog {
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.JAPAN);
         for (PrefMeta meta : metas) {
-            Long remoteTime = remoteDates.get(meta.getName());
-            boolean hasUpdate = remoteTime != null && remoteTime > meta.getLastUpdated();
-            container.addView(buildRow(context, viewModel, meta, sdf, hasUpdate));
+            Date sourceUpdatedAt = remoteDates.get(meta.getName());
+            boolean hasUpdate = sourceUpdatedAt != null
+                    && meta.getLastUpdated() < sourceUpdatedAt.getTime();
+            container.addView(buildRow(context, viewModel, meta, sdf, sourceUpdatedAt, hasUpdate));
         }
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
@@ -99,22 +100,21 @@ public class PrefRefreshDialog {
         dialog.show();
     }
 
-    private static View buildRow(Context context, MainViewModel viewModel, PrefMeta meta, SimpleDateFormat sdf, boolean hasUpdate) {
+    private static View buildRow(Context context, MainViewModel viewModel, PrefMeta meta,
+                                 SimpleDateFormat sdf, Date sourceUpdatedAt, boolean hasUpdate) {
         LinearLayout row = new LinearLayout(context);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setOrientation(LinearLayout.VERTICAL);
         row.setPadding(0, 12, 0, 12);
+
+        LinearLayout header = new LinearLayout(context);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView nameView = new TextView(context);
         nameView.setText(meta.getName());
         nameView.setTextSize(16f);
         nameView.setLayoutParams(new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        TextView dateView = new TextView(context);
-        dateView.setText(sdf.format(new Date(meta.getLastUpdated())));
-        dateView.setTextSize(12f);
-        dateView.setPadding(0, 0, 16, 0);
 
         Button updateButton = new Button(context);
         updateButton.setText("更新");
@@ -144,10 +144,17 @@ public class PrefRefreshDialog {
                 })
                 .show());
 
-        row.addView(nameView);
+        header.addView(nameView);
+        header.addView(updateButton);
+        header.addView(deleteButton);
+        row.addView(header);
+
+        TextView dateView = new TextView(context);
+        String sourceDate = sourceUpdatedAt == null ? "-" : sdf.format(sourceUpdatedAt);
+        dateView.setText("最終取得日時: " + sdf.format(new Date(meta.getLastUpdated()))
+                + "\nデータ源更新日: " + sourceDate);
+        dateView.setTextSize(12f);
         row.addView(dateView);
-        row.addView(updateButton);
-        row.addView(deleteButton);
         return row;
     }
 }
