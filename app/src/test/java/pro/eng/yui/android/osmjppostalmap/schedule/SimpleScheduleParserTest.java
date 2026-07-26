@@ -3,12 +3,10 @@ package pro.eng.yui.android.osmjppostalmap.schedule;
 import org.junit.Test;
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser;
-import pro.eng.yui.oss.osm.lib.jppostalcore.types.CollectionTimes;
-import pro.eng.yui.oss.osm.lib.jppostalcore.types.Days;
-import pro.eng.yui.oss.osm.lib.jppostalcore.types.IDaySchedule;
-import pro.eng.yui.oss.osm.lib.jppostalcore.types.OpeningHours;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.*;
 
 import java.time.*;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.*;
@@ -645,5 +643,32 @@ public class SimpleScheduleParserTest {
         
         assertNotNull(result.getNextEvent());
     
+    }
+
+    @Test
+    public void testFormatOffAndUnknown() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        Map<Days, List<? extends pro.eng.yui.oss.osm.lib.jppostalcore.types.ITagPart>> weeklyTable = new java.util.HashMap<>();
+        
+        // Mo-Fr is 10:00
+        List<CollectionTime> wdTimes = new java.util.ArrayList<>();
+        wdTimes.add(new pro.eng.yui.oss.osm.lib.jppostalcore.types.CollectionTime("10:00"));
+        weeklyTable.put(Days.MONDAY, wdTimes);
+        weeklyTable.put(Days.TUESDAY, wdTimes);
+        weeklyTable.put(Days.WEDNESDAY, wdTimes);
+        weeklyTable.put(Days.THURSDAY, wdTimes);
+        weeklyTable.put(Days.FRIDAY, wdTimes);
+        
+        // Sa is off
+        weeklyTable.put(Days.SATURDAY, new java.util.ArrayList<>());
+        
+        // Su is unknown (not in map)
+        
+        String formatted = parser.format(weeklyTable, ScheduleParser.TimeType.COLLECTION_TIMES);
+        // 期待値: Mo-Fr 10:00; Sa off; (Su/PH はなし)
+        // 実際のフォーマットはライブラリ依存だが、off が含まれ、Su が含まれないことを期待
+        assertTrue(formatted.contains("10:00"));
+        assertTrue(formatted.contains("Sa off"));
+        assertFalse(formatted.contains("Su"));
     }
 }

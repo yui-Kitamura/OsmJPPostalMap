@@ -67,6 +67,7 @@ public class EditPoiActivity extends AppCompatActivity {
     private EditText editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd;
     private EditText editOhPhOpen, editOhPhClose, editOhPhBreakStart, editOhPhBreakEnd;
     private android.widget.CheckBox checkOhWdOff, checkOhSaOff, checkOhPhOff;
+    private android.widget.CheckBox checkColWdOff, checkColSaOff, checkColPhOff;
     private static final Pattern TIME_PATTERN = Pattern.compile("^([01]?[0-9]|2[0-3]):[0-5][0-9]$");
     private PoiRepository repository;
     private AuthRepository authRepository;
@@ -189,6 +190,8 @@ public class EditPoiActivity extends AppCompatActivity {
         tagInput = findViewById(R.id.edit_tag_value);
         View tagLayout = findViewById(R.id.edit_tag_layout);
         View collectionLayout = findViewById(R.id.layout_collection_edit);
+        View branchLayout = findViewById(R.id.edit_branch_layout);
+        TextInputEditText branchInput = findViewById(R.id.edit_branch_value);
         View refLayout = findViewById(R.id.edit_ref_layout);
         TextInputEditText refInput = findViewById(R.id.edit_ref_value);
         View shapeLayout = findViewById(R.id.layout_shape_edit);
@@ -226,7 +229,10 @@ public class EditPoiActivity extends AppCompatActivity {
         checkOhWdOff = findViewById(R.id.check_oh_wd_off);
         checkOhSaOff = findViewById(R.id.check_oh_sa_off);
         checkOhPhOff = findViewById(R.id.check_oh_ph_off);
-        
+        checkColWdOff = findViewById(R.id.check_col_wd_off);
+        checkColSaOff = findViewById(R.id.check_col_sa_off);
+        checkColPhOff = findViewById(R.id.check_col_ph_off);
+
         android.widget.CompoundButton.OnCheckedChangeListener ohOffListener = (buttonView, isChecked) -> {
             EditText[] rowEditors;
             if (buttonView == checkOhWdOff) {
@@ -244,6 +250,24 @@ public class EditPoiActivity extends AppCompatActivity {
         checkOhWdOff.setOnCheckedChangeListener(ohOffListener);
         checkOhSaOff.setOnCheckedChangeListener(ohOffListener);
         checkOhPhOff.setOnCheckedChangeListener(ohOffListener);
+
+        android.widget.CompoundButton.OnCheckedChangeListener colOffListener = (buttonView, isChecked) -> {
+            int col;
+            if (buttonView == checkColWdOff) {
+                col = 0;
+            } else if (buttonView == checkColSaOff) {
+                col = 1;
+            } else {
+                col = 2;
+            }
+            for (EditText[] row : timeRows) {
+                row[col].setEnabled(!isChecked);
+                row[col].setAlpha(isChecked ? 0.5f : 1.0f);
+            }
+        };
+        checkColWdOff.setOnCheckedChangeListener(colOffListener);
+        checkColSaOff.setOnCheckedChangeListener(colOffListener);
+        checkColPhOff.setOnCheckedChangeListener(colOffListener);
         
         Button btnOhCopyToSa = findViewById(R.id.btn_oh_copy_to_sa);
         Button btnOhCopyToPh = findViewById(R.id.btn_oh_copy_to_ph);
@@ -305,6 +329,12 @@ public class EditPoiActivity extends AppCompatActivity {
                 radioShape.clearCheck();
             }
             lastCheckedShapeId = radioShape.getCheckedRadioButtonId();
+
+            branchLayout.setVisibility(View.VISIBLE);
+            String currentBranch = targetPoi.getTag("operator:branch");
+            if (currentBranch != null) {
+                branchInput.setText(currentBranch);
+            }
 
             refLayout.setVisibility(View.VISIBLE);
             String currentRef = targetPoi.getTag("ref");
@@ -481,53 +511,73 @@ public class EditPoiActivity extends AppCompatActivity {
                     } else {
                         Map<Days, List<? extends ITagPart>> weeklyTable = new HashMap<>();
                         for (int col = 0; col < 3; col++) {
-                            List<CollectionTime> targetList = new ArrayList<>();
-                            int lastMinutes = -1;
-                            for (int r = 0; r < timeRows.size(); r++) {
-                                String val = timeRows.get(r)[col].getText().toString().trim();
-                                if (val.isEmpty()) continue;
-                                if (!TIME_PATTERN.matcher(val).matches()) {
-                                    Toast.makeText(this, "無効な時刻形式です: " + val, Toast.LENGTH_SHORT).show();
-                                    return;
-                                }
-                                int minutes = SimpleScheduleParser.parseMinutes(val);
-                                if (minutes <= lastMinutes) {
-                                    Toast.makeText(this, "時刻は昇順で入力してください", Toast.LENGTH_SHORT).show();
-                                    return;
-                                }
-                                targetList.add(new CollectionTime(val));
-                                lastMinutes = minutes;
-                            }
-                            if (col == 0) {
-                                weeklyTable.put(Days.MONDAY, targetList);
-                                weeklyTable.put(Days.TUESDAY, targetList);
-                                weeklyTable.put(Days.WEDNESDAY, targetList);
-                                weeklyTable.put(Days.THURSDAY, targetList);
-                                weeklyTable.put(Days.FRIDAY, targetList);
-                            } else if (col == 1) {
-                                weeklyTable.put(Days.SATURDAY, targetList);
+                            android.widget.CheckBox checkColOff = (col == 0) ? checkColWdOff : (col == 1 ? checkColSaOff : checkColPhOff);
+                            List<CollectionTime> targetList = null;
+
+                            if (checkColOff.isChecked()) {
+                                targetList = new ArrayList<>(); // off;
                             } else {
-                                weeklyTable.put(Days.SUNDAY, targetList);
-                                weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
+                                int lastMinutes = -1;
+                                for (int r = 0; r < timeRows.size(); r++) {
+                                    String val = timeRows.get(r)[col].getText().toString().trim();
+                                    if (val.isEmpty()) continue;
+                                    if (!TIME_PATTERN.matcher(val).matches()) {
+                                        Toast.makeText(this, "無効な時刻形式です: " + val, Toast.LENGTH_SHORT).show();
+                                        return;
+                                    }
+                                    int minutes = SimpleScheduleParser.parseMinutes(val);
+                                    if (minutes <= lastMinutes) {
+                                        Toast.makeText(this, "時刻は昇順で入力してください", Toast.LENGTH_SHORT).show();
+                                        return;
+                                    }
+                                    if (targetList == null) targetList = new ArrayList<>();
+                                    targetList.add(new CollectionTime(val));
+                                    lastMinutes = minutes;
+                                }
+                            }
+
+                            if (targetList != null) {
+                                if (col == 0) {
+                                    weeklyTable.put(Days.MONDAY, targetList);
+                                    weeklyTable.put(Days.TUESDAY, targetList);
+                                    weeklyTable.put(Days.WEDNESDAY, targetList);
+                                    weeklyTable.put(Days.THURSDAY, targetList);
+                                    weeklyTable.put(Days.FRIDAY, targetList);
+                                } else if (col == 1) {
+                                    weeklyTable.put(Days.SATURDAY, targetList);
+                                } else {
+                                    weeklyTable.put(Days.SUNDAY, targetList);
+                                    weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
+                                }
                             }
                         }
                         collection = scheduleParser.format(weeklyTable, ScheduleParser.TimeType.COLLECTION_TIMES);
                     }
+                    TextInputEditText branchInputLocal = findViewById(R.id.edit_branch_value);
+                    String branch = branchInputLocal.getText() != null ? branchInputLocal.getText().toString().trim() : "";
                     TextInputEditText refInputLocal = findViewById(R.id.edit_ref_value);
                     ref = refInputLocal.getText() != null ? refInputLocal.getText().toString().trim() : "";
+                    
+                    GeoPoint pos = marker.getPosition();
+                    String addr = JpPostalUtil.getAddressText(targetPoi.getTags());
+                    
+                    String memo = String.format("ポストの情報（現地確認）\n収集時刻=%s\n住所=%s\n収集局名=%s\n参照番号=%s",
+                            collection, addr, branch, ref);
+                    JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name),memo, pos.getLatitude(), pos.getLongitude());
                 } else {
                     // 郵便局の場合は営業時間
                     collection = targetPoi.getTag("opening_hours"); // とりあえず現状維持か、編集値をパースするか
                     // 編集値をパースするのは大変なので、とりあえず既存値を出すか、メッセージを調整する
                     ref = "";
+                    
+                    GeoPoint pos = marker.getPosition();
+                    String addr = JpPostalUtil.getAddressText(targetPoi.getTags());
+                    
+                    String memo = String.format("郵便局の情報（現地確認）\n営業時間=%s\n住所=%s",
+                            collection, addr);
+                    JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name),memo, pos.getLatitude(), pos.getLongitude());
                 }
 
-                GeoPoint pos = marker.getPosition();
-                String addr = JpPostalUtil.getAddressText(targetPoi.getTags());
-                
-                String memo = String.format("ポストの情報（現地確認）\n収集時刻=%s\n住所=%s\n参照番号=%s",
-                        collection, addr, ref);
-                JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name),memo, pos.getLatitude(), pos.getLongitude());
                 Toast.makeText(this, "地図メモを保存しました", Toast.LENGTH_SHORT).show();
                 finish();
                 return;
@@ -580,6 +630,14 @@ public class EditPoiActivity extends AppCompatActivity {
                 currentTags.remove("post_box:type");
             }
 
+            TextInputEditText branchInput = findViewById(R.id.edit_branch_value);
+            String newBranch = branchInput.getText() != null ? branchInput.getText().toString().trim() : "";
+            if (!newBranch.isEmpty()) {
+                currentTags.put("operator:branch", newBranch);
+            } else {
+                currentTags.remove("operator:branch");
+            }
+
             TextInputEditText refInput = findViewById(R.id.edit_ref_value);
             String newRef = refInput.getText() != null ? refInput.getText().toString().trim() : "";
             if (!newRef.isEmpty()) {
@@ -593,41 +651,55 @@ public class EditPoiActivity extends AppCompatActivity {
             } else {
                 Map<Days, List<? extends ITagPart>> weeklyTable = new HashMap<>();
                 for (int col = 0; col < 3; col++) {
-                    List<CollectionTime> targetList = new ArrayList<>();
-                    int lastMinutes = -1;
-                    for (int r = 0; r < timeRows.size(); r++) {
-                        String val = timeRows.get(r)[col].getText().toString().trim();
-                        if (val.isEmpty()) continue;
+                    android.widget.CheckBox checkColOff = (col == 0) ? checkColWdOff : (col == 1 ? checkColSaOff : checkColPhOff);
+                    List<CollectionTime> targetList = null;
 
-                        if (!TIME_PATTERN.matcher(val).matches()) {
-                            Toast.makeText(this, "無効な時刻形式です: " + val, Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-
-                        int minutes = SimpleScheduleParser.parseMinutes(val);
-                        if (minutes <= lastMinutes) {
-                            Toast.makeText(this, "時刻は昇順で入力してください", Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-                        targetList.add(new CollectionTime(val));
-                        lastMinutes = minutes;
-                    }
-                    if (col == 0) {
-                        weeklyTable.put(Days.MONDAY, targetList);
-                        weeklyTable.put(Days.TUESDAY, targetList);
-                        weeklyTable.put(Days.WEDNESDAY, targetList);
-                        weeklyTable.put(Days.THURSDAY, targetList);
-                        weeklyTable.put(Days.FRIDAY, targetList);
-                    } else if (col == 1) {
-                        weeklyTable.put(Days.SATURDAY, targetList);
+                    if (checkColOff.isChecked()) {
+                        targetList = new ArrayList<>(); // off;
                     } else {
-                        weeklyTable.put(Days.SUNDAY, targetList);
-                        weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
+                        int lastMinutes = -1;
+                        for (int r = 0; r < timeRows.size(); r++) {
+                            String val = timeRows.get(r)[col].getText().toString().trim();
+                            if (val.isEmpty()) continue;
+
+                            if (!TIME_PATTERN.matcher(val).matches()) {
+                                Toast.makeText(this, "無効な時刻形式です: " + val, Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+
+                            int minutes = SimpleScheduleParser.parseMinutes(val);
+                            if (minutes <= lastMinutes) {
+                                Toast.makeText(this, "時刻は昇順で入力してください", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            if (targetList == null) targetList = new ArrayList<>();
+                            targetList.add(new CollectionTime(val));
+                            lastMinutes = minutes;
+                        }
+                    }
+
+                    if (targetList != null) {
+                        if (col == 0) {
+                            weeklyTable.put(Days.MONDAY, targetList);
+                            weeklyTable.put(Days.TUESDAY, targetList);
+                            weeklyTable.put(Days.WEDNESDAY, targetList);
+                            weeklyTable.put(Days.THURSDAY, targetList);
+                            weeklyTable.put(Days.FRIDAY, targetList);
+                        } else if (col == 1) {
+                            weeklyTable.put(Days.SATURDAY, targetList);
+                        } else {
+                            weeklyTable.put(Days.SUNDAY, targetList);
+                            weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
+                        }
                     }
                 }
 
                 String collection = scheduleParser.format(weeklyTable, ScheduleParser.TimeType.COLLECTION_TIMES);
-                currentTags.put("collection_times", collection);
+                if (collection != null && !collection.isEmpty()) {
+                    currentTags.put("collection_times", collection);
+                } else {
+                    currentTags.remove("collection_times");
+                }
             }
         } else {
             // 不要なタグを削除
@@ -777,6 +849,13 @@ public class EditPoiActivity extends AppCompatActivity {
 
             row.addView(et);
             rowEditors[i] = et;
+
+            // 収集なしチェックボックスの状態を反映
+            android.widget.CheckBox checkColOff = (i == 0) ? checkColWdOff : (i == 1 ? checkColSaOff : checkColPhOff);
+            if (checkColOff != null && checkColOff.isChecked()) {
+                et.setEnabled(false);
+                et.setAlpha(0.5f);
+            }
         }
         tableCollection.addView(row);
         timeRows.add(rowEditors);
@@ -903,12 +982,22 @@ public class EditPoiActivity extends AppCompatActivity {
 
             // 火〜金のスケジュールが月曜日と一致するか確認
             for (String day : new String[]{"TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
-                if (!weekday.equals(schedToList(weeklyTable.get(Days.valueOf(day))))) return false;
+                IDaySchedule dSched = weeklyTable.get(Days.valueOf(day));
+                if ((wdSched == null ? null : wdSched.status()) != (dSched == null ? null : dSched.status())) return false;
+                if (!weekday.equals(schedToList(dSched))) return false;
             }
 
             // 日曜と祝日が同じかチェック
             boolean hasPH = tag.contains("PH");
-            if (hasPH && !sunday.equals(holiday)) return false;
+            if (hasPH) {
+                if ((suSched == null ? null : suSched.status()) != (phSched == null ? null : phSched.status())) return false;
+                if (!sunday.equals(holiday)) return false;
+            }
+
+            // 収集なし(off;)のチェック状態を反映
+            checkColWdOff.setChecked(wdSched != null && wdSched.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY);
+            checkColSaOff.setChecked(saSched != null && saSched.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY);
+            checkColPhOff.setChecked(phSched != null && phSched.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY);
 
             if (!hasPH) {
                 findViewById(R.id.layout_holiday_warning).setVisibility(View.VISIBLE);

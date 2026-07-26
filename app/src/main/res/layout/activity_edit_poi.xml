@@ -184,6 +184,29 @@
                         android:textSize="12sp" />
                     <View android:layout_width="0dp" android:layout_height="0dp" />
                 </TableRow>
+                <TableRow>
+                    <CheckBox
+                        android:id="@+id/check_col_wd_off"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="収集なし"
+                        android:textSize="10sp"
+                        android:gravity="center"/>
+                    <CheckBox
+                        android:id="@+id/check_col_sa_off"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="収集なし"
+                        android:textSize="10sp"
+                        android:gravity="center"/>
+                    <CheckBox
+                        android:id="@+id/check_col_ph_off"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="収集なし"
+                        android:textSize="10sp"
+                        android:gravity="center"/>
+                </TableRow>
             </TableLayout>
 
             <LinearLayout
@@ -284,6 +307,21 @@
                     android:text="その他" />
             </RadioGroup>
         </LinearLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/edit_branch_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="収集局名 (operator:branch)"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edit_branch_value"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/edit_ref_layout"
