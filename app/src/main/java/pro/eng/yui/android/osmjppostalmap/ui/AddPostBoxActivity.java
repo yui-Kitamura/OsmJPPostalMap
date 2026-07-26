@@ -1,13 +1,21 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
 import android.view.Gravity;
 import android.widget.*;
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -24,11 +32,16 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.graphics.Insets;
 import pro.eng.yui.android.osmjppostalmap.R;
+import pro.eng.yui.android.osmjppostalmap.core.AddressEditDialog;
 import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
+import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.JpAddress;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -39,8 +52,18 @@ public class AddPostBoxActivity extends AppCompatActivity {
     private AuthRepository authRepository;
     private PoiRepository repository;
     private Button btnSave;
+    private TextView addressValue;
+    private final java.util.Map<String, String> addressTags = new java.util.HashMap<>();
     private int lastCheckedShapeId = -1;
     private androidx.appcompat.app.AlertDialog progressDialog;
+    private LocationManager locationManager;
+    private Location lastLocation;
+    private final LocationListener locationListener = new LocationListener() {
+        @Override
+        public void onLocationChanged(@NonNull Location location) {
+            lastLocation = location;
+        }
+    };
 
     private TableLayout tableCollection;
     private final List<EditText[]> timeRows = new ArrayList<>();
@@ -99,9 +122,24 @@ public class AddPostBoxActivity extends AppCompatActivity {
 
         authRepository = new AuthRepository(this);
         if (authRepository.getAccessToken() == null) {
-            Toast.makeText(this, "追加するにはログインが必要です", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle("ログインが必要です")
+                    .setMessage("地図メモを残すには、このまま続行してください。")
+                    .setPositiveButton("ログイン", (dialog, which) -> {
+                        Intent intent = new Intent(this, SettingsActivity.class);
+                        startActivity(intent);
+                        finish();
+                    })
+                    .setNeutralButton("このまま地図メモを残す", null)
+                    .setNegativeButton("キャンセル", (dialog, which) -> finish())
+                    .setCancelable(false)
+                    .show();
+        }
+
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
+            lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
         }
 
         repository = PoiRepositoryImpl.getInstance();
@@ -136,6 +174,8 @@ public class AddPostBoxActivity extends AppCompatActivity {
         Button btnCopyToSat = findViewById(R.id.btn_copy_to_sat);
         Button btnCopyToSun = findViewById(R.id.btn_copy_to_sun);
         btnSave = findViewById(R.id.btn_add_save);
+        addressValue = findViewById(R.id.add_address_value);
+        View btnAddressEdit = findViewById(R.id.btn_address_edit);
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
@@ -157,6 +197,13 @@ public class AddPostBoxActivity extends AppCompatActivity {
                 row[2].setText(row[1].getText());
             }
         });
+
+        showAddress();
+        btnAddressEdit.setOnClickListener(v ->
+                AddressEditDialog.show(this, JpAddress.of(addressTags), edited -> {
+                    AddressEditDialog.applyTo(addressTags, edited);
+                    showAddress();
+                }));
 
         // 地図の初期化 (MainActivityからの遷移時はその中心座標を使用)
         map.setTileSource(new XYTileSource("OSMJP", (int) MIN_ZOOM, 18, 256, ".png", 
@@ -193,6 +240,11 @@ public class AddPostBoxActivity extends AppCompatActivity {
         });
 
         btnSave.setOnClickListener(v -> {
+            if (lastLocation == null || lastLocation.getAccuracy() > 50) {
+                Toast.makeText(this, "現地入力が必須です", Toast.LENGTH_LONG).show();
+                return;
+            }
+
             int selectedShapeId = radioShape.getCheckedRadioButtonId();
             String shape = selectedShapeId != -1 ? ((RadioButton)findViewById(selectedShapeId)).getText().toString() : "";
             String branch = inputBranch.getText() != null ? inputBranch.getText().toString() : "";
@@ -205,6 +257,19 @@ public class AddPostBoxActivity extends AppCompatActivity {
                 return;
             }
 
+            if (!authRepository.isLoggedIn()) {
+                // 地図メモとして保存
+                GeoPoint pos = marker.getPosition();
+                String addr = JpPostalUtil.getAddressText(addressTags);
+                
+                String memo = String.format("ポストの情報（現地確認）\n収集時刻=%s\n住所=%s\n参照番号=%s",
+                        collection, addr, ref);
+                JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name), memo, pos.getLatitude(), pos.getLongitude());
+                Toast.makeText(this, "地図メモを保存しました", Toast.LENGTH_SHORT).show();
+                finish();
+                return;
+            }
+
             new MaterialAlertDialogBuilder(this)
                 .setTitle("ポストの追加")
                 .setMessage("OSMに新しいポストを追加しますか？")
@@ -214,7 +279,7 @@ public class AddPostBoxActivity extends AppCompatActivity {
                     }
                     showProgress("処理を開始中…");
                     GeoPoint pos = marker.getPosition();
-                    repository.addPostBox(pos.getLatitude(), pos.getLongitude(), shape, branch, ref, collection, note, new PoiRepository.PoiSaveCallback() {
+                    repository.addPostBox(pos.getLatitude(), pos.getLongitude(), shape, branch, ref, collection, note, addressTags, new PoiRepository.PoiSaveCallback() {
                         @Override
                         public void onSuccess() {
                             dismissProgress();
@@ -266,6 +331,11 @@ public class AddPostBoxActivity extends AppCompatActivity {
             progressDialog.dismiss();
             progressDialog = null;
         }
+    }
+
+    private void showAddress() {
+        String text = JpPostalUtil.getAddressText(addressTags);
+        addressValue.setText(text.isEmpty() ? "データなし" : text);
     }
 
     private void addNewRow() {

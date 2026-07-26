@@ -380,7 +380,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     @Override
-    public void addPostBox(double lat, double lon, String shape, String branch, String postboxRef, String collectionTimes, String note, PoiSaveCallback callback) {
+    public void addPostBox(double lat, double lon, String shape, String branch, String postboxRef, String collectionTimes, String note, Map<String, String> addressTags, PoiSaveCallback callback) {
         AtomicBoolean started = showWaitingProgress(callback);
         runOnExecutor("郵便ポストを保存中", () -> {
             started.set(true);
@@ -393,6 +393,9 @@ public class PoiRepositoryImpl implements PoiRepository {
                 ChangeSetInfo csIdInfo = new ChangeSetInfo(csId);
 
                 Map<String, String> poiTags = new HashMap<>();
+                if (addressTags != null) {
+                    poiTags.putAll(addressTags);
+                }
                 poiTags.put("amenity", "post_box");
                 poiTags.put("operator", "日本郵便");
                 if ("柱上箱型".equals(shape)) {

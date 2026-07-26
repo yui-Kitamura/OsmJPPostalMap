@@ -1,5 +1,11 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputType;
@@ -8,6 +14,8 @@ import android.view.Gravity;
 import android.view.View;
 import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.GradientDrawable;
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.widget.Button;
 import android.widget.EditText;
@@ -68,6 +76,14 @@ public class EditPoiActivity extends AppCompatActivity {
     private int lastCheckedShapeId = -1;
     private final ScheduleParser scheduleParser = new SimpleScheduleParser();
     private androidx.appcompat.app.AlertDialog progressDialog;
+    private LocationManager locationManager;
+    private Location lastLocation;
+    private final LocationListener locationListener = new LocationListener() {
+        @Override
+        public void onLocationChanged(@NonNull Location location) {
+            lastLocation = location;
+        }
+    };
     private static final double MIN_ZOOM = 15.0;
 
     private class ReticleMarker extends Marker {
@@ -121,9 +137,24 @@ public class EditPoiActivity extends AppCompatActivity {
 
         authRepository = new AuthRepository(this);
         if (authRepository.getAccessToken() == null) {
-            Toast.makeText(this, "編集するにはログインが必要です", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle("ログインが必要です")
+                    .setMessage("地図メモを残すには、このまま続行してください。")
+                    .setPositiveButton("ログイン", (dialog, which) -> {
+                        Intent intent = new Intent(this, SettingsActivity.class);
+                        startActivity(intent);
+                        finish();
+                    })
+                    .setNeutralButton("このまま地図メモを残す", null)
+                    .setNegativeButton("キャンセル", (dialog, which) -> finish())
+                    .setCancelable(false)
+                    .show();
+        }
+
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
+            lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
         }
 
         repository = PoiRepositoryImpl.getInstance();
@@ -432,8 +463,73 @@ public class EditPoiActivity extends AppCompatActivity {
         });
 
         btnSave.setOnClickListener(v -> {
+            if (lastLocation == null || lastLocation.getAccuracy() > 50) {
+                Toast.makeText(this, "現地入力が必須です", Toast.LENGTH_LONG).show();
+                return;
+            }
+
             if (!authRepository.isLoggedIn()) {
-                Toast.makeText(this, "ログインが必要です", Toast.LENGTH_SHORT).show();
+                // 地図メモとして保存
+                String collection;
+                String ref;
+                String aTag = targetPoi.getTag("amenity");
+                boolean isPostBoxLocal = "post_box".equals(aTag);
+
+                if (isPostBoxLocal) {
+                    if (layoutFallback.getVisibility() == View.VISIBLE) {
+                        collection = targetPoi.getTag("collection_times");
+                    } else {
+                        Map<Days, List<? extends ITagPart>> weeklyTable = new HashMap<>();
+                        for (int col = 0; col < 3; col++) {
+                            List<CollectionTime> targetList = new ArrayList<>();
+                            int lastMinutes = -1;
+                            for (int r = 0; r < timeRows.size(); r++) {
+                                String val = timeRows.get(r)[col].getText().toString().trim();
+                                if (val.isEmpty()) continue;
+                                if (!TIME_PATTERN.matcher(val).matches()) {
+                                    Toast.makeText(this, "無効な時刻形式です: " + val, Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+                                int minutes = SimpleScheduleParser.parseMinutes(val);
+                                if (minutes <= lastMinutes) {
+                                    Toast.makeText(this, "時刻は昇順で入力してください", Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+                                targetList.add(new CollectionTime(val));
+                                lastMinutes = minutes;
+                            }
+                            if (col == 0) {
+                                weeklyTable.put(Days.MONDAY, targetList);
+                                weeklyTable.put(Days.TUESDAY, targetList);
+                                weeklyTable.put(Days.WEDNESDAY, targetList);
+                                weeklyTable.put(Days.THURSDAY, targetList);
+                                weeklyTable.put(Days.FRIDAY, targetList);
+                            } else if (col == 1) {
+                                weeklyTable.put(Days.SATURDAY, targetList);
+                            } else {
+                                weeklyTable.put(Days.SUNDAY, targetList);
+                                weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
+                            }
+                        }
+                        collection = scheduleParser.format(weeklyTable, ScheduleParser.TimeType.COLLECTION_TIMES);
+                    }
+                    TextInputEditText refInputLocal = findViewById(R.id.edit_ref_value);
+                    ref = refInputLocal.getText() != null ? refInputLocal.getText().toString().trim() : "";
+                } else {
+                    // 郵便局の場合は営業時間
+                    collection = targetPoi.getTag("opening_hours"); // とりあえず現状維持か、編集値をパースするか
+                    // 編集値をパースするのは大変なので、とりあえず既存値を出すか、メッセージを調整する
+                    ref = "";
+                }
+
+                GeoPoint pos = marker.getPosition();
+                String addr = JpPostalUtil.getAddressText(targetPoi.getTags());
+                
+                String memo = String.format("ポストの情報（現地確認）\n収集時刻%s\n住所%s\n参照番号%s",
+                        collection, addr, ref);
+                JpPostalUtil.callOsmApi(this, getString(R.string.app_name), pos.getLatitude(), pos.getLongitude(), memo);
+                Toast.makeText(this, "地図メモを保存しました", Toast.LENGTH_SHORT).show();
+                finish();
                 return;
             }
 
