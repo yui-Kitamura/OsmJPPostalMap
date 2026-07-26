@@ -287,7 +287,7 @@ public class AddPostBoxActivity extends AppCompatActivity {
                 GeoPoint pos = marker.getPosition();
                 String addr = JpPostalUtil.getAddressText(addressTags);
                 
-                String memo = String.format("ポストの情報（現地確認）\n収集時刻=%s\n住所=%s\n参照番号=%s",
+                String memo = String.format("ポストの情報（現地確認）\n収集時刻 = %s\n住所 = %s\n参照番号 = %s",
                         collection, addr, ref);
                 JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name), memo, pos.getLatitude(), pos.getLongitude());
                 Toast.makeText(this, "地図メモを保存しました", Toast.LENGTH_SHORT).show();

@@ -561,7 +561,7 @@ public class EditPoiActivity extends AppCompatActivity {
                     GeoPoint pos = marker.getPosition();
                     String addr = JpPostalUtil.getAddressText(targetPoi.getTags());
                     
-                    String memo = String.format("ポストの情報（現地確認）\n収集時刻=%s\n住所=%s\n収集局名=%s\n参照番号=%s",
+                    String memo = String.format("ポストの情報（現地確認）\n収集時刻 = %s\n住所 = %s\n収集局名 = %s\n参照番号 = %s",
                             collection, addr, branch, ref);
                     JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name),memo, pos.getLatitude(), pos.getLongitude());
                 } else {
@@ -573,7 +573,7 @@ public class EditPoiActivity extends AppCompatActivity {
                     GeoPoint pos = marker.getPosition();
                     String addr = JpPostalUtil.getAddressText(targetPoi.getTags());
                     
-                    String memo = String.format("郵便局の情報（現地確認）\n営業時間=%s\n住所=%s",
+                    String memo = String.format("郵便局の情報（現地確認）\n営業時間 = %s\n住所 = %s",
                             collection, addr);
                     JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name),memo, pos.getLatitude(), pos.getLongitude());
                 }
