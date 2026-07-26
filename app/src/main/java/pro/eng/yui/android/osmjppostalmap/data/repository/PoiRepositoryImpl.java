@@ -134,42 +134,31 @@ public class PoiRepositoryImpl implements PoiRepository {
         if (latLonPoints == null || latLonPoints.length == 0) { return; }
 
         runOnExecutor("地図データを読み込み中", () -> {
-            // 1. まずは現在のキャッシュ分（全アクティブ県）を全出力。
-            // 描画範囲で絞り込むとズームアウト時にマーカーが消えるため、全吐き出しとする。
-            postCombined();
-
-            // 2. 表示範囲にかかる都道府県名を逆ジオコーディングで特定
+            // キャッシュ済みデータは初期化時に配信済み。地図移動のたびに同じ一覧を
+            // 再配信すると全マーカーの付け直しが発生するため、ここでは配信しない。
+            // 表示範囲にかかる都道府県名を逆ジオコーディングで特定する。
             Set<String> prefNames = reverseGeocodePrefectures(latLonPoints);
             if (prefNames.isEmpty()) { return; }
 
-            // 3. 新規フェッチが必要な県を特定
+            // 新規フェッチが必要な県を特定
             Map<String, Integer> prefs = JpPostalUtil.getPrefectures();
             List<String> neededPrefNames = new ArrayList<>();
-            boolean addedNewCode = false;
             for (String name : prefNames) {
                 Integer code = prefs.get(name);
                 if (code == null || code < 0) { continue; }
-                if (currentPrefCodes.add(code)) {
-                    addedNewCode = true;
-                }
+                currentPrefCodes.add(code);
                 if (local != null && !local.hasPrefecture(code)) {
                     neededPrefNames.add(name);
                 }
             }
 
             if (neededPrefNames.isEmpty()) {
-                if (addedNewCode) {
-                    postCombined();
-                }
                 return;
             }
 
-            // 4. クールダウン判定（新規ネットワーク取得が発生する場合のみ適用）
+            // クールダウン判定（新規ネットワーク取得が発生する場合のみ適用）
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastFetchTime < MIN_INTERVAL_MS) {
-                if (addedNewCode) {
-                    postCombined();
-                }
                 return;
             }
             lastFetchTime = currentTime;
