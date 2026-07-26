@@ -48,7 +48,7 @@ public class AddPostBoxActivity extends AppCompatActivity {
 
     private static final double MIN_ZOOM = 15.0;
 
-    private static class ReticleMarker extends Marker {
+    private class ReticleMarker extends Marker {
         private final android.graphics.Paint paint;
 
         public ReticleMarker(MapView mapView) {

@@ -70,7 +70,7 @@ public class EditPoiActivity extends AppCompatActivity {
     private androidx.appcompat.app.AlertDialog progressDialog;
     private static final double MIN_ZOOM = 15.0;
 
-    private static class ReticleMarker extends Marker {
+    private class ReticleMarker extends Marker {
         private final android.graphics.Paint paint;
 
         public ReticleMarker(MapView mapView) {
