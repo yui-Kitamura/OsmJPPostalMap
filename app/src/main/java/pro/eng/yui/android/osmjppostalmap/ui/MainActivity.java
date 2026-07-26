@@ -13,6 +13,10 @@ import org.osmdroid.views.MapView;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -75,6 +79,8 @@ public class MainActivity extends AppCompatActivity {
     private double gpsZoomBase = GPS_MIN_ZOOM;
     private final ExecutorService markerStateExecutor = Executors.newSingleThreadExecutor();
     private final AtomicInteger markerRenderGeneration = new AtomicInteger();
+    /** 一度生成・解析したマーカーを、地図移動後の再通知でも再利用する。 */
+    private final Map<String, MarkerEntry> markerCache = new LinkedHashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -169,29 +175,53 @@ public class MainActivity extends AppCompatActivity {
             adjustGpsZoomForPoiCount(pois);
             map.getOverlays().removeIf(overlay -> overlay instanceof PoiMarker);
             viewModel.updateAccessToken(authRepository.getAccessToken());
-            
-            java.util.ArrayList<PoiMarker> markers = new java.util.ArrayList<>();
-            for (OsmPoi poi : pois) {
-                ScheduleParser.Amenity amenity = 
-                        "post_office".equals(poi.getTag("amenity")) ? 
-                        ScheduleParser.Amenity.POST_OFFICE : 
-                        ScheduleParser.Amenity.POST_BOX;
-                
-                PoiMarker.PoiType type = (amenity == ScheduleParser.Amenity.POST_OFFICE) ? 
-                        PoiMarker.PoiType.POST_OFFICE : PoiMarker.PoiType.POST_BOX;
-                PoiMarker marker = new PoiMarker(map, type);
-                marker.setPosition(new GeoPoint(poi.getLat(), poi.getLon()));
-                
-                marker.setOnMarkerClickListener((m, mapView) -> {
-                    PoiDetailsDialog.show(this, poi, ((PoiMarker)m).getSchedule());
-                    return true;
-                });
-                markers.add(marker);
+
+            List<OsmPoi> allPois = viewModel.getPois().getValue();
+            if (allPois != null) {
+                Set<String> liveKeys = new HashSet<>();
+                for (OsmPoi poi : allPois) liveKeys.add(markerKey(poi));
+                markerCache.keySet().retainAll(liveKeys);
             }
 
+            ArrayList<PoiMarker> markers = new ArrayList<>();
+            ArrayList<OsmPoi> poisToParse = new ArrayList<>();
+            ArrayList<PoiMarker> markersToParse = new ArrayList<>();
+            for (OsmPoi poi : pois) {
+                boolean postOffice = "post_office".equals(poi.getTag("amenity"));
+                String key = markerKey(poi);
+                String stateSource = markerStateSource(poi);
+                MarkerEntry entry = markerCache.get(key);
+
+                if (entry == null || entry.postOffice != postOffice) {
+                    PoiMarker.PoiType type = postOffice
+                            ? PoiMarker.PoiType.POST_OFFICE : PoiMarker.PoiType.POST_BOX;
+                    entry = new MarkerEntry(new PoiMarker(map, type), postOffice);
+                    MarkerEntry clickEntry = entry;
+                    entry.marker.setOnMarkerClickListener((m, mapView) -> {
+                        PoiDetailsDialog.show(this, clickEntry.poi, ((PoiMarker) m).getSchedule());
+                        return true;
+                    });
+                    markerCache.put(key, entry);
+                }
+
+                entry.poi = poi;
+                PoiMarker marker = entry.marker;
+                marker.setPosition(new GeoPoint(poi.getLat(), poi.getLon()));
+                markers.add(marker);
+
+                if (!stateSource.equals(entry.stateSource)) {
+                    marker.setSchedule(null);
+                    poisToParse.add(poi);
+                    markersToParse.add(marker);
+                }
+            }
+
+            markers.sort(this::compareMarkerPriority);
             map.getOverlays().addAll(markers);
             map.invalidate();
-            updateMarkerStatesAsync(pois, markers, renderGeneration);
+            if (!poisToParse.isEmpty()) {
+                updateMarkerStatesAsync(poisToParse, markersToParse, markers, renderGeneration);
+            }
         });
 
         // Menu Button
@@ -574,7 +604,7 @@ public class MainActivity extends AppCompatActivity {
      * マーカー本体を先に表示し、時間の掛かるスケジュール解析結果を小分けに反映する。
      */
     private void updateMarkerStatesAsync(List<OsmPoi> pois, ArrayList<PoiMarker> markers,
-                                         int renderGeneration) {
+                                         ArrayList<PoiMarker> visibleMarkers, int renderGeneration) {
         markerStateExecutor.execute(() -> {
             final int batchSize = 25;
             for (int start = 0; start < pois.size(); start += batchSize) {
@@ -599,7 +629,14 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     if (markerRenderGeneration.get() != renderGeneration) return;
                     for (int i = 0; i < results.size(); i++) {
-                        markers.get(batchStart + i).setSchedule(results.get(i));
+                        int resultIndex = batchStart + i;
+                        OsmPoi poi = pois.get(resultIndex);
+                        PoiMarker marker = markers.get(resultIndex);
+                        marker.setSchedule(results.get(i));
+                        MarkerEntry entry = markerCache.get(markerKey(poi));
+                        if (entry != null && entry.marker == marker) {
+                            entry.stateSource = markerStateSource(poi);
+                        }
                     }
                     map.invalidate();
                 });
@@ -607,12 +644,39 @@ public class MainActivity extends AppCompatActivity {
 
             runOnUiThread(() -> {
                 if (markerRenderGeneration.get() != renderGeneration) return;
-                markers.sort((a, b) -> compareMarkerPriority(a, b));
-                map.getOverlays().removeAll(markers);
-                map.getOverlays().addAll(markers);
+                visibleMarkers.sort(this::compareMarkerPriority);
+                map.getOverlays().removeAll(visibleMarkers);
+                map.getOverlays().addAll(visibleMarkers);
                 map.invalidate();
             });
         });
+    }
+
+    private String markerKey(OsmPoi poi) {
+        String type = poi.getType() == null ? "" : poi.getType();
+        if (poi.getId() != 0) {
+            return type + ':' + poi.getId();
+        }
+        return type + ":@" + poi.getLat() + ',' + poi.getLon();
+    }
+
+    /** 状態表示に関係する値が変わった場合だけ再解析する。 */
+    private String markerStateSource(OsmPoi poi) {
+        return String.valueOf(poi.getTag("amenity")) + '\u0000'
+                + String.valueOf(poi.getTag("opening_hours")) + '\u0000'
+                + String.valueOf(poi.getTag("collection_times"));
+    }
+
+    private static final class MarkerEntry {
+        final PoiMarker marker;
+        final boolean postOffice;
+        OsmPoi poi;
+        String stateSource;
+
+        MarkerEntry(PoiMarker marker, boolean postOffice) {
+            this.marker = marker;
+            this.postOffice = postOffice;
+        }
     }
 
     private int compareMarkerPriority(PoiMarker a, PoiMarker b) {
