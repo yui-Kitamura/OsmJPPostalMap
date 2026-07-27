@@ -768,10 +768,16 @@ public class MainActivity extends AppCompatActivity {
         int priority = Integer.compare(
                 getPriorityForSorting(a.getSchedule()), getPriorityForSorting(b.getSchedule()));
         if (priority != 0) return priority;
-        if (a.getSchedule() != null && b.getSchedule() != null
-                && a.getSchedule().getNextEvent() != null && b.getSchedule().getNextEvent() != null) {
-            return b.getSchedule().getNextEvent().getTimestamp()
-                    .compareTo(a.getSchedule().getNextEvent().getTimestamp());
+
+        ScheduleResult.Event ea = a.getSchedule() != null ? a.getSchedule().getNextEvent() : null;
+        ScheduleResult.Event eb = b.getSchedule() != null ? b.getSchedule().getNextEvent() : null;
+
+        if (ea != null && eb != null) {
+            return eb.getTimestamp().compareTo(ea.getTimestamp());
+        } else if (ea != null) {
+            return 1;
+        } else if (eb != null) {
+            return -1;
         }
         return 0;
     }
