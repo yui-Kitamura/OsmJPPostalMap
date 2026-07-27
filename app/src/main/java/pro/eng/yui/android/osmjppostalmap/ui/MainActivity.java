@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
     private LocationManager locationManager;
     private Location lastLocation;
     private static final int PERMISSION_REQUEST_LOCATION = 100;
-    private static final double GPS_MIN_ZOOM = 15.0;
+    private static final double GPS_MIN_ZOOM = 18.0;
     private static final double GPS_MAX_ZOOM = 20.0;
     private static final double MIN_ZOOM = 5.0;
     private static final int GPS_MAX_VISIBLE_POIS = 30;
@@ -170,7 +170,7 @@ public class MainActivity extends AppCompatActivity {
         map.setMinZoomLevel(MIN_ZOOM);
 
         GeoPoint startPoint = TOKYO_CENTRAL_POST_OFFICE;
-        map.getController().setZoom(17.0);
+        map.getController().setZoom(18.0);
         map.getController().setCenter(startPoint);
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
