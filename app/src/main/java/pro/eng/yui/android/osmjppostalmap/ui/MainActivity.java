@@ -204,7 +204,7 @@ public class MainActivity extends AppCompatActivity {
                     entry = new MarkerEntry(new PoiMarker(map, type), postOffice);
                     MarkerEntry clickEntry = entry;
                     entry.marker.setOnMarkerClickListener((m, mapView) -> {
-                        PoiDetailsDialog.show(this, clickEntry.poi, ((PoiMarker) m).getSchedule());
+                        PoiDetailsDialog.show(this, clickEntry.poi, ((PoiMarker) m).getSchedule(), lastLocation);
                         return true;
                     });
                     markerCache.put(key, entry);

@@ -2,6 +2,7 @@ package pro.eng.yui.android.osmjppostalmap.core;
 
 import android.content.Context;
 import android.content.Intent;
+import android.location.Location;
 import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,7 +32,7 @@ import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
 
 public class PoiDetailsDialog {
 
-    public static void show(Context context, OsmPoi poi, ScheduleResult schedule) {
+    public static void show(Context context, OsmPoi poi, ScheduleResult schedule, Location currentLocation) {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
 
         ScheduleParser.Amenity amenity =
@@ -217,7 +218,25 @@ public class PoiDetailsDialog {
         checkDateText.setVisibility(View.VISIBLE);
         
         String displayAddress = JpPostalUtil.getAddressText(poi.getTags());
-        addressText.setText(displayAddress.isEmpty() ? "データなし" : displayAddress);
+        if (displayAddress.isEmpty()) displayAddress = "データなし";
+
+        if (currentLocation != null) {
+            float[] results = new float[1];
+            Location.distanceBetween(currentLocation.getLatitude(), currentLocation.getLongitude(),
+                    poi.getLat(), poi.getLon(), results);
+            float distanceMeters = results[0];
+
+            if (distanceMeters <= 50000) { // 50km
+                String distanceStr;
+                if (distanceMeters < 1000) {
+                    distanceStr = String.format(Locale.JAPAN, " (%dm先)", (int) distanceMeters);
+                } else {
+                    distanceStr = String.format(Locale.JAPAN, " (%.1fkm先)", distanceMeters / 1000.0);
+                }
+                displayAddress += distanceStr;
+            }
+        }
+        addressText.setText(displayAddress);
 
         builder.setView(view);
         builder.setPositiveButton("閉じる", null);
