@@ -296,21 +296,7 @@ public class MainActivity extends AppCompatActivity {
         // GPS Button
         findViewById(R.id.gps_button).setOnClickListener(v -> {
             if (lastLocation != null) {
-                gpsZoomCenter = mapTargetFor(lastLocation);
-                // 基準となるズームを設定して移動（最終的なズームは adjustGpsZoomForPoiCount で決定）
-                gpsZoomBase = Math.min(GPS_MAX_ZOOM,
-                        Math.max(GPS_MIN_ZOOM, map.getZoomLevelDouble()));
-                map.getController().setZoom(gpsZoomBase);
-                map.getController().animateTo(gpsZoomCenter);
-
-                // 移動後の基準ズーム表示範囲を取得してからPOIをロードする。
-                // ロード完了時に、実際に画面内へ描画されるPOI数から最終ズームを決める。
-                map.postDelayed(() -> {
-                    gpsZoomMinBounds = map.getBoundingBox();
-                    gpsZoomAdjustmentPending = true;
-                    initialLocationSet = true;
-                    updatePois();
-                }, 500);
+                performInitialGpsZoom(lastLocation);
             } else {
                 Toast.makeText(this, "現在地を取得中です...", Toast.LENGTH_SHORT).show();
             }
@@ -413,7 +399,7 @@ public class MainActivity extends AppCompatActivity {
         double halfLonBase = (shortSide * dLonPerPixel) / 2.0;
         double halfLatBase = (shortSide * dLatPerPixel) / 2.0;
 
-        double targetZoom = GPS_MIN_ZOOM;
+        double targetZoom = GPS_MAX_ZOOM;
         // 最大ズームから順に下げていき、条件（5POI以上かつ郵便局1以上）を満たす最初のズームを採用する
         for (double candidateZoom = GPS_MAX_ZOOM; candidateZoom >= MIN_ZOOM; candidateZoom -= 1.0) {
             double scale = Math.pow(2.0, candidateZoom - gpsZoomBase);
@@ -442,6 +428,23 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         map.getController().setZoom(targetZoom);
+    }
+
+    private void performInitialGpsZoom(Location location) {
+        if (location == null) return;
+        gpsZoomCenter = mapTargetFor(location);
+        gpsZoomBase = GPS_MIN_ZOOM;
+        map.getController().setZoom(gpsZoomBase);
+        map.getController().animateTo(gpsZoomCenter);
+
+        // 移動後の基準ズーム表示範囲を取得してからPOIをロードする。
+        // ロード完了時に、実際に画面内へ描画されるPOI数から最終ズームを決める。
+        map.postDelayed(() -> {
+            gpsZoomMinBounds = map.getBoundingBox();
+            gpsZoomAdjustmentPending = true;
+            initialLocationSet = true;
+            updatePois();
+        }, 500);
     }
 
     private static double longitudeDistance(double longitude1, double longitude2) {
@@ -501,11 +504,10 @@ public class MainActivity extends AppCompatActivity {
                 Location loc = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 if (loc != null) {
                     updateCurrentLocation(loc);
-                    // 初期表示を現在地に
-                    map.getController().setCenter(mapTargetFor(loc));
                     if (!initialLocationSet) {
-                        initialLocationSet = true;
-                        updatePois();
+                        performInitialGpsZoom(loc);
+                    } else {
+                        map.getController().setCenter(mapTargetFor(loc));
                     }
                 }
             }
@@ -514,11 +516,10 @@ public class MainActivity extends AppCompatActivity {
                 Location loc = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                 if (loc != null && lastLocation == null) {
                     updateCurrentLocation(loc);
-                    // 初期表示を現在地に
-                    map.getController().setCenter(mapTargetFor(loc));
                     if (!initialLocationSet) {
-                        initialLocationSet = true;
-                        updatePois();
+                        performInitialGpsZoom(loc);
+                    } else {
+                        map.getController().setCenter(mapTargetFor(loc));
                     }
                 }
             }
@@ -532,9 +533,7 @@ public class MainActivity extends AppCompatActivity {
         public void onLocationChanged(@NonNull Location location) {
             updateCurrentLocation(location);
             if (!initialLocationSet) {
-                initialLocationSet = true;
-                map.getController().setCenter(mapTargetFor(location));
-                updatePois();
+                performInitialGpsZoom(location);
             }
         }
         @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
