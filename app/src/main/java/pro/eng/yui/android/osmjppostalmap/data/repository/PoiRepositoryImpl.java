@@ -297,7 +297,6 @@ public class PoiRepositoryImpl implements PoiRepository {
             for (PrefMeta meta : saved) {
                 currentPrefCodes.add(meta.getPrefCode());
             }
-            postCombined();
         });
     }
 
@@ -318,13 +317,11 @@ public class PoiRepositoryImpl implements PoiRepository {
      */
     private void postCombined() {
         if (local == null) { return; }
-        List<OsmPoi> all;
-        if (areaFilterEnabled) {
-            all = local.getByBoundingBox(activeLatMin, activeLatMax, activeLonMin, activeLonMax);
-        } else {
-            // 起動時など範囲未指定時は全キャッシュを返す
-            all = local.getAllPois();
+        if (!areaFilterEnabled) {
+            // 範囲未指定時は全件ロードを避ける（起動時のブロッキング防止）
+            return;
         }
+        List<OsmPoi> all = local.getByBoundingBox(activeLatMin, activeLatMax, activeLonMin, activeLonMax);
         poisLiveData.postValue(all);
     }
 
