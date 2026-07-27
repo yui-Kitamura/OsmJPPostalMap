@@ -473,16 +473,35 @@ public class MainActivity extends AppCompatActivity {
         if (!canLoadPois() || map == null || !map.isLayoutOccurred()) {
             return;
         }
-        // 表示範囲の4隅＋中心を渡し、範囲にかかる都道府県すべてをキャッシュ優先で取得する
+
         org.osmdroid.util.BoundingBox bb = map.getBoundingBox();
-        double[][] points = new double[][]{
-                {map.getMapCenter().getLatitude(), map.getMapCenter().getLongitude()},
-                {bb.getLatNorth(), bb.getLonWest()},
-                {bb.getLatNorth(), bb.getLonEast()},
-                {bb.getLatSouth(), bb.getLonWest()},
-                {bb.getLatSouth(), bb.getLonEast()},
-        };
-        viewModel.fetchPoisForArea(points, forceNotify);
+        org.osmdroid.api.IGeoPoint center = map.getMapCenter();
+        double centerLat = center.getLatitude();
+        double centerLon = center.getLongitude();
+
+        // 中心から約20km (11海里 = 11/60度) の範囲を表示範囲内でメッシュ化する
+        double range = 11.0 / 60.0;
+        double latMin = Math.max(bb.getLatSouth(), centerLat - range);
+        double latMax = Math.min(bb.getLatNorth(), centerLat + range);
+        double lonMin = Math.max(bb.getLonWest(), centerLon - range);
+        double lonMax = Math.min(bb.getLonEast(), centerLon + range);
+
+        double step = 1.0 / 60.0; // 1海里 = 1/60度
+        List<double[]> pointsList = new ArrayList<>();
+
+        for (double lat = latMin; ; lat += step) {
+            boolean isLastLat = lat >= latMax;
+            double actualLat = isLastLat ? latMax : lat;
+            for (double lon = lonMin; ; lon += step) {
+                boolean isLastLon = lon >= lonMax;
+                double actualLon = isLastLon ? lonMax : lon;
+                pointsList.add(new double[]{actualLat, actualLon});
+                if (isLastLon) break;
+            }
+            if (isLastLat) break;
+        }
+
+        viewModel.fetchPoisForArea(pointsList.toArray(new double[0][0]), forceNotify);
     }
 
     private void updatePois() {
