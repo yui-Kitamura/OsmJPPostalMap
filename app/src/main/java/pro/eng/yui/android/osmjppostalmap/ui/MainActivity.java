@@ -179,7 +179,7 @@ public class MainActivity extends AppCompatActivity {
         // Observe Filtered POIs
         viewModel.getFilteredPois().observe(this, pois -> {
             int renderGeneration = markerRenderGeneration.incrementAndGet();
-            adjustGpsZoomForPoiCount(pois);
+            adjustGpsZoomForPoiCount(viewModel.getPois().getValue());
             map.getOverlays().removeIf(overlay -> overlay instanceof PoiMarker);
             viewModel.updateAccessToken(authRepository.getAccessToken());
 
@@ -381,7 +381,7 @@ public class MainActivity extends AppCompatActivity {
      * POIのアイコン（中心点）が収まること。ただし必ず1POIは郵便局を含むこと。
      */
     private void adjustGpsZoomForPoiCount(List<OsmPoi> pois) {
-        if (!gpsZoomAdjustmentPending || gpsZoomCenter == null || gpsZoomMinBounds == null) {
+        if (!gpsZoomAdjustmentPending || gpsZoomCenter == null || gpsZoomMinBounds == null || pois == null) {
             return;
         }
         gpsZoomAdjustmentPending = false;
@@ -408,18 +408,22 @@ public class MainActivity extends AppCompatActivity {
 
             int visibleCount = 0;
             boolean hasPostOffice = false;
+            boolean hasPostBox = false;
 
             for (OsmPoi poi : pois) {
                 if (Math.abs(poi.getLat() - gpsZoomCenter.getLatitude()) <= halfLat
                         && longitudeDistance(poi.getLon(), gpsZoomCenter.getLongitude()) <= halfLon) {
                     visibleCount++;
-                    if ("post_office".equals(poi.getTag("amenity"))) {
+                    String amenity = poi.getTag("amenity");
+                    if ("post_office".equals(amenity)) {
                         hasPostOffice = true;
+                    } else if ("post_box".equals(amenity)) {
+                        hasPostBox = true;
                     }
                 }
             }
 
-            if (visibleCount >= 5 && hasPostOffice) {
+            if (visibleCount >= 5 && hasPostOffice && hasPostBox) {
                 targetZoom = candidateZoom;
                 break;
             }
