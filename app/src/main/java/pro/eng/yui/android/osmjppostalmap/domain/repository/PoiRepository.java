@@ -57,11 +57,6 @@ public interface PoiRepository {
     }
 
     /**
-     * 指定されたIDのPOIを取得する
-     */
-    LiveData<OsmPoi> getPoi(long id, String type);
-
-    /**
      * POIをOSMに保存する
      */
     void savePoi(OsmPoi poi, String comment, PoiSaveCallback callback);

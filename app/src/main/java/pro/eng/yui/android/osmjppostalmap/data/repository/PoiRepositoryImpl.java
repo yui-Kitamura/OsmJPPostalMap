@@ -7,7 +7,6 @@ import androidx.lifecycle.MutableLiveData;
 
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.api.osm.ChangeSetInfo;
-import pro.eng.yui.oss.osm.lib.jppostalcore.api.overpass.OverpassQuery;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.BBox;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
@@ -61,7 +60,7 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     /** 逆ジオコーディング結果のキャッシュ。固定座標系（1海里）へのアライメントによりヒット率を高める。 */
     private final Map<Long, Set<String>> gridPrefCache = new java.util.concurrent.ConcurrentHashMap<>();
-    /** 都道府県の境界ボックス（BBox）キャッシュ。Overpass依存を減らすために使用。 */
+    /** 都道府県の境界ボックス（BBox）キャッシュ。 */
     private final Map<String, BBox> prefBoundaryCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static PoiRepositoryImpl instance;
@@ -176,15 +175,13 @@ public class PoiRepositoryImpl implements PoiRepository {
         final double fLonMax = lonMax;
 
         runOnExecutor("表示エリアを判定中", () -> {
-            // キャッシュ済みデータは初期化時に配信済み。地図移動のたびに同じ一覧を
-            // 再配信すると全マーカーの付け直しが発生するため、通常は配信しない。
             // 表示範囲にかかる都道府県名を判定する。
             Set<String> prefNames;
             if (!prefBoundaryCache.isEmpty()) {
                 // BBoxを用いたローカル判定（高速）
                 prefNames = findIntersectingPrefectures(fLatMin, fLatMax, fLonMin, fLonMax);
             } else {
-                // まだBBoxが読み込まれていない場合は従来の逆ジオコーディング（Overpass依存）
+                // まだBBoxが読み込まれていない場合は従来の逆ジオコーディング
                 prefNames = reverseGeocodePrefectures(latLonPoints);
             }
 
@@ -299,14 +296,6 @@ public class PoiRepositoryImpl implements PoiRepository {
         try {
             loadingStatusLiveData.postValue(prefName + "のデータを取得中");
             List<OsmPoi> fetched = JpPostalUtil.getPoiData(prefName).join();
-            if (fetched.isEmpty()) {
-                // データソースに無い場合はOverpassフォールバック
-                loadingStatusLiveData.postValue(prefName + "のデータを取得中 (Overpass)");
-                try {
-                    fetched = JpPostalUtil.callOverpass(
-                            OverpassQuery.getPostSearchQuery(prefName), 3, 5).join();
-                } catch (IllegalStateException ignore) { }
-            }
             if (local != null) {
                 loadingStatusLiveData.postValue(prefName + "のデータを処理中");
                 local.upsertPrefecture(prefCode, prefName, fetched, System.currentTimeMillis());
@@ -370,13 +359,13 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     /**
-     * 複数座標を一度のOverpass呼び出しで逆ジオコーディングし、
      * admin_level=4（都道府県）の name 集合を返す。
+     * BBoxキャッシュとグリッドキャッシュのみを使用する。
      */
     private Set<String> reverseGeocodePrefectures(double[][] points) {
         Set<String> names = new LinkedHashSet<>();
 
-        // まずはBBoxキャッシュで判定を試みる
+        // 1. BBoxキャッシュで判定を試みる
         if (!prefBoundaryCache.isEmpty()) {
             for (double[] p : points) {
                 for (Map.Entry<String, BBox> entry : prefBoundaryCache.entrySet()) {
@@ -387,82 +376,18 @@ public class PoiRepositoryImpl implements PoiRepository {
                     }
                 }
             }
-            if (!names.isEmpty()) {
-                return names;
-            }
         }
 
-        List<double[]> missing = new ArrayList<>();
+        // 2. グリッドキャッシュ（過去の判定結果）で補完する
         double gridUnit = 1.0 / 60.0;
-
         for (double[] p : points) {
             long key = getGridKey(p, gridUnit);
             Set<String> cached = gridPrefCache.get(key);
             if (cached != null) {
                 names.addAll(cached);
-            } else {
-                missing.add(p);
             }
         }
 
-        if (missing.isEmpty()) {
-            return names;
-        }
-
-        StringBuilder body = new StringBuilder();
-        for (int i = 0; i < missing.size(); i++) {
-            body.append(String.format(Locale.US,
-                    "is_in(%.7f,%.7f)->.a%d;", missing.get(i)[0], missing.get(i)[1], i));
-        }
-        body.append("(");
-        for (int i = 0; i < missing.size(); i++) {
-            body.append(String.format(Locale.US,
-                    "rel(pivot.a%d)[\"boundary\"=\"administrative\"][\"admin_level\"=\"4\"];", i));
-        }
-        body.append(");");
-
-        Set<String> newNames = new LinkedHashSet<>();
-        try {
-            for (OsmPoi rel : JpPostalUtil.callOverpass(body.toString(), 3, 3).join()) {
-                String name = rel.getTag("name");
-                if (name != null && !name.isEmpty()) {
-                    newNames.add(name);
-                }
-            }
-
-            // キャッシュへの書き戻し
-            // バッチ結果が1県のみであれば、全問い合わせ点に対してその結果をキャッシュする。
-            // 複数ある場合は特定できないため、問い合わせ点が1件のみの場合のみキャッシュする。
-            if (newNames.size() == 1) {
-                String name = newNames.iterator().next();
-                Set<String> singleton = Collections.singleton(name);
-                for (double[] p : missing) {
-                    long key = getGridKey(p, gridUnit);
-                    gridPrefCache.put(key, singleton);
-                    if (local != null) local.upsertGridPref(key, name);
-                }
-            } else if (newNames.isEmpty()) {
-                // 海上などの場合は空セットをキャッシュして再問い合わせを防ぐ
-                for (double[] p : missing) {
-                    long key = getGridKey(p, gridUnit);
-                    gridPrefCache.put(key, Collections.emptySet());
-                    if (local != null) local.upsertGridPref(key, "");
-                }
-            } else if (missing.size() == 1) {
-                long key = getGridKey(missing.get(0), gridUnit);
-                gridPrefCache.put(key, newNames);
-                if (local != null) {
-                    StringBuilder sb = new StringBuilder();
-                    for (String n : newNames) {
-                        if (sb.length() > 0) sb.append(",");
-                        sb.append(n);
-                    }
-                    local.upsertGridPref(key, sb.toString());
-                }
-            }
-            names.addAll(newNames);
-        } catch (RuntimeException ignore) {
-        }
         return names;
     }
 
@@ -470,29 +395,6 @@ public class PoiRepositoryImpl implements PoiRepository {
         long latIdx = Math.round(p[0] / gridUnit);
         long lonIdx = Math.round(p[1] / gridUnit);
         return (latIdx << 32) | (lonIdx & 0xFFFFFFFFL);
-    }
-
-    @Override
-    public LiveData<OsmPoi> getPoi(long id, String type) {
-        MutableLiveData<OsmPoi> poiLiveData = new MutableLiveData<>();
-        String query = String.format(Locale.US, "%s(%d);", type, id);
-
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastFetchTime < MIN_INTERVAL_MS) {
-            return poiLiveData;
-        }
-        lastFetchTime = currentTime;
-        startCooldownTimer();
-
-        runOnExecutor("詳細情報を取得中", () -> {
-            try {
-                List<OsmPoi> poiList = JpPostalUtil.callOverpass(query, 3, 5).join();
-                poiLiveData.postValue(poiList.get(0));
-            } catch (RuntimeException e) {
-                poiLiveData.postValue(null);
-            }
-        });
-        return poiLiveData;
     }
 
     /* ---------- 保存系（バックグラウンド実行 + 即時SQLite反映） ---------- */

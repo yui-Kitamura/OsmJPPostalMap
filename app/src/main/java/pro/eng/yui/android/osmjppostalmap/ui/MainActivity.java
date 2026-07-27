@@ -557,7 +557,7 @@ public class MainActivity extends AppCompatActivity {
         double gridLonMin = Math.floor(lonMin / gridUnit) * gridUnit;
         double gridLonMax = Math.ceil(lonMax / gridUnit) * gridUnit;
 
-        // 逆ジオコーディング地点の密度を下げ、Overpass負荷を減らす
+        // 逆ジオコーディング地点の密度を下げ、処理負荷を減らす
         // 最小ステップを0.1度とし、かつグリッド単位（1海里）の整数倍にする
         double rawStep = Math.max(0.1, Math.max(latMax - latMin, lonMax - lonMin) / 5.0);
         double step = Math.ceil(rawStep / gridUnit) * gridUnit;
