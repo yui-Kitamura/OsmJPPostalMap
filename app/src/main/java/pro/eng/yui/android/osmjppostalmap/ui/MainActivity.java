@@ -33,6 +33,7 @@ import pro.eng.yui.android.osmjppostalmap.R;
 import android.view.View;
 import android.content.Intent;
 import android.Manifest;
+import android.graphics.Color;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
@@ -237,31 +238,33 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        // Refresh Button → 更新ダイアログを開く
+        // Refresh Button
         CooldownRefreshButton refreshButton = findViewById(R.id.refresh_button);
         refreshButton.setOnClickListener(v -> {
-            if (!initialLocationSet) {
-                initialLocationSet = true;
+            boolean loading = Boolean.TRUE.equals(viewModel.getLoading().getValue());
+            Long remaining = viewModel.getCooldownRemaining().getValue();
+            if (loading || (remaining != null && remaining > 0)) {
+                String status = viewModel.getLoadingStatus().getValue();
+                if (status == null || status.isEmpty()) {
+                    status = (loading) ? "処理中..." : "クールダウン中...";
+                }
+                showStatusTooltip(refreshButton, status);
+            } else {
+                if (!initialLocationSet) {
+                    initialLocationSet = true;
+                }
+                PrefRefreshDialog.show(this, viewModel, this::updatePois);
             }
-            PrefRefreshDialog.show(this, viewModel, this::updatePois);
         });
 
         viewModel.getCooldownRemaining().observe(this, remaining -> {
             refreshButton.setCooldown(remaining, viewModel.getCooldownInterval());
-            boolean loading = Boolean.TRUE.equals(viewModel.getLoading().getValue());
-            refreshButton.setEnabled(remaining <= 0 && !loading);
-            if (remaining > 0) {
-                refreshButton.setAlpha(0.5f);
-            } else {
-                refreshButton.setAlpha(1.0f);
-            }
+            updateRefreshButtonVisuals(refreshButton);
         });
 
         viewModel.getLoading().observe(this, loadingValue -> {
-            boolean loading = Boolean.TRUE.equals(loadingValue);
-            refreshButton.setLoading(loading);
-            Long remaining = viewModel.getCooldownRemaining().getValue();
-            refreshButton.setEnabled(!loading && (remaining == null || remaining <= 0));
+            refreshButton.setLoading(Boolean.TRUE.equals(loadingValue));
+            updateRefreshButtonVisuals(refreshButton);
         });
 
 
@@ -699,6 +702,39 @@ public class MainActivity extends AppCompatActivity {
             this.marker = marker;
             this.postOffice = postOffice;
         }
+    }
+
+    private void updateRefreshButtonVisuals(CooldownRefreshButton button) {
+        boolean loading = Boolean.TRUE.equals(viewModel.getLoading().getValue());
+        Long remaining = viewModel.getCooldownRemaining().getValue();
+        if (loading || (remaining != null && remaining > 0)) {
+            button.setAlpha(0.5f);
+        } else {
+            button.setAlpha(1.0f);
+        }
+    }
+
+    private void showStatusTooltip(View anchor, String message) {
+        TextView textView = new TextView(this);
+        textView.setText(message);
+        textView.setTextColor(android.graphics.Color.WHITE);
+        textView.setPadding(24, 16, 24, 16);
+        textView.setBackground(ContextCompat.getDrawable(this, R.drawable.bg_tooltip));
+
+        android.widget.PopupWindow popupWindow = new android.widget.PopupWindow(
+                textView,
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+                true
+        );
+        popupWindow.setElevation(10f);
+
+        textView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        int xOffset = -(textView.getMeasuredWidth() + 24);
+        int yOffset = -(anchor.getHeight() + textView.getMeasuredHeight()) / 2;
+
+        popupWindow.showAsDropDown(anchor, xOffset, yOffset);
+        anchor.postDelayed(popupWindow::dismiss, 3000);
     }
 
     private int compareMarkerPriority(PoiMarker a, PoiMarker b) {

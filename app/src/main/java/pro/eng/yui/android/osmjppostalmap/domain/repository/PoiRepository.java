@@ -93,6 +93,9 @@ public interface PoiRepository {
     /** リポジトリのバックグラウンド処理が実行中かどうか。 */
     LiveData<Boolean> getLoading();
 
+    /** 現在実行中の処理内容を表すメッセージ。 */
+    LiveData<String> getLoadingStatus();
+
     /**
      * クールダウンの全期間をミリ秒で取得する
      */

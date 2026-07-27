@@ -35,6 +35,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final MutableLiveData<String> successLiveData = new MutableLiveData<>();
     private final MutableLiveData<Long> cooldownRemainingLiveData = new MutableLiveData<>(0L);
     private final MutableLiveData<Boolean> loadingLiveData = new MutableLiveData<>(false);
+    private final MutableLiveData<String> loadingStatusLiveData = new MutableLiveData<>("");
     private String accessToken;
     public void setAccessToken(String token) {
         this.accessToken = token;
@@ -112,6 +113,7 @@ public class PoiRepositoryImpl implements PoiRepository {
         if (pendingOperations.getAndIncrement() == 0) {
             loadingLiveData.postValue(true);
         }
+        loadingStatusLiveData.postValue(operation);
         executor.execute(() -> {
             try {
                 task.run();
@@ -120,6 +122,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             } finally {
                 if (pendingOperations.decrementAndGet() == 0) {
                     loadingLiveData.postValue(false);
+                    loadingStatusLiveData.postValue("");
                 }
             }
         });
@@ -162,6 +165,7 @@ public class PoiRepositoryImpl implements PoiRepository {
 
             for (String name : neededPrefNames) {
                 Integer code = prefs.get(name);
+                loadingStatusLiveData.postValue(name + "のデータを読み込み中");
                 loadPref(code, name, false);
             }
 
@@ -475,6 +479,11 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     @Override
+    public LiveData<String> getLoadingStatus() {
+        return loadingStatusLiveData;
+    }
+
+    @Override
     public long getCooldownInterval() {
         return MIN_INTERVAL_MS;
     }
@@ -510,6 +519,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     private void postProgress(PoiSaveCallback callback, String message) {
+        loadingStatusLiveData.postValue(message);
         handler.post(() -> callback.onProgress(message));
     }
 
