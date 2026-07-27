@@ -294,7 +294,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.gps_button).setOnClickListener(v -> {
             if (lastLocation != null) {
                 gpsZoomCenter = mapTargetFor(lastLocation);
-                // 押下時より広域にはしない。15未満の場合だけ最小値の15まで拡大する。
+                // 基準となるズームを設定して移動（最終的なズームは adjustGpsZoomForPoiCount で決定）
                 gpsZoomBase = Math.min(GPS_MAX_ZOOM,
                         Math.max(GPS_MIN_ZOOM, map.getZoomLevelDouble()));
                 map.getController().setZoom(gpsZoomBase);
@@ -387,9 +387,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * GPS移動先のPOI密度に応じて、描画数が過密にならない最小ズームを選ぶ。
-     * Zoomが1上がるごとに表示範囲の縦横が半分になる前提で、各候補の
-     * 画面内POI数を実座標から数える。
+     * GPS移動先のPOI密度に応じて、5POIが映る適切なズームレベルを選ぶ。
+     * 映る、の定義は、画面の短辺を1辺の長さとするGPS座標を中心に持つ正方形範囲に
+     * POIのアイコン（中心点）が収まること。ただし必ず1POIは郵便局を含むこと。
      */
     private void adjustGpsZoomForPoiCount(List<OsmPoi> pois) {
         if (!gpsZoomAdjustmentPending || gpsZoomCenter == null || gpsZoomMinBounds == null) {
@@ -397,32 +397,46 @@ public class MainActivity extends AppCompatActivity {
         }
         gpsZoomAdjustmentPending = false;
 
-        double targetZoom = GPS_MAX_ZOOM;
-        double candidateZoom = gpsZoomBase;
-        while (candidateZoom <= GPS_MAX_ZOOM) {
+        int width = map.getWidth();
+        int height = map.getHeight();
+        if (width <= 0 || height <= 0) return;
+        int shortSide = Math.min(width, height);
+
+        // gpsZoomBaseにおける1ピクセルあたりの緯度経度幅
+        double dLonPerPixel = gpsZoomMinBounds.getLongitudeSpan() / (double) width;
+        double dLatPerPixel = gpsZoomMinBounds.getLatitudeSpan() / (double) height;
+
+        // gpsZoomBaseにおける短辺相当の地理的範囲（半径）
+        double halfLonBase = (shortSide * dLonPerPixel) / 2.0;
+        double halfLatBase = (shortSide * dLatPerPixel) / 2.0;
+
+        double targetZoom = GPS_MIN_ZOOM;
+        // 最大ズームから順に下げていき、条件（5POI以上かつ郵便局1以上）を満たす最初のズームを採用する
+        for (double candidateZoom = GPS_MAX_ZOOM; candidateZoom >= MIN_ZOOM; candidateZoom -= 1.0) {
             double scale = Math.pow(2.0, candidateZoom - gpsZoomBase);
-            double halfLatitudeSpan = gpsZoomMinBounds.getLatitudeSpan() / (2.0 * scale);
-            double halfLongitudeSpan = gpsZoomMinBounds.getLongitudeSpan() / (2.0 * scale);
+            double halfLon = halfLonBase / scale;
+            double halfLat = halfLatBase / scale;
+
             int visibleCount = 0;
+            boolean hasPostOffice = false;
 
             for (OsmPoi poi : pois) {
-                if (Math.abs(poi.getLat() - gpsZoomCenter.getLatitude()) <= halfLatitudeSpan
-                        && longitudeDistance(poi.getLon(), gpsZoomCenter.getLongitude()) <= halfLongitudeSpan) {
+                if (Math.abs(poi.getLat() - gpsZoomCenter.getLatitude()) <= halfLat
+                        && longitudeDistance(poi.getLon(), gpsZoomCenter.getLongitude()) <= halfLon) {
                     visibleCount++;
-                    if (visibleCount > GPS_MAX_VISIBLE_POIS) {
-                        break;
+                    if ("post_office".equals(poi.getTag("amenity"))) {
+                        hasPostOffice = true;
                     }
                 }
             }
-            if (visibleCount <= GPS_MAX_VISIBLE_POIS) {
+
+            if (visibleCount >= 5 && hasPostOffice) {
                 targetZoom = candidateZoom;
                 break;
             }
-            if (candidateZoom >= GPS_MAX_ZOOM) {
-                break;
+            if (candidateZoom <= MIN_ZOOM) {
+                targetZoom = MIN_ZOOM;
             }
-            // 最初の候補には押下時の小数ズームも使い、以降は整数ズームで評価する。
-            candidateZoom = Math.min(GPS_MAX_ZOOM, Math.floor(candidateZoom) + 1.0);
         }
         map.getController().setZoom(targetZoom);
     }
