@@ -115,6 +115,10 @@ public class MainActivity extends AppCompatActivity {
         });
 
         map = findViewById(R.id.map);
+        ScaleBarView scaleBarView = findViewById(R.id.scale_bar);
+        if (scaleBarView != null) {
+            scaleBarView.setMapView(map);
+        }
         locationOverlay = new org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay(
                 new org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider(this), map);
         

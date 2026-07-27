@@ -86,6 +86,15 @@
         app:layout_constraintEnd_toEndOf="parent"
         android:contentDescription="ポスト追加" />
 
+    <pro.eng.yui.android.osmjppostalmap.ui.ScaleBarView
+        android:id="@+id/scale_bar"
+        android:layout_width="0dp"
+        android:layout_height="24dp"
+        android:background="#80FFFFFF"
+        app:layout_constraintBottom_toTopOf="@id/copyright_text"
+        app:layout_constraintEnd_toEndOf="@id/copyright_text"
+        app:layout_constraintStart_toStartOf="@id/copyright_text" />
+
     <TextView
         android:id="@+id/copyright_text"
         android:layout_width="wrap_content"
