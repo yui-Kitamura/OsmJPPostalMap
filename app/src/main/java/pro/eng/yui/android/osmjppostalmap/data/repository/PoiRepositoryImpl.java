@@ -8,6 +8,7 @@ import androidx.lifecycle.MutableLiveData;
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.api.osm.ChangeSetInfo;
 import pro.eng.yui.oss.osm.lib.jppostalcore.api.overpass.OverpassQuery;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.BBox;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
 import java.io.IOException;
@@ -60,6 +61,8 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     /** 逆ジオコーディング結果のキャッシュ。固定座標系（1海里）へのアライメントによりヒット率を高める。 */
     private final Map<Long, Set<String>> gridPrefCache = new java.util.concurrent.ConcurrentHashMap<>();
+    /** 都道府県の境界ボックス（BBox）キャッシュ。Overpass依存を減らすために使用。 */
+    private final Map<String, BBox> prefBoundaryCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static PoiRepositoryImpl instance;
 
@@ -80,6 +83,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             repo.local = new PoiLocalDataSource(context.getApplicationContext());
             repo.loadAllFromCache();
             repo.loadGridCacheFromDb();
+            repo.preloadBoundaries();
         }
     }
 
@@ -89,6 +93,18 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     private PoiRepositoryImpl(String accessToken) {
         this.accessToken = accessToken;
+    }
+
+    private void preloadBoundaries() {
+        JpPostalUtil.getPrefectures().thenAccept(prefs -> {
+            for (String name : prefs.keySet()) {
+                JpPostalUtil.getBoundary(name, null).thenAccept(bbox -> {
+                    if (bbox != null) {
+                        prefBoundaryCache.put(name, bbox);
+                    }
+                });
+            }
+        });
     }
 
     /* ---------- 取得系 ---------- */
@@ -154,11 +170,24 @@ public class PoiRepositoryImpl implements PoiRepository {
         this.activeLonMax = lonMax;
         this.areaFilterEnabled = true;
 
+        final double fLatMin = latMin;
+        final double fLatMax = latMax;
+        final double fLonMin = lonMin;
+        final double fLonMax = lonMax;
+
         runOnExecutor("表示エリアを判定中", () -> {
             // キャッシュ済みデータは初期化時に配信済み。地図移動のたびに同じ一覧を
             // 再配信すると全マーカーの付け直しが発生するため、通常は配信しない。
-            // 表示範囲にかかる都道府県名を逆ジオコーディングで特定する。
-            Set<String> prefNames = reverseGeocodePrefectures(latLonPoints);
+            // 表示範囲にかかる都道府県名を判定する。
+            Set<String> prefNames;
+            if (!prefBoundaryCache.isEmpty()) {
+                // BBoxを用いたローカル判定（高速）
+                prefNames = findIntersectingPrefectures(fLatMin, fLatMax, fLonMin, fLonMax);
+            } else {
+                // まだBBoxが読み込まれていない場合は従来の逆ジオコーディング（Overpass依存）
+                prefNames = reverseGeocodePrefectures(latLonPoints);
+            }
+
             if (prefNames.isEmpty()) {
                 if (forceNotify) postCombined();
                 return;
@@ -328,12 +357,41 @@ public class PoiRepositoryImpl implements PoiRepository {
         poisLiveData.postValue(all);
     }
 
+    private Set<String> findIntersectingPrefectures(double latMin, double latMax, double lonMin, double lonMax) {
+        Set<String> names = new LinkedHashSet<>();
+        for (Map.Entry<String, BBox> entry : prefBoundaryCache.entrySet()) {
+            BBox b = entry.getValue();
+            if (latMin <= b.getMaxLat() && latMax >= b.getMinLat() &&
+                lonMin <= b.getMaxLon() && lonMax >= b.getMinLon()) {
+                names.add(entry.getKey());
+            }
+        }
+        return names;
+    }
+
     /**
      * 複数座標を一度のOverpass呼び出しで逆ジオコーディングし、
      * admin_level=4（都道府県）の name 集合を返す。
      */
     private Set<String> reverseGeocodePrefectures(double[][] points) {
         Set<String> names = new LinkedHashSet<>();
+
+        // まずはBBoxキャッシュで判定を試みる
+        if (!prefBoundaryCache.isEmpty()) {
+            for (double[] p : points) {
+                for (Map.Entry<String, BBox> entry : prefBoundaryCache.entrySet()) {
+                    BBox b = entry.getValue();
+                    if (p[0] >= b.getMinLat() && p[0] <= b.getMaxLat() &&
+                        p[1] >= b.getMinLon() && p[1] <= b.getMaxLon()) {
+                        names.add(entry.getKey());
+                    }
+                }
+            }
+            if (!names.isEmpty()) {
+                return names;
+            }
+        }
+
         List<double[]> missing = new ArrayList<>();
         double gridUnit = 1.0 / 60.0;
 
