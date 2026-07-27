@@ -129,15 +129,18 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     @Override
-    public void loadPoisForArea(double[][] latLonPoints) {
+    public void loadPoisForArea(double[][] latLonPoints, boolean forceNotify) {
         if (latLonPoints == null || latLonPoints.length == 0) { return; }
 
         runOnExecutor("地図データを読み込み中", () -> {
             // キャッシュ済みデータは初期化時に配信済み。地図移動のたびに同じ一覧を
-            // 再配信すると全マーカーの付け直しが発生するため、ここでは配信しない。
+            // 再配信すると全マーカーの付け直しが発生するため、通常は配信しない。
             // 表示範囲にかかる都道府県名を逆ジオコーディングで特定する。
             Set<String> prefNames = reverseGeocodePrefectures(latLonPoints);
-            if (prefNames.isEmpty()) { return; }
+            if (prefNames.isEmpty()) {
+                if (forceNotify) postCombined();
+                return;
+            }
 
             // 新規フェッチが必要な県を特定
             Map<String, Integer> prefs = JpPostalUtil.getPrefectures().join();
@@ -152,6 +155,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             }
 
             if (neededPrefNames.isEmpty()) {
+                if (forceNotify) postCombined();
                 return;
             }
 

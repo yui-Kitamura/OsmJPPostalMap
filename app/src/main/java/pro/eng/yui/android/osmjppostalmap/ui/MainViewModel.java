@@ -123,9 +123,15 @@ public class MainViewModel extends ViewModel {
     /**
      * 表示範囲にかかる都道府県のPOIをキャッシュ優先で読み込む。
      * @param latLonPoints 逆ジオコーディング対象の座標（各要素 {lat, lon}）。通常は4隅＋中心。
+     * @param forceNotify データが既にキャッシュされている場合でも通知を強制するかどうか。
      */
+    public void fetchPoisForArea(double[][] latLonPoints, boolean forceNotify) {
+        repository.loadPoisForArea(latLonPoints, forceNotify);
+    }
+
+    /** 互換用 */
     public void fetchPoisForArea(double[][] latLonPoints) {
-        repository.loadPoisForArea(latLonPoints);
+        fetchPoisForArea(latLonPoints, false);
     }
 
     /** 指定都道府県を強制的に再取得する（更新ダイアログの個別更新用） */

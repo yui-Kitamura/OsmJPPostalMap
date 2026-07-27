@@ -28,8 +28,9 @@ public interface PoiRepository {
      *
      * @param latLonPoints 逆ジオコーディング対象の座標配列（各要素は {lat, lon}）。
      *                     通常は表示範囲の4隅＋中心を渡す。
+     * @param forceNotify データが既にキャッシュされている場合でも LiveData を更新して通知するかどうか。
      */
-    void loadPoisForArea(double[][] latLonPoints);
+    void loadPoisForArea(double[][] latLonPoints, boolean forceNotify);
 
     /**
      * 指定した都道府県をキャッシュ有無に関わらずネットワークから再取得し、

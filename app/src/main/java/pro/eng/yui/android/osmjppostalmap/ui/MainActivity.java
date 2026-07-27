@@ -169,7 +169,7 @@ public class MainActivity extends AppCompatActivity {
                 map.removeOnLayoutChangeListener(this);
                 // 位置がレイアウトより先に確定した場合、または位置情報が不許可と確定した場合にロードする。
                 if (canLoadPois()) {
-                    updatePois();
+                    updatePois(true);
                 }
             }
         });
@@ -448,7 +448,7 @@ public class MainActivity extends AppCompatActivity {
             gpsZoomMinBounds = map.getBoundingBox();
             gpsZoomAdjustmentPending = true;
             initialLocationSet = true;
-            updatePois();
+            updatePois(true);
         }, 500);
     }
 
@@ -469,7 +469,7 @@ public class MainActivity extends AppCompatActivity {
         return TOKYO_CENTRAL_POST_OFFICE;
     }
 
-    private void updatePois() {
+    private void updatePois(boolean forceNotify) {
         if (!canLoadPois() || map == null || !map.isLayoutOccurred()) {
             return;
         }
@@ -482,7 +482,11 @@ public class MainActivity extends AppCompatActivity {
                 {bb.getLatSouth(), bb.getLonWest()},
                 {bb.getLatSouth(), bb.getLonEast()},
         };
-        viewModel.fetchPoisForArea(points);
+        viewModel.fetchPoisForArea(points, forceNotify);
+    }
+
+    private void updatePois() {
+        updatePois(false);
     }
 
     private void requestLocationPermissions() {
@@ -564,7 +568,7 @@ public class MainActivity extends AppCompatActivity {
                 startLocationUpdates();
             } else {
                 // 許可が得られなかった場合は、デフォルト位置（東京）でロードを開始する
-                updatePois();
+                updatePois(true);
             }
         }
     }
