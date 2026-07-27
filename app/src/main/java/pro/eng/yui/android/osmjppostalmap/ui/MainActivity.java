@@ -78,7 +78,6 @@ public class MainActivity extends AppCompatActivity {
     private boolean locationPermissionResolved = false;
     private boolean gpsZoomAdjustmentPending = false;
     private GeoPoint gpsZoomCenter;
-    private org.osmdroid.util.BoundingBox gpsZoomMinBounds;
     private double gpsZoomBase = GPS_MIN_ZOOM;
     private ProgressBar gpsProgress;
     private final ExecutorService markerStateExecutor = Executors.newSingleThreadExecutor();
@@ -401,7 +400,7 @@ public class MainActivity extends AppCompatActivity {
         if (gpsProgress != null && gpsZoomAdjustmentPending) {
             gpsProgress.setVisibility(View.GONE);
         }
-        if (!gpsZoomAdjustmentPending || gpsZoomCenter == null || gpsZoomMinBounds == null || pois == null) {
+        if (!gpsZoomAdjustmentPending || gpsZoomCenter == null || pois == null) {
             return;
         }
         gpsZoomAdjustmentPending = false;
@@ -411,9 +410,10 @@ public class MainActivity extends AppCompatActivity {
         if (width <= 0 || height <= 0) return;
         int shortSide = Math.min(width, height);
 
-        // gpsZoomBaseにおける1ピクセルあたりの緯度経度幅
-        double dLonPerPixel = gpsZoomMinBounds.getLongitudeSpan() / (double) width;
-        double dLatPerPixel = gpsZoomMinBounds.getLatitudeSpan() / (double) height;
+        // gpsZoomBaseにおける1ピクセルあたりの緯度経度幅を計算で求める
+        // degree_per_pixel = 360 / (256 * 2^zoom)
+        double dLonPerPixel = 360.0 / (Math.pow(2.0, gpsZoomBase) * 256.0);
+        double dLatPerPixel = dLonPerPixel / Math.cos(Math.toRadians(gpsZoomCenter.getLatitude()));
 
         // gpsZoomBaseにおける短辺相当の地理的範囲（半径）
         double halfLonBase = (shortSide * dLonPerPixel) / 2.0;
@@ -464,17 +464,16 @@ public class MainActivity extends AppCompatActivity {
         if (gpsProgress != null) gpsProgress.setVisibility(View.VISIBLE);
         gpsZoomCenter = mapTargetFor(location);
         gpsZoomBase = GPS_MIN_ZOOM;
+
+        // 地図のアニメーションと並行してPOIのフェッチを開始するため、即座にフラグを立ててロードを実行する。
+        // 計算式による範囲算出を導入したため、移動完了を待つ必要がない。
+        gpsZoomAdjustmentPending = true;
+        initialLocationSet = true;
+
         map.getController().setZoom(gpsZoomBase);
         map.getController().animateTo(gpsZoomCenter);
 
-        // 移動後の基準ズーム表示範囲を取得してからPOIをロードする。
-        // ロード完了時に、実際に画面内へ描画されるPOI数から最終ズームを決める。
-        map.postDelayed(() -> {
-            gpsZoomMinBounds = map.getBoundingBox();
-            gpsZoomAdjustmentPending = true;
-            initialLocationSet = true;
-            updatePois(true);
-        }, 500);
+        updatePois(true);
     }
 
     private static double longitudeDistance(double longitude1, double longitude2) {
@@ -505,7 +504,7 @@ public class MainActivity extends AppCompatActivity {
         double centerLon = center.getLongitude();
 
         double latMin, latMax, lonMin, lonMax;
-        if (gpsZoomAdjustmentPending && gpsZoomMinBounds != null) {
+        if (gpsZoomAdjustmentPending) {
             // GPSボタン押下直後など、適切なズーム判定に必要な広域をカバーする。
             // 全国(5.0)を対象にすると処理が重いため、一旦11.0（約32km四方）を上限とする。
             double searchMinZoom = Math.max(MIN_ZOOM, 11.0);
@@ -513,8 +512,9 @@ public class MainActivity extends AppCompatActivity {
             int width = map.getWidth();
             int height = map.getHeight();
             int shortSide = Math.min(width, height);
-            double dLatPerPixel = gpsZoomMinBounds.getLatitudeSpan() / (double) height;
-            double dLonPerPixel = gpsZoomMinBounds.getLongitudeSpan() / (double) width;
+
+            double dLonPerPixel = 360.0 / (Math.pow(2.0, gpsZoomBase) * 256.0);
+            double dLatPerPixel = dLonPerPixel / Math.cos(Math.toRadians(centerLat));
 
             double halfLat = (shortSide * dLatPerPixel / 2.0) / scale;
             double halfLon = (shortSide * dLonPerPixel / 2.0) / scale;
@@ -577,7 +577,19 @@ public class MainActivity extends AppCompatActivity {
 
     private void startLocationUpdates() {
         try {
-            if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            if (gpsProgress != null) gpsProgress.setVisibility(View.VISIBLE);
+            boolean gpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+            boolean networkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+            if (!gpsEnabled && !networkEnabled) {
+                if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
+                // 位置情報プロバイダが無効な場合は、確定を待たずにデフォルト（東京）でロードを開始する
+                initialLocationSet = true;
+                updatePois(true);
+                return;
+            }
+
+            if (gpsEnabled) {
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
                 Location loc = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 if (loc != null) {
@@ -589,7 +601,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
             }
-            if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+            if (networkEnabled) {
                 locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 10, locationListener);
                 Location loc = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                 if (loc != null && lastLocation == null) {
@@ -636,6 +648,7 @@ public class MainActivity extends AppCompatActivity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startLocationUpdates();
             } else {
+                if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
                 // 許可が得られなかった場合は、デフォルト位置（東京）でロードを開始する
                 updatePois(true);
             }
