@@ -38,6 +38,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
@@ -79,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
     private GeoPoint gpsZoomCenter;
     private org.osmdroid.util.BoundingBox gpsZoomMinBounds;
     private double gpsZoomBase = GPS_MIN_ZOOM;
+    private ProgressBar gpsProgress;
     private final ExecutorService markerStateExecutor = Executors.newSingleThreadExecutor();
     private final AtomicInteger markerRenderGeneration = new AtomicInteger();
 
@@ -130,6 +132,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         map = findViewById(R.id.map);
+        gpsProgress = findViewById(R.id.gps_progress);
         ScaleBarView scaleBarView = findViewById(R.id.scale_bar);
         if (scaleBarView != null) {
             scaleBarView.setMapView(map);
@@ -395,6 +398,9 @@ public class MainActivity extends AppCompatActivity {
      * POIのアイコン（中心点）が収まること。ただし必ず1POIは郵便局を含むこと。
      */
     private void adjustGpsZoomForPoiCount(List<OsmPoi> pois) {
+        if (gpsProgress != null && gpsZoomAdjustmentPending) {
+            gpsProgress.setVisibility(View.GONE);
+        }
         if (!gpsZoomAdjustmentPending || gpsZoomCenter == null || gpsZoomMinBounds == null || pois == null) {
             return;
         }
@@ -455,6 +461,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void performInitialGpsZoom(Location location) {
         if (location == null) return;
+        if (gpsProgress != null) gpsProgress.setVisibility(View.VISIBLE);
         gpsZoomCenter = mapTargetFor(location);
         gpsZoomBase = GPS_MIN_ZOOM;
         map.getController().setZoom(gpsZoomBase);
