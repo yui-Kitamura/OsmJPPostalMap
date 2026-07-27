@@ -23,6 +23,42 @@ public class ScaleBarView extends View {
     private final Paint barPaint = new Paint();
     private final Paint textPaint = new Paint();
 
+    private static class ScaleConfig {
+        final double totalMeters;
+        final int segments;
+        final String middleLabel;
+        final String rightLabel;
+
+        ScaleConfig(double totalMeters, int segments, String middleLabel, String rightLabel) {
+            this.totalMeters = totalMeters;
+            this.segments = segments;
+            this.middleLabel = middleLabel;
+            this.rightLabel = rightLabel;
+        }
+    }
+
+    private static final ScaleConfig[] CANDIDATES = {
+            // Metric < 80m
+            new ScaleConfig(10, 1, null, "10m"),
+            new ScaleConfig(20, 2, "10m", "20m"),
+            new ScaleConfig(50, 1, null, "50m"),
+            // Walking (80m = 1min)
+            new ScaleConfig(80, 1, null, "徒歩1分"),
+            new ScaleConfig(160, 2, "徒歩1分", "徒歩2分"),
+            new ScaleConfig(400, 1, null, "徒歩5分"),
+            new ScaleConfig(800, 2, "徒歩5分", "徒歩10分"),
+            new ScaleConfig(1200, 1, null, "徒歩15分"),
+            // Metric > 1200m
+            new ScaleConfig(2000, 2, "1km", "2km"),
+            new ScaleConfig(5000, 1, null, "5km"),
+            new ScaleConfig(10000, 2, "5km", "10km"),
+            new ScaleConfig(20000, 2, "10km", "20km"),
+            new ScaleConfig(50000, 1, null, "50km"),
+            new ScaleConfig(100000, 2, "50km", "100km"),
+            new ScaleConfig(200000, 2, "100km", "200km"),
+            new ScaleConfig(500000, 1, null, "500km")
+    };
+
     public ScaleBarView(Context context) {
         this(context, null);
     }
@@ -95,53 +131,46 @@ public class ScaleBarView extends View {
             return;
         }
 
-        // Scale candidates (meters)
-        // Walking: 1min=80m, 5min=400m, 15min=1200m
-        // Others: km units or smaller meters
-        double[] candidates = {
-            10, 20, 50, 80, 100, 200, 400, 800, 1000, 1200, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000
-        };
-
-        double selectedMeters = candidates[0];
-        for (double c : candidates) {
-            if (c <= metersInView) {
-                selectedMeters = c;
+        ScaleConfig selected = CANDIDATES[0];
+        for (ScaleConfig c : CANDIDATES) {
+            if (c.totalMeters <= metersInView) {
+                selected = c;
             } else {
                 break;
             }
         }
 
-        String text;
-        if (selectedMeters == 80) {
-            text = "徒歩1分";
-        } else if (selectedMeters == 400) {
-            text = "徒歩5分";
-        } else if (selectedMeters == 1200) {
-            text = "徒歩15分";
-        } else if (selectedMeters >= 1000) {
-            text = ((int) (selectedMeters / 1000)) + "km";
-        } else {
-            text = ((int) selectedMeters) + "m";
-        }
-
-        float barWidthPx = (float) (viewWidth * (selectedMeters / metersInView));
+        float barWidthPx = (float) (viewWidth * (selected.totalMeters / metersInView));
         float density = getResources().getDisplayMetrics().density;
         
         // Bar position (relative to View bottom)
         float barY = viewHeight - 4 * density;
         float tickHeight = 6 * density;
-        float tickHeightSub = 3 * density;
 
         // Draw bar
         canvas.drawLine(0, barY, barWidthPx, barY, barPaint);
-        // Left tick
+        // Left tick (0)
         canvas.drawLine(0, barY - tickHeight, 0, barY, barPaint);
         // Right tick
         canvas.drawLine(barWidthPx, barY - tickHeight, barWidthPx, barY, barPaint);
-        // Middle tick (2 segments)
-        canvas.drawLine(barWidthPx / 2, barY - tickHeightSub, barWidthPx / 2, barY, barPaint);
+        
+        // Labels Y position
+        float labelY = barY - tickHeight - 2 * density;
 
-        // Draw text
-        canvas.drawText(text, 2 * density, barY - tickHeight - 2 * density, textPaint);
+        // Draw "0" label
+        textPaint.setTextAlign(Paint.Align.LEFT);
+        canvas.drawText("0", 0, labelY, textPaint);
+
+        // Middle tick and label (if 2 segments)
+        if (selected.segments == 2 && selected.middleLabel != null) {
+            float midX = barWidthPx / 2;
+            canvas.drawLine(midX, barY - tickHeight, midX, barY, barPaint);
+            textPaint.setTextAlign(Paint.Align.CENTER);
+            canvas.drawText(selected.middleLabel, midX, labelY, textPaint);
+        }
+
+        // Draw right label
+        textPaint.setTextAlign(Paint.Align.RIGHT);
+        canvas.drawText(selected.rightLabel, barWidthPx, labelY, textPaint);
     }
 }
