@@ -97,9 +97,21 @@ public class PoiRepositoryImpl implements PoiRepository {
     private void preloadBoundaries() {
         JpPostalUtil.getPrefectures().thenAccept(prefs -> {
             for (String name : prefs.keySet()) {
-                JpPostalUtil.getBoundary(name, null).thenAccept(bbox -> {
-                    if (bbox != null) {
-                        prefBoundaryCache.put(name, bbox);
+                JpPostalUtil.getSubAreas(name).thenAccept(subs -> {
+                    if (subs != null && !subs.isEmpty()) {
+                        for (String sub : subs) {
+                            JpPostalUtil.getBoundary(name, sub).thenAccept(bbox -> {
+                                if (bbox != null) {
+                                    prefBoundaryCache.put(name + ":" + sub, bbox);
+                                }
+                            });
+                        }
+                    } else {
+                        JpPostalUtil.getBoundary(name, null).thenAccept(bbox -> {
+                            if (bbox != null) {
+                                prefBoundaryCache.put(name, bbox);
+                            }
+                        });
                     }
                 });
             }
@@ -295,7 +307,20 @@ public class PoiRepositoryImpl implements PoiRepository {
         }
         try {
             loadingStatusLiveData.postValue(prefName + "のデータを取得中");
-            List<OsmPoi> fetched = JpPostalUtil.getPoiData(prefName).join();
+            List<String> subs = JpPostalUtil.getSubAreas(prefName).join();
+            List<OsmPoi> fetched = new ArrayList<>();
+            if (subs != null && !subs.isEmpty()) {
+                for (String sub : subs) {
+                    loadingStatusLiveData.postValue(prefName + " " + sub + " のデータを取得中");
+                    List<OsmPoi> subData = JpPostalUtil.getPoiData(prefName, sub).join();
+                    if (subData != null) {
+                        fetched.addAll(subData);
+                    }
+                }
+            } else {
+                fetched = JpPostalUtil.getPoiData(prefName).join();
+            }
+
             if (local != null) {
                 loadingStatusLiveData.postValue(prefName + "のデータを処理中");
                 local.upsertPrefecture(prefCode, prefName, fetched, System.currentTimeMillis());
@@ -352,7 +377,12 @@ public class PoiRepositoryImpl implements PoiRepository {
             BBox b = entry.getValue();
             if (latMin <= b.getMaxLat() && latMax >= b.getMinLat() &&
                 lonMin <= b.getMaxLon() && lonMax >= b.getMinLon()) {
-                names.add(entry.getKey());
+                String key = entry.getKey();
+                if (key.contains(":")) {
+                    names.add(key.split(":")[0]);
+                } else {
+                    names.add(key);
+                }
             }
         }
         return names;
@@ -372,7 +402,12 @@ public class PoiRepositoryImpl implements PoiRepository {
                     BBox b = entry.getValue();
                     if (p[0] >= b.getMinLat() && p[0] <= b.getMaxLat() &&
                         p[1] >= b.getMinLon() && p[1] <= b.getMaxLon()) {
-                        names.add(entry.getKey());
+                        String key = entry.getKey();
+                        if (key.contains(":")) {
+                            names.add(key.split(":")[0]);
+                        } else {
+                            names.add(key);
+                        }
                     }
                 }
             }
