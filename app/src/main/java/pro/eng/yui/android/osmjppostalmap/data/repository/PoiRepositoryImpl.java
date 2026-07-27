@@ -79,6 +79,7 @@ public class PoiRepositoryImpl implements PoiRepository {
         if (repo.local == null) {
             repo.local = new PoiLocalDataSource(context.getApplicationContext());
             repo.loadAllFromCache();
+            repo.loadGridCacheFromDb();
         }
     }
 
@@ -301,6 +302,17 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     /**
+     * SQLiteに保存されているグリッドキャッシュ（逆ジオコーディング結果）を読み込む。
+     */
+    private void loadGridCacheFromDb() {
+        if (local == null) return;
+        executor.execute(() -> {
+            Map<Long, Set<String>> cached = local.getAllGridPrefs();
+            gridPrefCache.putAll(cached);
+        });
+    }
+
+    /**
      * {@link #currentPrefCodes} のPOIをSQLiteから結合し、上限判定のうえLiveDataへ反映する。
      * 処理速度向上のため、{@link #areaFilterEnabled} が有効な場合は表示範囲内のみに絞り込む。
      */
@@ -364,17 +376,31 @@ public class PoiRepositoryImpl implements PoiRepository {
             // バッチ結果が1県のみであれば、全問い合わせ点に対してその結果をキャッシュする。
             // 複数ある場合は特定できないため、問い合わせ点が1件のみの場合のみキャッシュする。
             if (newNames.size() == 1) {
-                Set<String> singleton = Collections.singleton(newNames.iterator().next());
+                String name = newNames.iterator().next();
+                Set<String> singleton = Collections.singleton(name);
                 for (double[] p : missing) {
-                    gridPrefCache.put(getGridKey(p, gridUnit), singleton);
+                    long key = getGridKey(p, gridUnit);
+                    gridPrefCache.put(key, singleton);
+                    if (local != null) local.upsertGridPref(key, name);
                 }
             } else if (newNames.isEmpty()) {
                 // 海上などの場合は空セットをキャッシュして再問い合わせを防ぐ
                 for (double[] p : missing) {
-                    gridPrefCache.put(getGridKey(p, gridUnit), Collections.emptySet());
+                    long key = getGridKey(p, gridUnit);
+                    gridPrefCache.put(key, Collections.emptySet());
+                    if (local != null) local.upsertGridPref(key, "");
                 }
             } else if (missing.size() == 1) {
-                gridPrefCache.put(getGridKey(missing.get(0), gridUnit), newNames);
+                long key = getGridKey(missing.get(0), gridUnit);
+                gridPrefCache.put(key, newNames);
+                if (local != null) {
+                    StringBuilder sb = new StringBuilder();
+                    for (String n : newNames) {
+                        if (sb.length() > 0) sb.append(",");
+                        sb.append(n);
+                    }
+                    local.upsertGridPref(key, sb.toString());
+                }
             }
             names.addAll(newNames);
         } catch (RuntimeException ignore) {

@@ -15,7 +15,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class PoiDbHelper extends SQLiteOpenHelper {
 
     public static final String DB_NAME = "poi_cache.db";
-    public static final int DB_VERSION = 2;
+    public static final int DB_VERSION = 3;
 
     /* poi table */
     public static final String TABLE_POI = "poi";
@@ -32,6 +32,11 @@ public class PoiDbHelper extends SQLiteOpenHelper {
     public static final String COL_META_PREF_CODE = "pref_code";
     public static final String COL_META_NAME = "name";
     public static final String COL_META_LAST_UPDATED = "last_updated"; // epoch millis
+
+    /* grid_pref_cache table */
+    public static final String TABLE_GRID_PREF = "grid_pref_cache";
+    public static final String COL_GRID_KEY = "grid_key";
+    public static final String COL_PREF_NAME = "pref_name";
 
     public PoiDbHelper(Context context) {
         super(context.getApplicationContext(), DB_NAME, null, DB_VERSION);
@@ -57,13 +62,20 @@ public class PoiDbHelper extends SQLiteOpenHelper {
                 + COL_META_NAME + " TEXT NOT NULL, "
                 + COL_META_LAST_UPDATED + " INTEGER NOT NULL"
                 + ")");
+
+        db.execSQL("CREATE TABLE " + TABLE_GRID_PREF + " ("
+                + COL_GRID_KEY + " INTEGER PRIMARY KEY, "
+                + COL_PREF_NAME + " TEXT"
+                + ")");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // v1のみ。将来のスキーマ変更時に移行処理を追加する。
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_POI);
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_PREF_META);
-        onCreate(db);
+        if (oldVersion < 3) {
+            db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_GRID_PREF + " ("
+                    + COL_GRID_KEY + " INTEGER PRIMARY KEY, "
+                    + COL_PREF_NAME + " TEXT"
+                    + ")");
+        }
     }
 }

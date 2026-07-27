@@ -10,8 +10,10 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
@@ -163,6 +165,39 @@ public class PoiLocalDataSource {
             int iTs = c.getColumnIndexOrThrow(PoiDbHelper.COL_META_LAST_UPDATED);
             while (c.moveToNext()) {
                 result.add(new PrefMeta(c.getInt(iCode), c.getString(iName), c.getLong(iTs)));
+            }
+        }
+        return result;
+    }
+
+    /* ---------- グリッドキャッシュ ---------- */
+
+    public void upsertGridPref(long gridKey, String prefNames) {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        ContentValues v = new ContentValues();
+        v.put(PoiDbHelper.COL_GRID_KEY, gridKey);
+        v.put(PoiDbHelper.COL_PREF_NAME, prefNames);
+        db.insertWithOnConflict(PoiDbHelper.TABLE_GRID_PREF, null,
+                v, SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    public Map<Long, Set<String>> getAllGridPrefs() {
+        SQLiteDatabase db = helper.getReadableDatabase();
+        Map<Long, Set<String>> result = new HashMap<>();
+        try (Cursor c = db.query(PoiDbHelper.TABLE_GRID_PREF, null,
+                null, null, null, null, null)) {
+            int iKey = c.getColumnIndexOrThrow(PoiDbHelper.COL_GRID_KEY);
+            int iName = c.getColumnIndexOrThrow(PoiDbHelper.COL_PREF_NAME);
+            while (c.moveToNext()) {
+                long key = c.getLong(iKey);
+                String namesStr = c.getString(iName);
+                Set<String> set = new HashSet<>();
+                if (namesStr != null && !namesStr.isEmpty()) {
+                    for (String s : namesStr.split(",")) {
+                        set.add(s.trim());
+                    }
+                }
+                result.put(key, set);
             }
         }
         return result;
