@@ -498,8 +498,6 @@ public class MainActivity extends AppCompatActivity {
         double centerLon = center.getLongitude();
 
         double latMin, latMax, lonMin, lonMax;
-        double step;
-
         if (gpsZoomAdjustmentPending && gpsZoomMinBounds != null) {
             // GPSボタン押下直後など、適切なズーム判定に必要な広域をカバーする。
             // 全国(5.0)を対象にすると処理が重いため、一旦11.0（約32km四方）を上限とする。
@@ -527,20 +525,23 @@ public class MainActivity extends AppCompatActivity {
             lonMax = Math.min(bb.getLonEast(), centerLon + range);
         }
 
-        // 逆ジオコーディング地点の密度を下げ、Overpass負荷を減らす（約11km間隔を最小とする）
-        step = Math.max(0.1, Math.max(latMax - latMin, lonMax - lonMin) / 5.0);
+        // 固定グリッド（1海里＝1/60度）へのアライメント
+        double gridUnit = 1.0 / 60.0;
+        double gridLatMin = Math.floor(latMin / gridUnit) * gridUnit;
+        double gridLatMax = Math.ceil(latMax / gridUnit) * gridUnit;
+        double gridLonMin = Math.floor(lonMin / gridUnit) * gridUnit;
+        double gridLonMax = Math.ceil(lonMax / gridUnit) * gridUnit;
+
+        // 逆ジオコーディング地点の密度を下げ、Overpass負荷を減らす
+        // 最小ステップを0.1度とし、かつグリッド単位（1海里）の整数倍にする
+        double rawStep = Math.max(0.1, Math.max(latMax - latMin, lonMax - lonMin) / 5.0);
+        double step = Math.ceil(rawStep / gridUnit) * gridUnit;
 
         List<double[]> pointsList = new ArrayList<>();
-        for (double lat = latMin; ; lat += step) {
-            boolean isLastLat = lat >= latMax;
-            double actualLat = isLastLat ? latMax : lat;
-            for (double lon = lonMin; ; lon += step) {
-                boolean isLastLon = lon >= lonMax;
-                double actualLon = isLastLon ? lonMax : lon;
-                pointsList.add(new double[]{actualLat, actualLon});
-                if (isLastLon) break;
+        for (double lat = gridLatMin; lat <= gridLatMax + (gridUnit / 2.0); lat += step) {
+            for (double lon = gridLonMin; lon <= gridLonMax + (gridUnit / 2.0); lon += step) {
+                pointsList.add(new double[]{lat, lon});
             }
-            if (isLastLat) break;
         }
 
         viewModel.fetchPoisForArea(pointsList.toArray(new double[0][0]), forceNotify);

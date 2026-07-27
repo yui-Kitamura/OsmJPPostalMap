@@ -58,6 +58,9 @@ public class PoiRepositoryImpl implements PoiRepository {
     private double activeLatMin = -90, activeLatMax = 90, activeLonMin = -180, activeLonMax = 180;
     private boolean areaFilterEnabled = false;
 
+    /** 逆ジオコーディング結果のキャッシュ。固定座標系（1海里）へのアライメントによりヒット率を高める。 */
+    private final Map<Long, Set<String>> gridPrefCache = new java.util.concurrent.ConcurrentHashMap<>();
+
     private static PoiRepositoryImpl instance;
 
     public static synchronized PoiRepositoryImpl getInstance() {
@@ -318,30 +321,71 @@ public class PoiRepositoryImpl implements PoiRepository {
      * admin_level=4（都道府県）の name 集合を返す。
      */
     private Set<String> reverseGeocodePrefectures(double[][] points) {
+        Set<String> names = new LinkedHashSet<>();
+        List<double[]> missing = new ArrayList<>();
+        double gridUnit = 1.0 / 60.0;
+
+        for (double[] p : points) {
+            long key = getGridKey(p, gridUnit);
+            Set<String> cached = gridPrefCache.get(key);
+            if (cached != null) {
+                names.addAll(cached);
+            } else {
+                missing.add(p);
+            }
+        }
+
+        if (missing.isEmpty()) {
+            return names;
+        }
+
         StringBuilder body = new StringBuilder();
-        for (int i = 0; i < points.length; i++) {
+        for (int i = 0; i < missing.size(); i++) {
             body.append(String.format(Locale.US,
-                    "is_in(%.7f,%.7f)->.a%d;", points[i][0], points[i][1], i));
+                    "is_in(%.7f,%.7f)->.a%d;", missing.get(i)[0], missing.get(i)[1], i));
         }
         body.append("(");
-        for (int i = 0; i < points.length; i++) {
+        for (int i = 0; i < missing.size(); i++) {
             body.append(String.format(Locale.US,
                     "rel(pivot.a%d)[\"boundary\"=\"administrative\"][\"admin_level\"=\"4\"];", i));
         }
         body.append(");");
 
-        Set<String> names = new LinkedHashSet<>();
+        Set<String> newNames = new LinkedHashSet<>();
         try {
             for (OsmPoi rel : JpPostalUtil.callOverpass(body.toString(), 3, 3).join()) {
                 String name = rel.getTag("name");
                 if (name != null && !name.isEmpty()) {
-                    names.add(name);
+                    newNames.add(name);
                 }
             }
+
+            // キャッシュへの書き戻し
+            // バッチ結果が1県のみであれば、全問い合わせ点に対してその結果をキャッシュする。
+            // 複数ある場合は特定できないため、問い合わせ点が1件のみの場合のみキャッシュする。
+            if (newNames.size() == 1) {
+                Set<String> singleton = Collections.singleton(newNames.iterator().next());
+                for (double[] p : missing) {
+                    gridPrefCache.put(getGridKey(p, gridUnit), singleton);
+                }
+            } else if (newNames.isEmpty()) {
+                // 海上などの場合は空セットをキャッシュして再問い合わせを防ぐ
+                for (double[] p : missing) {
+                    gridPrefCache.put(getGridKey(p, gridUnit), Collections.emptySet());
+                }
+            } else if (missing.size() == 1) {
+                gridPrefCache.put(getGridKey(missing.get(0), gridUnit), newNames);
+            }
+            names.addAll(newNames);
         } catch (RuntimeException ignore) {
-            // IllegalStateException(429/リトライ超過), IllegalArgumentException(400) 等を含めて無視
         }
         return names;
+    }
+
+    private long getGridKey(double[] p, double gridUnit) {
+        long latIdx = Math.round(p[0] / gridUnit);
+        long lonIdx = Math.round(p[1] / gridUnit);
+        return (latIdx << 32) | (lonIdx & 0xFFFFFFFFL);
     }
 
     @Override
