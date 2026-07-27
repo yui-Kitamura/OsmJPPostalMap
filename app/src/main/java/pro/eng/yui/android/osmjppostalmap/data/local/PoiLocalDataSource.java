@@ -36,21 +36,25 @@ public class PoiLocalDataSource {
     /* ---------- 書き込み ---------- */
 
     /**
-     * 指定した都道府県のPOIを全置換し、最終更新日時を記録する。
+     * 指定した都道府県・サブ領域のPOIを全置換し、最終更新日時を記録する。
      */
-    public void upsertPrefecture(int prefCode, String name, List<OsmPoi> pois, long timestamp) {
+    public void upsertArea(int prefCode, String subName, String name, List<OsmPoi> pois, long timestamp) {
         SQLiteDatabase db = helper.getWritableDatabase();
         db.beginTransaction();
         try {
+            String subStr = (subName == null) ? "" : subName;
+            // 指定のサブ領域のみ削除
             db.delete(PoiDbHelper.TABLE_POI,
-                    PoiDbHelper.COL_PREF_CODE + " = ?",
-                    new String[]{String.valueOf(prefCode)});
+                    PoiDbHelper.COL_PREF_CODE + " = ? AND (" + PoiDbHelper.COL_SUB_NAME + " = ? OR " + PoiDbHelper.COL_SUB_NAME + " IS NULL)",
+                    new String[]{String.valueOf(prefCode), subStr});
+
             for (OsmPoi poi : pois) {
                 db.insertWithOnConflict(PoiDbHelper.TABLE_POI, null,
-                        toValues(prefCode, poi), SQLiteDatabase.CONFLICT_REPLACE);
+                        toValues(prefCode, subName, poi), SQLiteDatabase.CONFLICT_REPLACE);
             }
             ContentValues meta = new ContentValues();
             meta.put(PoiDbHelper.COL_META_PREF_CODE, prefCode);
+            meta.put(PoiDbHelper.COL_META_SUB_NAME, subStr);
             meta.put(PoiDbHelper.COL_META_NAME, name);
             meta.put(PoiDbHelper.COL_META_LAST_UPDATED, timestamp);
             db.insertWithOnConflict(PoiDbHelper.TABLE_PREF_META, null,
@@ -64,10 +68,10 @@ public class PoiLocalDataSource {
     /**
      * 単一POIを追加/更新する（編集・新規作成の即時反映用）。
      */
-    public void upsertPoi(int prefCode, OsmPoi poi) {
+    public void upsertPoi(int prefCode, String subName, OsmPoi poi) {
         SQLiteDatabase db = helper.getWritableDatabase();
         db.insertWithOnConflict(PoiDbHelper.TABLE_POI, null,
-                toValues(prefCode, poi), SQLiteDatabase.CONFLICT_REPLACE);
+                toValues(prefCode, subName, poi), SQLiteDatabase.CONFLICT_REPLACE);
     }
 
     /**
@@ -90,12 +94,13 @@ public class PoiLocalDataSource {
 
     /* ---------- 読み込み ---------- */
 
-    public boolean hasPrefecture(int prefCode) {
+    public boolean hasArea(int prefCode, String subName) {
         SQLiteDatabase db = helper.getReadableDatabase();
+        String subStr = (subName == null) ? "" : subName;
         try (Cursor c = db.query(PoiDbHelper.TABLE_PREF_META,
                 new String[]{PoiDbHelper.COL_META_PREF_CODE},
-                PoiDbHelper.COL_META_PREF_CODE + " = ?",
-                new String[]{String.valueOf(prefCode)},
+                PoiDbHelper.COL_META_PREF_CODE + " = ? AND " + PoiDbHelper.COL_META_SUB_NAME + " = ?",
+                new String[]{String.valueOf(prefCode), subStr},
                 null, null, null, "1")) {
             return c.moveToFirst();
         }
@@ -159,12 +164,13 @@ public class PoiLocalDataSource {
         List<PrefMeta> result = new ArrayList<>();
         try (Cursor c = db.query(PoiDbHelper.TABLE_PREF_META, null,
                 null, null, null, null,
-                PoiDbHelper.COL_META_PREF_CODE + " ASC")) {
+                PoiDbHelper.COL_META_PREF_CODE + " ASC, " + PoiDbHelper.COL_META_SUB_NAME + " ASC")) {
             int iCode = c.getColumnIndexOrThrow(PoiDbHelper.COL_META_PREF_CODE);
+            int iSub = c.getColumnIndexOrThrow(PoiDbHelper.COL_META_SUB_NAME);
             int iName = c.getColumnIndexOrThrow(PoiDbHelper.COL_META_NAME);
             int iTs = c.getColumnIndexOrThrow(PoiDbHelper.COL_META_LAST_UPDATED);
             while (c.moveToNext()) {
-                result.add(new PrefMeta(c.getInt(iCode), c.getString(iName), c.getLong(iTs)));
+                result.add(new PrefMeta(c.getInt(iCode), c.getString(iName), c.getString(iSub), c.getLong(iTs)));
             }
         }
         return result;
@@ -205,9 +211,10 @@ public class PoiLocalDataSource {
 
     /* ---------- シリアライズ ---------- */
 
-    private ContentValues toValues(int prefCode, OsmPoi poi) {
+    private ContentValues toValues(int prefCode, String subName, OsmPoi poi) {
         ContentValues v = new ContentValues();
         v.put(PoiDbHelper.COL_PREF_CODE, prefCode);
+        v.put(PoiDbHelper.COL_SUB_NAME, subName);
         v.put(PoiDbHelper.COL_ID, poi.getId());
         v.put(PoiDbHelper.COL_TYPE, poi.getType());
         v.put(PoiDbHelper.COL_NODE, serializeNode(poi));

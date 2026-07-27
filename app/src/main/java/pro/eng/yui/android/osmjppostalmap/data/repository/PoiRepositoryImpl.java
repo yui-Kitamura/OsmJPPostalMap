@@ -187,34 +187,37 @@ public class PoiRepositoryImpl implements PoiRepository {
         final double fLonMax = lonMax;
 
         runOnExecutor("表示エリアを判定中", () -> {
-            // 表示範囲にかかる都道府県名を判定する。
-            Set<String> prefNames;
+            // 表示範囲にかかるエリア（都道府県またはサブ領域）を判定する。
+            Set<String> areaKeys;
             if (!prefBoundaryCache.isEmpty()) {
                 // BBoxを用いたローカル判定（高速）
-                prefNames = findIntersectingPrefectures(fLatMin, fLatMax, fLonMin, fLonMax);
+                areaKeys = findIntersectingAreas(fLatMin, fLatMax, fLonMin, fLonMax);
             } else {
                 // まだBBoxが読み込まれていない場合は従来の逆ジオコーディング
-                prefNames = reverseGeocodePrefectures(latLonPoints);
+                areaKeys = reverseGeocodeAreas(latLonPoints);
             }
 
-            if (prefNames.isEmpty()) {
+            if (areaKeys.isEmpty()) {
                 if (forceNotify) postCombined();
                 return;
             }
 
-            // 新規フェッチが必要な県を特定
+            // 新規フェッチが必要なエリアを特定
             Map<String, Integer> prefs = JpPostalUtil.getPrefectures().join();
-            List<String> neededPrefNames = new ArrayList<>();
-            for (String name : prefNames) {
-                Integer code = prefs.get(name);
+            List<String[]> neededAreas = new ArrayList<>(); // [prefName, subName]
+            for (String key : areaKeys) {
+                String prefName = key.contains(":") ? key.split(":")[0] : key;
+                String subName = key.contains(":") ? key.split(":")[1] : null;
+
+                Integer code = prefs.get(prefName);
                 if (code == null || code < 0) { continue; }
                 currentPrefCodes.add(code);
-                if (local != null && !local.hasPrefecture(code)) {
-                    neededPrefNames.add(name);
+                if (local != null && !local.hasArea(code, subName)) {
+                    neededAreas.add(new String[]{prefName, subName});
                 }
             }
 
-            if (neededPrefNames.isEmpty()) {
+            if (neededAreas.isEmpty()) {
                 if (forceNotify) postCombined();
                 return;
             }
@@ -227,9 +230,9 @@ public class PoiRepositoryImpl implements PoiRepository {
             lastFetchTime = currentTime;
             startCooldownTimer();
 
-            for (String name : neededPrefNames) {
-                Integer code = prefs.get(name);
-                loadPref(code, name, false);
+            for (String[] area : neededAreas) {
+                Integer code = prefs.get(area[0]);
+                loadArea(code, area[0], area[1], false);
             }
 
             // 新しくフェッチしたデータがあるため再反映
@@ -248,7 +251,7 @@ public class PoiRepositoryImpl implements PoiRepository {
         startCooldownTimer();
 
         runOnExecutor(prefName + "のデータを再取得中", () -> {
-            loadPref(prefCode, prefName, true); // 強制ネットワーク取得
+            loadArea(prefCode, prefName, null, true); // 強制ネットワーク取得
             postCombined();
         });
     }
@@ -295,40 +298,52 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     /**
-     * 1都道府県を読み込む。{@code forceNetwork} が false かつキャッシュ済みなら
+     * 指定のエリアを読み込む。{@code forceNetwork} が false かつキャッシュ済みなら
      * SQLiteから読み、そうでなければネットワーク取得してSQLiteへ保存する。
-     * 読み込んだ県は {@link #currentPrefCodes} に追加される。
+     * 読み込んだエリアの県コードは {@link #currentPrefCodes} に追加される。
      */
-    private void loadPref(int prefCode, String prefName, boolean forceNetwork) {
+    private void loadArea(int prefCode, String prefName, String subName, boolean forceNetwork) {
         currentPrefCodes.add(prefCode);
-        boolean cached = local != null && local.hasPrefecture(prefCode);
+        boolean cached = local != null && local.hasArea(prefCode, subName);
         if (!forceNetwork && cached) {
             return; // SQLiteの内容をそのまま利用（postCombinedで読み出す）
         }
         try {
-            loadingStatusLiveData.postValue(prefName + "のデータを取得中");
-            Map<String, Integer> subAll = JpPostalUtil.getSubAreas(prefName).join();
-            Set<String> subs = subAll.keySet();
+            String label = prefName + (subName != null ? " " + subName : "");
+            loadingStatusLiveData.postValue(label + "のデータを取得中");
+
             List<OsmPoi> fetched = new ArrayList<>();
-            if (subs != null && !subs.isEmpty()) {
-                for (String sub : subs) {
-                    loadingStatusLiveData.postValue(prefName + " " + sub + " のデータを取得中");
-                    List<OsmPoi> subData = JpPostalUtil.getPoiData(prefName, sub).join();
-                    if (subData != null) {
-                        fetched.addAll(subData);
-                    }
-                }
+            if (subName != null) {
+                fetched = JpPostalUtil.getPoiData(prefName, subName).join();
             } else {
-                fetched = JpPostalUtil.getPoiData(prefName).join();
+                // サブ領域指定がない場合、もしサブ領域が存在するならそれらを全て取得する
+                Map<String, Integer> subAll = JpPostalUtil.getSubAreas(prefName).join();
+                Set<String> subs = subAll.keySet();
+                if (subs != null && !subs.isEmpty()) {
+                    for (String sub : subs) {
+                        loadingStatusLiveData.postValue(prefName + " " + sub + " のデータを取得中");
+                        List<OsmPoi> subData = JpPostalUtil.getPoiData(prefName, sub).join();
+                        if (subData != null) {
+                            fetched.addAll(subData);
+                        }
+                    }
+                } else {
+                    fetched = JpPostalUtil.getPoiData(prefName).join();
+                }
             }
 
             if (local != null) {
-                loadingStatusLiveData.postValue(prefName + "のデータを処理中");
-                local.upsertPrefecture(prefCode, prefName, fetched, System.currentTimeMillis());
+                loadingStatusLiveData.postValue(label + "のデータを処理中");
+                local.upsertArea(prefCode, subName, prefName, fetched, System.currentTimeMillis());
             }
         } catch (RuntimeException e) {
             errorLiveData.postValue("データの取得に失敗しました: " + prefName);
         }
+    }
+
+    /** 互換用。 */
+    private void loadPref(int prefCode, String prefName, boolean forceNetwork) {
+        loadArea(prefCode, prefName, null, forceNetwork);
     }
 
     /**
@@ -372,29 +387,24 @@ public class PoiRepositoryImpl implements PoiRepository {
         poisLiveData.postValue(all);
     }
 
-    private Set<String> findIntersectingPrefectures(double latMin, double latMax, double lonMin, double lonMax) {
-        Set<String> names = new LinkedHashSet<>();
+    private Set<String> findIntersectingAreas(double latMin, double latMax, double lonMin, double lonMax) {
+        Set<String> keys = new LinkedHashSet<>();
         for (Map.Entry<String, BBox> entry : prefBoundaryCache.entrySet()) {
             BBox b = entry.getValue();
             if (latMin <= b.getMaxLat() && latMax >= b.getMinLat() &&
                 lonMin <= b.getMaxLon() && lonMax >= b.getMinLon()) {
-                String key = entry.getKey();
-                if (key.contains(":")) {
-                    names.add(key.split(":")[0]);
-                } else {
-                    names.add(key);
-                }
+                keys.add(entry.getKey());
             }
         }
-        return names;
+        return keys;
     }
 
     /**
-     * admin_level=4（都道府県）の name 集合を返す。
+     * 表示範囲にかかるエリアキーを返す。
      * BBoxキャッシュとグリッドキャッシュのみを使用する。
      */
-    private Set<String> reverseGeocodePrefectures(double[][] points) {
-        Set<String> names = new LinkedHashSet<>();
+    private Set<String> reverseGeocodeAreas(double[][] points) {
+        Set<String> keys = new LinkedHashSet<>();
 
         // 1. BBoxキャッシュで判定を試みる
         if (!prefBoundaryCache.isEmpty()) {
@@ -403,12 +413,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                     BBox b = entry.getValue();
                     if (p[0] >= b.getMinLat() && p[0] <= b.getMaxLat() &&
                         p[1] >= b.getMinLon() && p[1] <= b.getMaxLon()) {
-                        String key = entry.getKey();
-                        if (key.contains(":")) {
-                            names.add(key.split(":")[0]);
-                        } else {
-                            names.add(key);
-                        }
+                        keys.add(entry.getKey());
                     }
                 }
             }
@@ -420,11 +425,11 @@ public class PoiRepositoryImpl implements PoiRepository {
             long key = getGridKey(p, gridUnit);
             Set<String> cached = gridPrefCache.get(key);
             if (cached != null) {
-                names.addAll(cached);
+                keys.addAll(cached);
             }
         }
 
-        return names;
+        return keys;
     }
 
     private long getGridKey(double[] p, double gridUnit) {
@@ -530,12 +535,15 @@ public class PoiRepositoryImpl implements PoiRepository {
     private void cacheEditedPoi(OsmPoi poi) {
         if (local == null) { return; }
         try {
-            Set<String> names = reverseGeocodePrefectures(new double[][]{{poi.getLat(), poi.getLon()}});
-            if (names.isEmpty()) { return; }
-            String name = names.iterator().next();
-            Integer code = JpPostalUtil.getPrefectures().join().get(name);
+            Set<String> keys = reverseGeocodeAreas(new double[][]{{poi.getLat(), poi.getLon()}});
+            if (keys.isEmpty()) { return; }
+            String key = keys.iterator().next();
+            String prefName = key.contains(":") ? key.split(":")[0] : key;
+            String subName = key.contains(":") ? key.split(":")[1] : null;
+
+            Integer code = JpPostalUtil.getPrefectures().join().get(prefName);
             if (code == null || code < 0) { return; }
-            local.upsertPoi(code, poi);
+            local.upsertPoi(code, subName, poi);
             // 表示中であれば再構成
             if (currentPrefCodes.contains(code)) {
                 postCombined();
