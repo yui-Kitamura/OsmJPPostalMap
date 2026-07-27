@@ -15,7 +15,6 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import pro.eng.yui.android.osmjppostalmap.BuildConfig;
@@ -47,7 +46,6 @@ public class PoiRepositoryImpl implements PoiRepository {
     private static final int MAX_RENDER = 500;
     private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private volatile String currentOperation;
     private Runnable cooldownRunnable;
     private final AtomicInteger pendingOperations = new AtomicInteger();
 
@@ -115,13 +113,11 @@ public class PoiRepositoryImpl implements PoiRepository {
             loadingLiveData.postValue(true);
         }
         executor.execute(() -> {
-            currentOperation = operation;
             try {
                 task.run();
             } catch (Exception e) {
                 errorLiveData.postValue("処理中にエラーが発生しました");
             } finally {
-                currentOperation = null;
                 if (pendingOperations.decrementAndGet() == 0) {
                     loadingLiveData.postValue(false);
                 }
@@ -344,9 +340,7 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public void savePoi(OsmPoi poi, String comment, PoiSaveCallback callback) {
-        AtomicBoolean started = showWaitingProgress(callback);
         runOnExecutor("POIを保存中", () -> {
-            started.set(true);
             // 1. Create Changeset
             postProgress(callback, "Changesetを作成中…");
             ChangeSetInfo csInfo = new ChangeSetInfo(0, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, new HashMap<>());
@@ -366,17 +360,15 @@ public class PoiRepositoryImpl implements PoiRepository {
                 postError(callback, "入力内容の反映に失敗しました。リトライしてください");
                 return;
             }
-            // 2. ローカルSQLiteへ即時反映（既存POIはidが判っているのでそのままupsert）
-            cacheEditedPoi(poi);
             postSuccess(callback);
+            // 2. ローカルSQLiteへ即時反映（既存POIはidが判っているのでそのままupsert）
+            executor.execute(() -> cacheEditedPoi(poi));
         });
     }
 
     @Override
     public void addPostBox(double lat, double lon, String shape, String branch, String postboxRef, String collectionTimes, String note, Map<String, String> addressTags, PoiSaveCallback callback) {
-        AtomicBoolean started = showWaitingProgress(callback);
         runOnExecutor("郵便ポストを保存中", () -> {
-            started.set(true);
             Map<String, String> csTags = new HashMap<>();
             ChangeSetInfo createInfo = new ChangeSetInfo(0L, "郵便ポストの追加",
                     "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, csTags);
@@ -416,17 +408,18 @@ public class PoiRepositoryImpl implements PoiRepository {
                 OsmPoi newPoi = new OsmPoi(lat, lon, "node", poiTags);
                 // OSM API call
                 postProgress(callback, "入力内容を送信中…");
-                JpPostalUtil.callOsmCreateOrModifyElement(accessToken, csIdInfo, newPoi);
+                JpPostalUtil.callOsmCreateOrModifyElement(accessToken, csIdInfo, newPoi).join();
                 postProgress(callback, "Changesetを確定中…");
-                JpPostalUtil.callOsmCloseChangeset(accessToken, csIdInfo);
+                JpPostalUtil.callOsmCloseChangeset(accessToken, csIdInfo).join();
+
+                postSuccess(callback);
 
                 // ローカルSQLiteへ即時反映。
                 // 注: callOsmCreateOrModifyElement が採番IDを返さないため、
                 //     暫定的に一意な負のidで保存する（次回の県フル更新で正規データに置換される）。
                 long tempId = -System.currentTimeMillis();
                 OsmPoi cachePoi = new OsmPoi(tempId, lat, lon, "node", poiTags, 0);
-                cacheEditedPoi(cachePoi);
-                postSuccess(callback);
+                executor.execute(() -> cacheEditedPoi(cachePoi));
             } catch (RuntimeException e) {
                 postError(callback, "通信エラー: " + e.getMessage());
             }
@@ -518,24 +511,6 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     private void postProgress(PoiSaveCallback callback, String message) {
         handler.post(() -> callback.onProgress(message));
-    }
-
-    /** 保存タスクがExecutorで開始されるまで、先行処理の内容を定期的に通知する。 */
-    private AtomicBoolean showWaitingProgress(PoiSaveCallback callback) {
-        AtomicBoolean started = new AtomicBoolean(false);
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (started.get()) { return; }
-                String operation = currentOperation;
-                if (operation == null) {
-                    operation = "先行処理の完了待ち";
-                }
-                callback.onProgress("処理を開始中…（現在：" + operation + "）");
-                handler.postDelayed(this, 1000);
-            }
-        });
-        return started;
     }
 
     @Override
