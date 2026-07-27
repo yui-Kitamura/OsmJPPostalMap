@@ -101,7 +101,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     @Override
     public LiveData<List<OsmPoi>> getPois(String prefName) {
         // 互換用。バックグラウンドでキャッシュ優先の単一県読み込みを行う。
-        runOnExecutor("都道府県データを読み込み中", () -> {
+        runOnExecutor(prefName + "のデータを準備中", () -> {
             Map<String, Integer> prefs = JpPostalUtil.getPrefectures().join();
             Integer code = prefs.get(prefName);
             if (code == null || code < 0) { return; }
@@ -154,7 +154,7 @@ public class PoiRepositoryImpl implements PoiRepository {
         this.activeLonMax = lonMax;
         this.areaFilterEnabled = true;
 
-        runOnExecutor("地図データを読み込み中", () -> {
+        runOnExecutor("表示エリアを判定中", () -> {
             // キャッシュ済みデータは初期化時に配信済み。地図移動のたびに同じ一覧を
             // 再配信すると全マーカーの付け直しが発生するため、通常は配信しない。
             // 表示範囲にかかる都道府県名を逆ジオコーディングで特定する。
@@ -191,7 +191,6 @@ public class PoiRepositoryImpl implements PoiRepository {
 
             for (String name : neededPrefNames) {
                 Integer code = prefs.get(name);
-                loadingStatusLiveData.postValue(name + "のデータを読み込み中");
                 loadPref(code, name, false);
             }
 
@@ -210,7 +209,7 @@ public class PoiRepositoryImpl implements PoiRepository {
         lastFetchTime = currentTime;
         startCooldownTimer();
 
-        runOnExecutor("都道府県データを更新中", () -> {
+        runOnExecutor(prefName + "のデータを再取得中", () -> {
             loadPref(prefCode, prefName, true); // 強制ネットワーク取得
             postCombined();
         });
@@ -218,7 +217,7 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public void deletePrefectureCache(int prefCode) {
-        runOnExecutor("都道府県キャッシュを削除中", () -> {
+        runOnExecutor("キャッシュを削除中", () -> {
             if (local == null) { return; }
             local.deletePrefecture(prefCode);
             currentPrefCodes.remove(prefCode);
@@ -269,15 +268,18 @@ public class PoiRepositoryImpl implements PoiRepository {
             return; // SQLiteの内容をそのまま利用（postCombinedで読み出す）
         }
         try {
+            loadingStatusLiveData.postValue(prefName + "のデータを取得中");
             List<OsmPoi> fetched = JpPostalUtil.getPoiData(prefName).join();
             if (fetched.isEmpty()) {
                 // データソースに無い場合はOverpassフォールバック
+                loadingStatusLiveData.postValue(prefName + "のデータを取得中 (Overpass)");
                 try {
                     fetched = JpPostalUtil.callOverpass(
                             OverpassQuery.getPostSearchQuery(prefName), 3, 5).join();
                 } catch (IllegalStateException ignore) { }
             }
             if (local != null) {
+                loadingStatusLiveData.postValue(prefName + "のデータを処理中");
                 local.upsertPrefecture(prefCode, prefName, fetched, System.currentTimeMillis());
             }
         } catch (RuntimeException e) {
@@ -289,7 +291,7 @@ public class PoiRepositoryImpl implements PoiRepository {
      * アプリ起動時、SQLiteに保存されているすべての都道府県を読み込む。
      */
     private void loadAllFromCache() {
-        runOnExecutor("ローカルデータを読み込み中", () -> {
+        runOnExecutor("保存済みデータを読み込み中", () -> {
             if (local == null) return;
             List<PrefMeta> saved = local.getAllPrefMeta();
             if (saved.isEmpty()) return;
@@ -321,6 +323,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             // 範囲未指定時は全件ロードを避ける（起動時のブロッキング防止）
             return;
         }
+        loadingStatusLiveData.postValue("表示データを抽出中");
         List<OsmPoi> all = local.getByBoundingBox(activeLatMin, activeLatMax, activeLonMin, activeLonMax);
         poisLiveData.postValue(all);
     }
@@ -423,7 +426,7 @@ public class PoiRepositoryImpl implements PoiRepository {
         lastFetchTime = currentTime;
         startCooldownTimer();
 
-        runOnExecutor("POI情報を取得中", () -> {
+        runOnExecutor("詳細情報を取得中", () -> {
             try {
                 List<OsmPoi> poiList = JpPostalUtil.callOverpass(query, 3, 5).join();
                 poiLiveData.postValue(poiList.get(0));
@@ -438,7 +441,7 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public void savePoi(OsmPoi poi, String comment, PoiSaveCallback callback) {
-        runOnExecutor("POIを保存中", () -> {
+        runOnExecutor("修正を送信中", () -> {
             // 1. Create Changeset
             postProgress(callback, "Changesetを作成中…");
             ChangeSetInfo csInfo = new ChangeSetInfo(0, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, new HashMap<>());
@@ -466,7 +469,7 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public void addPostBox(double lat, double lon, String shape, String branch, String postboxRef, String collectionTimes, String note, Map<String, String> addressTags, PoiSaveCallback callback) {
-        runOnExecutor("郵便ポストを保存中", () -> {
+        runOnExecutor("新規ポストを送信中", () -> {
             Map<String, String> csTags = new HashMap<>();
             ChangeSetInfo createInfo = new ChangeSetInfo(0L, "郵便ポストの追加",
                     "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, csTags);
