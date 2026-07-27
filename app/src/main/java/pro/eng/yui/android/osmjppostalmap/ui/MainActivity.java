@@ -64,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_LOCATION = 100;
     private static final double GPS_MIN_ZOOM = 18.0;
     private static final double GPS_MAX_ZOOM = 20.0;
-    private static final double MIN_ZOOM = 10.0;
+    private static final double MIN_ZOOM = 7.0;
     // 日本の領域（離島を含む）を収める表示可能範囲。
     private static final BoundingBox JAPAN_BOUNDS =
             new BoundingBox(45.60, 154.00, 20.20, 122.70);
