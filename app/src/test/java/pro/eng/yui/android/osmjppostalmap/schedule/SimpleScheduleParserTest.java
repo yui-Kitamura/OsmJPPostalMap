@@ -139,6 +139,23 @@ public class SimpleScheduleParserTest {
         SimpleScheduleParser parser = new SimpleScheduleParser();
         ScheduleResult result = parser.parse(new OpeningHours("24/7"), zdt.toInstant().toEpochMilli(), ScheduleParser.TimeType.OPENING_HOURS);
         assertEquals(ScheduleResult.CurrentState.OPENING, result.getCurrentState());
+        
+        // 現状の確認用
+        if (result.getNextEvent() != null) {
+            System.out.println("Next event for 24/7 at 12:00: " + result.getNextEvent().getTimestamp());
+        }
+    }
+
+    @Test
+    public void testTwentyFourSevenNextEventReproduction() {
+        // 2026-07-21 (火) 12:00
+        ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 21, 12, 0, 0, 0, JpPostalUtil.JST);
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        ScheduleResult result = parser.parse(new OpeningHours("24/7"), zdt.toInstant().toEpochMilli(), ScheduleParser.TimeType.OPENING_HOURS);
+
+        assertEquals(ScheduleResult.CurrentState.OPENING, result.getCurrentState());
+        // 修正後: 24/7 の場合、nextEvent は null であるべき
+        assertNull(result.getNextEvent());
     }
 
     /**

@@ -28,6 +28,11 @@ public class SimpleScheduleParser implements ScheduleParser {
                             ScheduleResult.CurrentState.PARSE_ERROR,
                             new HashMap<>(), tagValue);
                 }
+                if (tagValue.getOrigin().equals("24/7")) {
+                    return new ScheduleResult(null, null, "24時間営業",
+                            ScheduleResult.CurrentState.OPENING, parsedMap, tagValue);
+                }
+
                 Days today = JpPostalUtil.getDays(now.toLocalDate());
                 OpeningHoursParser.DaySchedule todaySchedule = parsedMap.get(today);
                 int nowOnMinutes = now.getHour() * 60 + now.getMinute();
@@ -40,7 +45,7 @@ public class SimpleScheduleParser implements ScheduleParser {
                         if (nowOnMinutes < closedAtTodays) {
                             //延長営業時間内
                             ZonedDateTime closeAt = ZonedDateTime.of(
-                                    LocalDate.now(), closedAt.getTime(), JpPostalUtil.JST
+                                    now.toLocalDate(), closedAt.getTime(), JpPostalUtil.JST
                             );
                             return new ScheduleResult(
                                     new ScheduleResult.Event(closeAt, ScheduleResult.EventType.CLOSE),
@@ -81,11 +86,17 @@ public class SimpleScheduleParser implements ScheduleParser {
                             continue;
                         }
                         ZonedDateTime openAt = ZonedDateTime.of(
-                                LocalDate.now(), focus.openAt.getTime(), JpPostalUtil.JST
+                                now.toLocalDate(), focus.openAt.getTime(), JpPostalUtil.JST
                         );
                         ZonedDateTime closeAt = ZonedDateTime.of(
-                                LocalDate.now(), focus.closeAt.getTime(), JpPostalUtil.JST
+                                now.toLocalDate(), focus.closeAt.getTime(), JpPostalUtil.JST
                         );
+                        if (focus.closeAt.totalMinute >= 24 * 60) {
+                            closeAt = closeAt.plusMinutes(focus.closeAt.totalMinute - 1440);
+                            if (focus.closeAt.totalMinute == 24 * 60) {
+                                closeAt = closeAt.plusDays(1);
+                            }
+                        }
                         if (state == ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON) {
                             return new ScheduleResult(
                                     new ScheduleResult.Event(openAt, ScheduleResult.EventType.OPEN),
