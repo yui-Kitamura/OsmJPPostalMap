@@ -179,7 +179,7 @@ public class MainActivity extends AppCompatActivity {
         // Observe Filtered POIs
         viewModel.getFilteredPois().observe(this, pois -> {
             int renderGeneration = markerRenderGeneration.incrementAndGet();
-            adjustGpsZoomForPoiCount(viewModel.getPois().getValue());
+            adjustGpsZoomForPoiCount(pois);
             map.getOverlays().removeIf(overlay -> overlay instanceof PoiMarker);
             viewModel.updateAccessToken(authRepository.getAccessToken());
 
@@ -400,6 +400,7 @@ public class MainActivity extends AppCompatActivity {
         double halfLatBase = (shortSide * dLatPerPixel) / 2.0;
 
         double targetZoom = GPS_MAX_ZOOM;
+        boolean postOfficeOnly = Boolean.TRUE.equals(viewModel.getFilterPostOfficeOnly().getValue());
         // 最大ズームから順に下げていき、条件（5POI以上かつ郵便局1以上）を満たす最初のズームを採用する
         for (double candidateZoom = GPS_MAX_ZOOM; candidateZoom >= MIN_ZOOM; candidateZoom -= 1.0) {
             double scale = Math.pow(2.0, candidateZoom - gpsZoomBase);
@@ -423,7 +424,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
-            if (visibleCount >= 5 && hasPostOffice && hasPostBox) {
+            if (visibleCount >= 5 && hasPostOffice && (postOfficeOnly || hasPostBox)) {
                 targetZoom = candidateZoom;
                 break;
             }
