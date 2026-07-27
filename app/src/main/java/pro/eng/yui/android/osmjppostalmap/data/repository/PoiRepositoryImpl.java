@@ -98,8 +98,8 @@ public class PoiRepositoryImpl implements PoiRepository {
         JpPostalUtil.getPrefectures().thenAccept(prefs -> {
             for (String name : prefs.keySet()) {
                 JpPostalUtil.getSubAreas(name).thenAccept(subs -> {
-                    if (subs != null && !subs.isEmpty()) {
-                        for (String sub : subs) {
+                    if (subs != null && !subs.keySet().isEmpty()) {
+                        for (String sub : subs.keySet()) {
                             JpPostalUtil.getBoundary(name, sub).thenAccept(bbox -> {
                                 if (bbox != null) {
                                     prefBoundaryCache.put(name + ":" + sub, bbox);
@@ -307,7 +307,8 @@ public class PoiRepositoryImpl implements PoiRepository {
         }
         try {
             loadingStatusLiveData.postValue(prefName + "のデータを取得中");
-            List<String> subs = JpPostalUtil.getSubAreas(prefName).join();
+            Map<String, Integer> subAll = JpPostalUtil.getSubAreas(prefName).join();
+            Set<String> subs = subAll.keySet();
             List<OsmPoi> fetched = new ArrayList<>();
             if (subs != null && !subs.isEmpty()) {
                 for (String sub : subs) {
