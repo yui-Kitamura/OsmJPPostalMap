@@ -54,6 +54,9 @@ public class PoiRepositoryImpl implements PoiRepository {
     private PoiLocalDataSource local;
     /** 現在描画対象としている都道府県コード（再描画の再構成に使用） */
     private final Set<Integer> currentPrefCodes = new LinkedHashSet<>();
+    /** 現在表示・計算対象としている地理的範囲 */
+    private double activeLatMin = -90, activeLatMax = 90, activeLonMin = -180, activeLonMax = 180;
+    private boolean areaFilterEnabled = false;
 
     private static PoiRepositoryImpl instance;
 
@@ -131,6 +134,21 @@ public class PoiRepositoryImpl implements PoiRepository {
     @Override
     public void loadPoisForArea(double[][] latLonPoints, boolean forceNotify) {
         if (latLonPoints == null || latLonPoints.length == 0) { return; }
+
+        // 表示・計算対象範囲の更新
+        double latMin = Double.MAX_VALUE, latMax = -Double.MAX_VALUE;
+        double lonMin = Double.MAX_VALUE, lonMax = -Double.MAX_VALUE;
+        for (double[] p : latLonPoints) {
+            latMin = Math.min(latMin, p[0]);
+            latMax = Math.max(latMax, p[0]);
+            lonMin = Math.min(lonMin, p[1]);
+            lonMax = Math.max(lonMax, p[1]);
+        }
+        this.activeLatMin = latMin;
+        this.activeLatMax = latMax;
+        this.activeLonMin = lonMin;
+        this.activeLonMax = lonMax;
+        this.areaFilterEnabled = true;
 
         runOnExecutor("地図データを読み込み中", () -> {
             // キャッシュ済みデータは初期化時に配信済み。地図移動のたびに同じ一覧を
@@ -281,12 +299,17 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     /**
      * {@link #currentPrefCodes} のPOIをSQLiteから結合し、上限判定のうえLiveDataへ反映する。
+     * 処理速度向上のため、{@link #areaFilterEnabled} が有効な場合は表示範囲内のみに絞り込む。
      */
     private void postCombined() {
         if (local == null) { return; }
-        // ユーザー要望に基づき、特定県の絞り込みではなくキャッシュ全量を返す。
-        // currentPrefCodes には起動時に全キャッシュ済みの県が追加されている。
-        List<OsmPoi> all = local.getAllPois();
+        List<OsmPoi> all;
+        if (areaFilterEnabled) {
+            all = local.getByBoundingBox(activeLatMin, activeLatMax, activeLonMin, activeLonMax);
+        } else {
+            // 起動時など範囲未指定時は全キャッシュを返す
+            all = local.getAllPois();
+        }
         poisLiveData.postValue(all);
     }
 

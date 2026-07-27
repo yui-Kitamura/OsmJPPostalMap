@@ -479,16 +479,39 @@ public class MainActivity extends AppCompatActivity {
         double centerLat = center.getLatitude();
         double centerLon = center.getLongitude();
 
-        // 中心から約20km (11海里 = 11/60度) の範囲を表示範囲内でメッシュ化する
-        double range = 11.0 / 60.0;
-        double latMin = Math.max(bb.getLatSouth(), centerLat - range);
-        double latMax = Math.min(bb.getLatNorth(), centerLat + range);
-        double lonMin = Math.max(bb.getLonWest(), centerLon - range);
-        double lonMax = Math.min(bb.getLonEast(), centerLon + range);
+        double latMin, latMax, lonMin, lonMax;
+        double step;
 
-        double step = 1.0 / 60.0; // 1海里 = 1/60度
+        if (gpsZoomAdjustmentPending && gpsZoomMinBounds != null) {
+            // GPSボタン押下直後など、MIN_ZOOM(5.0)での判定に必要な広域をカバーする
+            double scale = Math.pow(2.0, MIN_ZOOM - gpsZoomBase);
+            int width = map.getWidth();
+            int height = map.getHeight();
+            int shortSide = Math.min(width, height);
+            double dLatPerPixel = gpsZoomMinBounds.getLatitudeSpan() / (double) height;
+            double dLonPerPixel = gpsZoomMinBounds.getLongitudeSpan() / (double) width;
+
+            double halfLat = (shortSide * dLatPerPixel / 2.0) / scale;
+            double halfLon = (shortSide * dLonPerPixel / 2.0) / scale;
+
+            latMin = centerLat - halfLat;
+            latMax = centerLat + halfLat;
+            lonMin = centerLon - halfLon;
+            lonMax = centerLon + halfLon;
+
+            // 広域探索時はグリッドのステップを大きくし、Overpass負荷を抑える（最大11x11程度）
+            step = Math.max(1.0 / 60.0, Math.max(latMax - latMin, lonMax - lonMin) / 10.0);
+        } else {
+            // 通常表示: 中心から約20km (11海里) の範囲を表示範囲内で制限
+            double range = 11.0 / 60.0;
+            latMin = Math.max(bb.getLatSouth(), centerLat - range);
+            latMax = Math.min(bb.getLatNorth(), centerLat + range);
+            lonMin = Math.max(bb.getLonWest(), centerLon - range);
+            lonMax = Math.min(bb.getLonEast(), centerLon + range);
+            step = 1.0 / 60.0;
+        }
+
         List<double[]> pointsList = new ArrayList<>();
-
         for (double lat = latMin; ; lat += step) {
             boolean isLastLat = lat >= latMax;
             double actualLat = isLastLat ? latMax : lat;
