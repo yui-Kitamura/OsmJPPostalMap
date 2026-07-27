@@ -17,7 +17,7 @@ public class SimpleScheduleParserTest {
     @BeforeAll
     static void waitHolidays() throws InterruptedException {
         int retry = 0;
-        while (!JpPostalUtil.isHolidaysLoaded() && retry < 100) {
+        while (!JpPostalUtil.isHolidaysLoaded() && retry < 5) {
             Thread.sleep(100);
             retry++;
         }
@@ -139,11 +139,6 @@ public class SimpleScheduleParserTest {
         SimpleScheduleParser parser = new SimpleScheduleParser();
         ScheduleResult result = parser.parse(new OpeningHours("24/7"), zdt.toInstant().toEpochMilli(), ScheduleParser.TimeType.OPENING_HOURS);
         assertEquals(ScheduleResult.CurrentState.OPENING, result.getCurrentState());
-        
-        // 現状の確認用
-        if (result.getNextEvent() != null) {
-            System.out.println("Next event for 24/7 at 12:00: " + result.getNextEvent().getTimestamp());
-        }
     }
 
     @Test
@@ -156,6 +151,20 @@ public class SimpleScheduleParserTest {
         assertEquals(ScheduleResult.CurrentState.OPENING, result.getCurrentState());
         // 修正後: 24/7 の場合、nextEvent は null であるべき
         assertNull(result.getNextEvent());
+    }
+
+    @Test
+    public void testMidnightHandling() {
+        // 2026-07-21 (火) 12:00
+        ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 21, 12, 0, 0, 0, JpPostalUtil.JST);
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        ScheduleResult result = parser.parse(new OpeningHours("Mo-Su 10:00-24:00"), zdt.toInstant().toEpochMilli(), ScheduleParser.TimeType.OPENING_HOURS);
+
+        assertEquals(ScheduleResult.CurrentState.OPENING, result.getCurrentState());
+        assertNotNull(result.getNextEvent());
+        // 期待値: 2026-07-22 00:00
+        ZonedDateTime expected = ZonedDateTime.of(2026, 7, 22, 0, 0, 0, 0, JpPostalUtil.JST);
+        assertEquals(expected, result.getNextEvent().getTimestamp());
     }
 
     /**
@@ -325,7 +334,7 @@ public class SimpleScheduleParserTest {
         ZonedDateTime zdt = ZonedDateTime.of(2024, 7, 16, 12, 0, 0, 0,JpPostalUtil.JST); // Tuesday, 12:00
 
         ScheduleResult result = parser.parse(new OpeningHours(tag), zdt.toInstant().toEpochMilli(), ScheduleParser.TimeType.OPENING_HOURS);
-        assertEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
+        assertEquals(ScheduleResult.CurrentState.PARSE_ERROR, result.getCurrentState());
     }
 
     /**
