@@ -278,8 +278,15 @@ public class MainActivity extends AppCompatActivity {
         });
 
         viewModel.getLoading().observe(this, loadingValue -> {
-            refreshButton.setLoading(Boolean.TRUE.equals(loadingValue));
+            boolean isLoading = Boolean.TRUE.equals(loadingValue);
+            refreshButton.setLoading(isLoading);
             updateRefreshButtonVisuals(refreshButton);
+
+            if (!isLoading && gpsZoomAdjustmentPending) {
+                // ロードが完了した時点でまだズーム調整が保留されている場合、
+                // 最新のPOIリストを用いて最終的なズーム調整を実行する。
+                adjustGpsZoomForPoiCount(viewModel.getFilteredPois().getValue());
+            }
         });
 
 
