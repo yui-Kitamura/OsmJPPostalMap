@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
     private Location lastLocation;
     private static final int PERMISSION_REQUEST_LOCATION = 100;
     private static final double GPS_MIN_ZOOM = 15.0;
-    private static final double GPS_MAX_ZOOM = 19.0;
+    private static final double GPS_MAX_ZOOM = 20.0;
     private static final double MIN_ZOOM = 5.0;
     private static final int GPS_MAX_VISIBLE_POIS = 30;
     // 日本の領域（離島を含む）を収める表示可能範囲。
@@ -147,7 +147,7 @@ public class MainActivity extends AppCompatActivity {
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
         // OSM JP Tile Server
-        map.setTileSource(new XYTileSource("OSMJP", (int) MIN_ZOOM, 19, 256, ".png",
+        map.setTileSource(new XYTileSource("OSMJP", (int) MIN_ZOOM, 20, 256, ".png",
                 new String[] { "https://tile.openstreetmap.jp/" }));
         map.setMultiTouchControls(true);
         map.setScrollableAreaLimitDouble(JAPAN_BOUNDS);
