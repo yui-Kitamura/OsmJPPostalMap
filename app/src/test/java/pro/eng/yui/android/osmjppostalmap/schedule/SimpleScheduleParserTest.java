@@ -625,6 +625,34 @@ public class SimpleScheduleParserTest {
     }
 
     @Test
+    public void testUnknownStatusLabel() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        // Mo-Fr 09:00-17:00 (土日は指定なし = UNKNOWN)
+        String tag = "Mo-Fr 09:00-17:00";
+
+        // 2026-07-25 (土曜日)
+        ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 25, 12, 0, 0, 0, JpPostalUtil.JST);
+        ScheduleResult result = parser.parse(new OpeningHours(tag), zdt.toInstant().toEpochMilli(), ScheduleParser.TimeType.OPENING_HOURS);
+
+        assertEquals(ScheduleResult.CurrentState.UNKNOWN, result.getCurrentState());
+        assertEquals("不明", result.getTodayStatus());
+    }
+
+    @Test
+    public void testOffStatusLabel() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        // Mo-Fr 09:00-17:00; Sa-Su off (土日は off)
+        String tag = "Mo-Fr 09:00-17:00; Sa-Su off";
+
+        // 2026-07-25 (土曜日)
+        ZonedDateTime zdt = ZonedDateTime.of(2026, 7, 25, 12, 0, 0, 0, JpPostalUtil.JST);
+        ScheduleResult result = parser.parse(new OpeningHours(tag), zdt.toInstant().toEpochMilli(), ScheduleParser.TimeType.OPENING_HOURS);
+
+        assertEquals(ScheduleResult.CurrentState.CLOSED, result.getCurrentState());
+        assertEquals("休業日", result.getTodayStatus());
+    }
+
+    @Test
     public void testFollowingEventAcrossDays() {
         SimpleScheduleParser parser = new SimpleScheduleParser();
         String tag = "Mo-Su 10:00, 15:00";

@@ -54,6 +54,10 @@ public class SimpleScheduleParser implements ScheduleParser {
                         return new ScheduleResult(null, null, "休業日",
                                 ScheduleResult.CurrentState.CLOSED,
                                 parsedMap, tagValue);
+                    } else if (todaySchedule.status() == OpeningHoursParser.DayStatus.UNKNOWN) {
+                        return new ScheduleResult(null, null, "不明",
+                                ScheduleResult.CurrentState.UNKNOWN,
+                                parsedMap, tagValue);
                     } else {
                         if (today.dayType == Days.WeekDay.HOLIDAY) {
                             return new ScheduleResult(null, null, "祝日データなし",

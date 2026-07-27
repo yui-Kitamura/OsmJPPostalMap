@@ -175,9 +175,17 @@ public class PoiDetailsDialog {
                     displayTime = "不明";
                 } else if (daySchedule.schedule().isEmpty()) {
                     if (isPostBox) {
-                        displayTime = "収集なし";
+                        if (daySchedule.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY) {
+                            displayTime = "収集なし";
+                        } else {
+                            displayTime = "不明";
+                        }
                     } else {
-                        displayTime = "休業";
+                        if (daySchedule.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.OpeningHoursParser.DayStatus.CLOSED_DAY) {
+                            displayTime = "休業";
+                        } else {
+                            displayTime = "不明";
+                        }
                     }
                 } else {
                     java.util.List<String> timeStrings = new java.util.ArrayList<>();
