@@ -44,9 +44,9 @@ public class ScaleBarView extends View {
             new ScaleConfig(50, 1, null, "50m"),
             // Walking (80m = 1min)
             new ScaleConfig(80, 1, null, "徒歩1分"),
-            new ScaleConfig(160, 2, "徒歩1分", "徒歩2分"),
+            new ScaleConfig(160, 2, "徒歩1分", "2分"),
             new ScaleConfig(400, 1, null, "徒歩5分"),
-            new ScaleConfig(800, 2, "徒歩5分", "徒歩10分"),
+            new ScaleConfig(800, 2, "徒歩5分", "10分"),
             new ScaleConfig(1200, 1, null, "徒歩15分"),
             // Metric > 1200m
             new ScaleConfig(2000, 2, "1km", "2km"),
