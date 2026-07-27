@@ -396,13 +396,9 @@ public class MainActivity extends AppCompatActivity {
      * POIのアイコン（中心点）が収まること。ただし必ず1POIは郵便局を含むこと。
      */
     private void adjustGpsZoomForPoiCount(List<OsmPoi> pois) {
-        if (gpsProgress != null && gpsZoomAdjustmentPending) {
-            gpsProgress.setVisibility(View.GONE);
-        }
         if (!gpsZoomAdjustmentPending || gpsZoomCenter == null || pois == null) {
             return;
         }
-        gpsZoomAdjustmentPending = false;
 
         int width = map.getWidth();
         int height = map.getHeight();
@@ -428,6 +424,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         double targetZoom = GPS_MAX_ZOOM;
+        boolean satisfied = false;
         boolean postOfficeOnly = Boolean.TRUE.equals(viewModel.getFilterPostOfficeOnly().getValue());
         // 最大ズームから順に下げていき、条件（5POI以上かつ郵便局1以上）を満たす最初のズームを採用する
         for (double candidateZoom = GPS_MAX_ZOOM; candidateZoom >= MIN_ZOOM; candidateZoom -= 1.0) {
@@ -449,13 +446,28 @@ public class MainActivity extends AppCompatActivity {
 
             if (visibleCount >= 5 && hasPostOffice && (postOfficeOnly || hasPostBox)) {
                 targetZoom = candidateZoom;
+                satisfied = true;
                 break;
             }
             if (candidateZoom <= MIN_ZOOM) {
                 targetZoom = MIN_ZOOM;
             }
         }
-        map.getController().setZoom(targetZoom);
+
+        if (satisfied) {
+            map.getController().setZoom(targetZoom);
+            gpsZoomAdjustmentPending = false;
+            if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
+        } else {
+            Boolean loading = viewModel.getLoading().getValue();
+            if (!Boolean.TRUE.equals(loading)) {
+                // すべての読み込みが終わって条件を満たさない場合は、最小ズームにして処理を完了する
+                map.getController().setZoom(targetZoom);
+                gpsZoomAdjustmentPending = false;
+                if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
+            }
+            // ロード中の場合は、次のPOIリスト通知を待つためにフラグを維持する
+        }
     }
 
     private void performInitialGpsZoom(Location location) {
