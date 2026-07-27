@@ -81,6 +81,20 @@ public class MainActivity extends AppCompatActivity {
     private double gpsZoomBase = GPS_MIN_ZOOM;
     private final ExecutorService markerStateExecutor = Executors.newSingleThreadExecutor();
     private final AtomicInteger markerRenderGeneration = new AtomicInteger();
+
+    private static class PoiInfo {
+        final double dLat;
+        final double dLon;
+        final boolean isPostOffice;
+        final boolean isPostBox;
+        PoiInfo(double dLat, double dLon, boolean isPostOffice, boolean isPostBox) {
+            this.dLat = dLat;
+            this.dLon = dLon;
+            this.isPostOffice = isPostOffice;
+            this.isPostBox = isPostBox;
+        }
+    }
+
     /** 一度生成・解析したマーカーを、地図移動後の再通知でも再利用する。 */
     private final Map<String, MarkerEntry> markerCache = new LinkedHashMap<>();
 
@@ -399,6 +413,15 @@ public class MainActivity extends AppCompatActivity {
         double halfLonBase = (shortSide * dLonPerPixel) / 2.0;
         double halfLatBase = (shortSide * dLatPerPixel) / 2.0;
 
+        // 計算の高速化のため、ループ前に必要な情報を抽出する
+        List<PoiInfo> poiInfos = new ArrayList<>(pois.size());
+        for (OsmPoi poi : pois) {
+            double dLat = Math.abs(poi.getLat() - gpsZoomCenter.getLatitude());
+            double dLon = longitudeDistance(poi.getLon(), gpsZoomCenter.getLongitude());
+            String amenity = poi.getTag("amenity");
+            poiInfos.add(new PoiInfo(dLat, dLon, "post_office".equals(amenity), "post_box".equals(amenity)));
+        }
+
         double targetZoom = GPS_MAX_ZOOM;
         boolean postOfficeOnly = Boolean.TRUE.equals(viewModel.getFilterPostOfficeOnly().getValue());
         // 最大ズームから順に下げていき、条件（5POI以上かつ郵便局1以上）を満たす最初のズームを採用する
@@ -411,16 +434,11 @@ public class MainActivity extends AppCompatActivity {
             boolean hasPostOffice = false;
             boolean hasPostBox = false;
 
-            for (OsmPoi poi : pois) {
-                if (Math.abs(poi.getLat() - gpsZoomCenter.getLatitude()) <= halfLat
-                        && longitudeDistance(poi.getLon(), gpsZoomCenter.getLongitude()) <= halfLon) {
+            for (PoiInfo pi : poiInfos) {
+                if (pi.dLat <= halfLat && pi.dLon <= halfLon) {
                     visibleCount++;
-                    String amenity = poi.getTag("amenity");
-                    if ("post_office".equals(amenity)) {
-                        hasPostOffice = true;
-                    } else if ("post_box".equals(amenity)) {
-                        hasPostBox = true;
-                    }
+                    if (pi.isPostOffice) hasPostOffice = true;
+                    if (pi.isPostBox) hasPostBox = true;
                 }
             }
 
@@ -483,8 +501,10 @@ public class MainActivity extends AppCompatActivity {
         double step;
 
         if (gpsZoomAdjustmentPending && gpsZoomMinBounds != null) {
-            // GPSボタン押下直後など、MIN_ZOOM(5.0)での判定に必要な広域をカバーする
-            double scale = Math.pow(2.0, MIN_ZOOM - gpsZoomBase);
+            // GPSボタン押下直後など、適切なズーム判定に必要な広域をカバーする。
+            // 全国(5.0)を対象にすると処理が重いため、一旦11.0（約32km四方）を上限とする。
+            double searchMinZoom = Math.max(MIN_ZOOM, 11.0);
+            double scale = Math.pow(2.0, searchMinZoom - gpsZoomBase);
             int width = map.getWidth();
             int height = map.getHeight();
             int shortSide = Math.min(width, height);
@@ -498,9 +518,6 @@ public class MainActivity extends AppCompatActivity {
             latMax = centerLat + halfLat;
             lonMin = centerLon - halfLon;
             lonMax = centerLon + halfLon;
-
-            // 広域探索時はグリッドのステップを大きくし、Overpass負荷を抑える（最大11x11程度）
-            step = Math.max(1.0 / 60.0, Math.max(latMax - latMin, lonMax - lonMin) / 10.0);
         } else {
             // 通常表示: 中心から約20km (11海里) の範囲を表示範囲内で制限
             double range = 11.0 / 60.0;
@@ -508,8 +525,10 @@ public class MainActivity extends AppCompatActivity {
             latMax = Math.min(bb.getLatNorth(), centerLat + range);
             lonMin = Math.max(bb.getLonWest(), centerLon - range);
             lonMax = Math.min(bb.getLonEast(), centerLon + range);
-            step = 1.0 / 60.0;
         }
+
+        // 逆ジオコーディング地点の密度を下げ、Overpass負荷を減らす（約11km間隔を最小とする）
+        step = Math.max(0.1, Math.max(latMax - latMin, lonMax - lonMin) / 5.0);
 
         List<double[]> pointsList = new ArrayList<>();
         for (double lat = latMin; ; lat += step) {
