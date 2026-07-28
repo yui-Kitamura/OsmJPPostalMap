@@ -52,20 +52,13 @@ public class AddPostBoxActivity extends AppCompatActivity {
     private Marker marker;
     private AuthRepository authRepository;
     private PoiRepository repository;
+    private MainViewModel viewModel;
     private Button btnSave;
     private TextView addressValue;
     private final java.util.Map<String, String> addressTags = new java.util.HashMap<>();
     private int lastCheckedShapeId = -1;
     private androidx.appcompat.app.AlertDialog progressDialog;
-    private LocationManager locationManager;
     private Location lastLocation;
-    private final LocationListener locationListener = new LocationListener() {
-        @Override
-        public void onLocationChanged(@NonNull Location location) {
-            lastLocation = location;
-        }
-    };
-
     private TableLayout tableCollection;
     private android.widget.CheckBox checkColWdOff, checkColSaOff, checkColPhOff;
     private final List<EditText[]> timeRows = new ArrayList<>();
@@ -139,14 +132,13 @@ public class AddPostBoxActivity extends AppCompatActivity {
                     .show();
         }
 
-        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
-            lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        }
-
         repository = PoiRepositoryImpl.getInstance();
         ((PoiRepositoryImpl)repository).setAccessToken(authRepository.getAccessToken());
+
+        viewModel = new androidx.lifecycle.ViewModelProvider(this).get(MainViewModel.class);
+        viewModel.getLocation().observe(this, location -> {
+            lastLocation = location;
+        });
 
         map = findViewById(R.id.add_map);
         map.setOnTouchListener((v, event) -> {
@@ -483,5 +475,18 @@ public class AddPostBoxActivity extends AppCompatActivity {
     private int parseMinutes(String time) {
         String[] parts = time.split(":");
         return Integer.parseInt(parts[0]) * 60 + Integer.parseInt(parts[1]);
+    }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            viewModel.startLocationUpdates();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        viewModel.stopLocationUpdates();
     }
 }

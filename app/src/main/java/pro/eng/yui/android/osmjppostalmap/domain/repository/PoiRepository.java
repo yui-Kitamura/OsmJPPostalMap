@@ -1,5 +1,6 @@
 package pro.eng.yui.android.osmjppostalmap.domain.repository;
 
+import android.location.Location;
 import androidx.lifecycle.LiveData;
 import java.util.List;
 import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateResponse;
@@ -97,6 +98,26 @@ public interface PoiRepository {
         void onError(String message);
         default void onProgress(String message) {}
     }
+
+    /**
+     * 現在地を配信するLiveDataを取得する
+     */
+    LiveData<Location> getLocationLiveData();
+
+    /**
+     * 位置情報の更新を開始する
+     */
+    void startLocationUpdates();
+
+    /**
+     * 位置情報の更新を停止する
+     */
+    void stopLocationUpdates();
+
+    /**
+     * 現在地から逆ジオコーディングされた都道府県名を取得する
+     */
+    LiveData<String> getCurrentPrefecture();
 
     /**
      * エラーメッセージをクリアする

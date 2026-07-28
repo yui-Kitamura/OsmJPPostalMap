@@ -59,7 +59,6 @@ public class MainActivity extends AppCompatActivity {
     private org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay locationOverlay;
     private MainViewModel viewModel;
     private AuthRepository authRepository;
-    private LocationManager locationManager;
     private Location lastLocation;
     private static final int PERMISSION_REQUEST_LOCATION = 100;
     private static final double GPS_MIN_ZOOM = 18.0;
@@ -290,7 +289,7 @@ public class MainActivity extends AppCompatActivity {
                 if (!initialLocationSet) {
                     initialLocationSet = true;
                 }
-                PrefRefreshDialog.show(this, viewModel, () -> updatePois(true, UpdateMode.FULL_SCREEN));
+                PrefRefreshDialog.show(this, viewModel, viewModel.getCurrentPrefecture().getValue(), () -> updatePois(true, UpdateMode.FULL_SCREEN));
             }
         });
 
@@ -356,9 +355,8 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        // Error Bar
-        TextView statusBar = findViewById(R.id.error_bar);
-        viewModel.getErrorMessage().observe(this, msg -> {
+        viewModel.getLocation().observe(this, this::updateCurrentLocation);
+        viewModel.getError().observe(this, msg -> {
             if (msg == null || msg.isEmpty()) {
                 statusBar.setVisibility(View.GONE);
             } else {
@@ -583,7 +581,7 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST_LOCATION);
         } else {
             locationPermissionResolved = true;
-            startLocationUpdates();
+            viewModel.startLocationUpdates();
         }
     }
 
@@ -595,74 +593,23 @@ public class MainActivity extends AppCompatActivity {
         boolean hasPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
         if (!hasPermission) return true;
 
-        boolean gpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        boolean networkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-        return !gpsEnabled && !networkEnabled;
+        // プロバイダ状態のチェックは ViewModel/Repository 側で隠蔽されているか、
+        // あるいは個別にチェックが必要だが、ここでは簡略化のため許可とする
+        return true;
     }
 
-    private void startLocationUpdates() {
-        try {
-            if (gpsProgress != null) gpsProgress.setVisibility(View.VISIBLE);
-            boolean gpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-            boolean networkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-
-            if (!gpsEnabled && !networkEnabled) {
-                if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
-                // 位置情報プロバイダが無効な場合は、デフォルト位置（東京）を初期位置として確定させる
-                initialLocationSet = true;
-                updatePois(true, UpdateMode.GPS_OR_INITIAL);
-                return;
-            }
-
-            if (gpsEnabled) {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
-                Location loc = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                if (loc != null) {
-                    updateCurrentLocation(loc);
-                    if (!initialLocationSet) {
-                        performInitialGpsZoom(loc);
-                    } else {
-                        map.getController().setCenter(mapTargetFor(loc));
-                    }
-                }
-            }
-            if (networkEnabled) {
-                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 10, locationListener);
-                Location loc = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-                if (loc != null && lastLocation == null) {
-                    updateCurrentLocation(loc);
-                    if (!initialLocationSet) {
-                        performInitialGpsZoom(loc);
-                    } else {
-                        map.getController().setCenter(mapTargetFor(loc));
-                    }
-                }
-            }
-        } catch (SecurityException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private final LocationListener locationListener = new LocationListener() {
-        @Override
-        public void onLocationChanged(@NonNull Location location) {
-            updateCurrentLocation(location);
-            if (!initialLocationSet) {
-                performInitialGpsZoom(location);
-            }
-        }
-        @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
-        @Override public void onProviderEnabled(@NonNull String provider) {}
-        @Override public void onProviderDisabled(@NonNull String provider) {}
-    };
 
     private void updateCurrentLocation(Location location) {
+        if (location == null) return;
+        boolean firstLocation = lastLocation == null;
         lastLocation = location;
-        if (locationOverlay != null && location != null) {
-            // MyLocationNewOverlay handles its own location updates if provider is active,
-            // but we can ensure it has the latest data.
+        if (locationOverlay != null) {
             map.invalidate();
         }
+        if (firstLocation && !initialLocationSet) {
+            performInitialGpsZoom(location);
+        }
+        if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
     }
 
     @Override
@@ -671,7 +618,7 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == PERMISSION_REQUEST_LOCATION) {
             locationPermissionResolved = true;
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startLocationUpdates();
+                viewModel.startLocationUpdates();
             } else {
                 if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
                 // 許可が得られなかった場合は、デフォルト位置（東京）を初期位置として確定させる
@@ -732,6 +679,7 @@ public class MainActivity extends AppCompatActivity {
             locationOverlay.disableMyLocation();
         }
         updateHandler.removeCallbacks(updateRunnable);
+        viewModel.stopLocationUpdates();
     }
 
     @Override

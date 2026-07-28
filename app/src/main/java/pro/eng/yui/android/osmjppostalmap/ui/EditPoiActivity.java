@@ -70,6 +70,7 @@ public class EditPoiActivity extends AppCompatActivity {
     private android.widget.CheckBox checkColWdOff, checkColSaOff, checkColPhOff;
     private static final Pattern TIME_PATTERN = Pattern.compile("^([01]?[0-9]|2[0-3]):[0-5][0-9]$");
     private PoiRepository repository;
+    private MainViewModel viewModel;
     private AuthRepository authRepository;
     private OsmPoi targetPoi;
     private Button btnSave;
@@ -77,14 +78,7 @@ public class EditPoiActivity extends AppCompatActivity {
     private int lastCheckedShapeId = -1;
     private final ScheduleParser scheduleParser = new SimpleScheduleParser();
     private androidx.appcompat.app.AlertDialog progressDialog;
-    private LocationManager locationManager;
     private Location lastLocation;
-    private final LocationListener locationListener = new LocationListener() {
-        @Override
-        public void onLocationChanged(@NonNull Location location) {
-            lastLocation = location;
-        }
-    };
     private static final double MIN_ZOOM = 15.0;
 
     private class ReticleMarker extends Marker {
@@ -152,14 +146,13 @@ public class EditPoiActivity extends AppCompatActivity {
                     .show();
         }
 
-        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 1, locationListener);
-            lastLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        }
-
         repository = PoiRepositoryImpl.getInstance();
         ((PoiRepositoryImpl)repository).setAccessToken(authRepository.getAccessToken());
+
+        viewModel = new androidx.lifecycle.ViewModelProvider(this).get(MainViewModel.class);
+        viewModel.getLocation().observe(this, location -> {
+            lastLocation = location;
+        });
 
         // IntentからPOI情報を受け取る
         long id = getIntent().getLongExtra("POI_ID", 0);
@@ -1032,5 +1025,18 @@ public class EditPoiActivity extends AppCompatActivity {
             }
         }
         return list;
+    }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            viewModel.startLocationUpdates();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        viewModel.stopLocationUpdates();
     }
 }

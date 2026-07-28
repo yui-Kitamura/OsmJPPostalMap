@@ -1,8 +1,17 @@
 package pro.eng.yui.android.osmjppostalmap.data.repository;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
@@ -41,6 +50,17 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final MutableLiveData<Long> cooldownRemainingLiveData = new MutableLiveData<>(0L);
     private final MutableLiveData<Boolean> loadingLiveData = new MutableLiveData<>(false);
     private final MutableLiveData<String> loadingStatusLiveData = new MutableLiveData<>("");
+    private final MutableLiveData<Location> locationLiveData = new MutableLiveData<>();
+    private final MutableLiveData<String> currentPrefectureLiveData = new MutableLiveData<>();
+    private LocationManager locationManager;
+    private final LocationListener locationListener = new LocationListener() {
+        @Override
+        public void onLocationChanged(@NonNull Location location) {
+            locationLiveData.postValue(location);
+            updateCurrentPrefecture(location);
+        }
+    };
+    private Context context;
     private String accessToken;
     public void setAccessToken(String token) {
         this.accessToken = token;
@@ -84,11 +104,15 @@ public class PoiRepositoryImpl implements PoiRepository {
      */
     public static synchronized void init(Context context) {
         PoiRepositoryImpl repo = getInstance();
+        repo.context = context.getApplicationContext();
         if (repo.local == null) {
-            repo.local = new PoiLocalDataSource(context.getApplicationContext());
+            repo.local = new PoiLocalDataSource(repo.context);
             repo.preloadBoundaries();
             repo.loadAllFromCache();
             repo.loadGridCacheFromDb();
+        }
+        if (repo.locationManager == null) {
+            repo.locationManager = (LocationManager) repo.context.getSystemService(Context.LOCATION_SERVICE);
         }
     }
 
@@ -624,6 +648,55 @@ public class PoiRepositoryImpl implements PoiRepository {
                 postCombined();
             }
         } catch (RuntimeException ignore) { }
+    }
+
+    @Override
+    public LiveData<Location> getLocationLiveData() {
+        return locationLiveData;
+    }
+
+    @Override
+    public void startLocationUpdates() {
+        if (locationManager == null || context == null) return;
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 10, locationListener);
+        Location lastGps = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        Location lastNetwork = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        if (lastGps != null) {
+            locationLiveData.postValue(lastGps);
+            updateCurrentPrefecture(lastGps);
+        } else if (lastNetwork != null) {
+            locationLiveData.postValue(lastNetwork);
+            updateCurrentPrefecture(lastNetwork);
+        }
+    }
+
+    @Override
+    public void stopLocationUpdates() {
+        if (locationManager != null) {
+            locationManager.removeUpdates(locationListener);
+        }
+    }
+
+    @Override
+    public LiveData<String> getCurrentPrefecture() {
+        return currentPrefectureLiveData;
+    }
+
+    private void updateCurrentPrefecture(Location location) {
+        if (context == null) return;
+        executor.execute(() -> {
+            Geocoder geocoder = new Geocoder(context, Locale.JAPAN);
+            try {
+                List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                if (addresses != null && !addresses.isEmpty()) {
+                    currentPrefectureLiveData.postValue(addresses.get(0).getAdminArea());
+                }
+            } catch (Exception ignored) {}
+        });
     }
 
     @Override

@@ -1,5 +1,6 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
+import android.location.Location;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
@@ -160,6 +161,22 @@ public class MainViewModel extends ViewModel {
 
     public LiveData<DataDateResponse> getDataDate() {
         return dataDate;
+    }
+
+    public LiveData<Location> getLocation() {
+        return repository.getLocationLiveData();
+    }
+
+    public LiveData<String> getCurrentPrefecture() {
+        return repository.getCurrentPrefecture();
+    }
+
+    public void startLocationUpdates() {
+        repository.startLocationUpdates();
+    }
+
+    public void stopLocationUpdates() {
+        repository.stopLocationUpdates();
     }
 
     /** ローカルに保存済みの都道府県一覧を返す（更新ダイアログ用） */

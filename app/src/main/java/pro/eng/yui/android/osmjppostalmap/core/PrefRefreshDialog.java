@@ -3,6 +3,9 @@ package pro.eng.yui.android.osmjppostalmap.core;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -53,7 +56,7 @@ public class PrefRefreshDialog {
      * @param viewModel     取得/更新の窓口
      * @param onRefreshArea 「表示範囲を取得」押下時の処理（通常は MainActivity#updatePois）
      */
-    public static void show(Context context, MainViewModel viewModel, Runnable onRefreshArea) {
+    public static void show(Context context, MainViewModel viewModel, String currentPref, Runnable onRefreshArea) {
         View view = LayoutInflater.from(context).inflate(R.layout.dialog_pref_refresh, null);
         LinearLayout container = view.findViewById(R.id.pref_list_container);
         Button areaButton = view.findViewById(R.id.refresh_area_button);
@@ -117,8 +120,13 @@ public class PrefRefreshDialog {
                         }
                     }
 
-                    // ソート: 取込済みがある県 > 全く未取得。各グループ内ではコード順
+                    // ソート: 現在地 > 取込済みがある県 > 全く未取得。各グループ内ではコード順
                     Collections.sort(allItems, (o1, o2) -> {
+                        boolean isCurr1 = o1.name.equals(currentPref);
+                        boolean isCurr2 = o2.name.equals(currentPref);
+                        if (isCurr1 && !isCurr2) return -1;
+                        if (!isCurr1 && isCurr2) return 1;
+
                         boolean s1 = hasAnySaved(o1, savedMap);
                         boolean s2 = hasAnySaved(o2, savedMap);
                         if (s1 && !s2) return -1;
@@ -134,6 +142,7 @@ public class PrefRefreshDialog {
 
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.JAPAN);
                     for (PrefInfo pi : allItems) {
+                        boolean isCurrent = pi.name.equals(currentPref);
                         if (pi.subNames.isEmpty()) {
                             // 通常の県
                             PrefMeta meta = savedMap.get(pi.name);
@@ -141,10 +150,10 @@ public class PrefRefreshDialog {
                             Date sourceUpdatedAt = remoteDates.get(pi.name);
                             boolean isSaved = savedMap.containsKey(pi.name);
                             boolean hasUpdate = isSaved && sourceUpdatedAt != null && meta.getLastUpdated() < sourceUpdatedAt.getTime();
-                            container.addView(buildRow(context, viewModel, meta, sdf, sourceUpdatedAt, hasUpdate, isSaved));
+                            container.addView(buildRow(context, viewModel, meta, sdf, sourceUpdatedAt, hasUpdate, isSaved, isCurrent));
                         } else {
                             // サブ領域あり
-                            container.addView(buildHierarchyRow(context, viewModel, pi, savedMap, remoteDates, sdf));
+                            container.addView(buildHierarchyRow(context, viewModel, pi, savedMap, remoteDates, sdf, isCurrent));
                         }
                     }
                 } catch (JSONException e) {
@@ -192,12 +201,16 @@ public class PrefRefreshDialog {
     }
 
     private static View buildHierarchyRow(Context context, MainViewModel viewModel, PrefInfo pi,
-                                          Map<String, PrefMeta> savedMap, Map<String, Date> remoteDates, SimpleDateFormat sdf) {
+                                          Map<String, PrefMeta> savedMap, Map<String, Date> remoteDates, SimpleDateFormat sdf, boolean isCurrent) {
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
 
         TextView label = new TextView(context);
         label.setText("▶ " + pi.name);
+        if (isCurrent) {
+            label.setCompoundDrawablesWithIntrinsicBounds(android.R.drawable.ic_menu_mylocation, 0, 0, 0);
+            label.setCompoundDrawablePadding(16);
+        }
         label.setTextSize(16f);
         label.setPadding(0, 24, 0, 8);
         label.setClickable(true);
@@ -228,7 +241,7 @@ public class PrefRefreshDialog {
             boolean isSaved = savedMap.containsKey(key);
             boolean hasUpdate = isSaved && sourceUpdatedAt != null && meta.getLastUpdated() < sourceUpdatedAt.getTime();
 
-            subContainer.addView(buildRow(context, viewModel, meta, sdf, sourceUpdatedAt, hasUpdate, isSaved));
+            subContainer.addView(buildRow(context, viewModel, meta, sdf, sourceUpdatedAt, hasUpdate, isSaved, false));
         }
 
         root.addView(label);
@@ -237,7 +250,7 @@ public class PrefRefreshDialog {
     }
 
     private static View buildRow(Context context, MainViewModel viewModel, PrefMeta meta,
-                                 SimpleDateFormat sdf, Date sourceUpdatedAt, boolean hasUpdate, boolean isSaved) {
+                                 SimpleDateFormat sdf, Date sourceUpdatedAt, boolean hasUpdate, boolean isSaved, boolean isCurrent) {
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.VERTICAL);
         row.setPadding(0, 12, 0, 12);
@@ -249,6 +262,10 @@ public class PrefRefreshDialog {
         TextView nameView = new TextView(context);
         String displayName = meta.getSubName() == null ? meta.getName() : meta.getSubName();
         nameView.setText(displayName);
+        if (isCurrent && meta.getSubName() == null) {
+            nameView.setCompoundDrawablesWithIntrinsicBounds(android.R.drawable.ic_menu_mylocation, 0, 0, 0);
+            nameView.setCompoundDrawablePadding(16);
+        }
         nameView.setTextSize(16f);
         nameView.setLayoutParams(new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
