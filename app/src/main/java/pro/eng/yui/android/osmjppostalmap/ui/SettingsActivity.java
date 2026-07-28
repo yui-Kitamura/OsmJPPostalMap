@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
@@ -100,6 +101,19 @@ public class SettingsActivity extends AppCompatActivity {
                 .setMessage(R.string.settings_delete_map_cache_confirm)
                 .setPositiveButton("はい", (dialog, which) -> {
                     deleteMapCache();
+                })
+                .setNegativeButton("いいえ", null)
+                .show();
+        });
+
+        findViewById(R.id.btn_show_boundary).setOnClickListener(v -> showBoundaryDialog());
+        findViewById(R.id.btn_delete_boundary).setOnClickListener(v -> {
+            new MaterialAlertDialogBuilder(this)
+                .setTitle("行政界削除")
+                .setMessage("行政界のキャッシュデータを削除しますか？")
+                .setPositiveButton("はい", (dialog, which) -> {
+                    JpPostalUtil.truncatePrefectureCache();
+                    Toast.makeText(this, "行政界キャッシュを削除しました", Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("いいえ", null)
                 .show();
@@ -207,6 +221,50 @@ public class SettingsActivity extends AppCompatActivity {
             e.printStackTrace();
             Toast.makeText(this, R.string.settings_delete_map_cache_fail, Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void showBoundaryDialog() {
+        JpPostalUtil.getRawPrefecturesJson().thenAccept(json -> {
+            runOnUiThread(() -> {
+                try {
+                    String prettyJson = (json == null || json.isEmpty()) ? "{}" : new JSONObject(json).toString(4);
+
+                    ScrollView scrollView = new ScrollView(this);
+                    TextView textView = new TextView(this);
+                    textView.setText(prettyJson);
+                    textView.setPadding(32, 32, 32, 32);
+                    textView.setTextSize(12f);
+                    scrollView.addView(textView);
+
+                    new MaterialAlertDialogBuilder(this)
+                            .setTitle("行政界キャッシュ")
+                            .setView(scrollView)
+                            .setPositiveButton("閉じる", null)
+                            .setNeutralButton("更新", (dialog, which) -> {
+                                updateBoundaryData();
+                            })
+                            .show();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Toast.makeText(this, "JSONの解析に失敗しました", Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+    }
+
+    private void updateBoundaryData() {
+        Toast.makeText(this, "行政界データを更新しています...", Toast.LENGTH_SHORT).show();
+        JpPostalUtil.fetchPrefectures().thenAccept(v -> {
+            runOnUiThread(() -> {
+                Toast.makeText(this, "行政界データを更新しました", Toast.LENGTH_SHORT).show();
+                showBoundaryDialog(); // リロードして再表示
+            });
+        }).exceptionally(ex -> {
+            runOnUiThread(() -> {
+                Toast.makeText(this, "更新に失敗しました: " + ex.getMessage(), Toast.LENGTH_SHORT).show();
+            });
+            return null;
+        });
     }
 
     private void fetchUserDetails(String token, TextView loginStatus, Button btnLogin, Button btnUserPage, Button btnLogout) {
