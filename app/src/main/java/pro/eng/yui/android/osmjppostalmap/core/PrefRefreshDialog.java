@@ -74,149 +74,6 @@ public class PrefRefreshDialog {
         progressBar.setLayoutParams(lp);
         container.addView(progressBar);
 
-        // Fetch saved data and remote data date from background, then combine with JpPostal master data
-        CompletableFuture.supplyAsync(() -> {
-            List<PrefMeta> savedMetas = viewModel.getSavedPrefectures();
-            Map<String, PrefMeta> savedMap = new HashMap<>();
-            for (PrefMeta m : savedMetas) {
-                String key = m.getName() + (m.getSubName() == null ? "" : ":" + m.getSubName());
-                savedMap.put(key, m);
-            }
-            return new Object[]{savedMetas, savedMap};
-        }).thenCombine(JpPostalUtil.getPrefectures(), (data, allPrefCodes) -> {
-            List<PrefMeta> savedMetas = (List<PrefMeta>) data[0];
-            Map<String, PrefMeta> savedMap = (Map<String, PrefMeta>) data[1];
-            return new Object[]{savedMetas, savedMap, allPrefCodes};
-        }).thenCombine(JpPostalUtil.getRawPrefecturesJson(), (data, json) -> {
-            List<PrefMeta> savedMetas = (List<PrefMeta>) data[0];
-            Map<String, PrefMeta> savedMap = (Map<String, PrefMeta>) data[1];
-            Map<String, Integer> allPrefCodes = (Map<String, Integer>) data[2];
-
-            Map<String, Date> remoteDates = new HashMap<>();
-            DataDateResponse remoteData = viewModel.getDataDate().getValue();
-            SimpleDateFormat remoteSdf = new SimpleDateFormat("yyyy/MM/dd'T'HH:mm:ss", Locale.JAPAN);
-            if (remoteData != null && remoteData.getPrefectures() != null) {
-                for (DataDateResponse.PrefectureDate pd : remoteData.getPrefectures()) {
-                    try {
-                        Date date = remoteSdf.parse(pd.getLastModified());
-                        if (date != null) {
-                            remoteDates.put(pd.getName(), date);
-                        }
-                    } catch (ParseException ignored) {
-                    }
-                }
-            }
-
-            List<PrefInfo> allItems = new ArrayList<>();
-            java.util.Set<String> processedPrefs = new java.util.HashSet<>();
-
-            try {
-                if (json != null && !json.isEmpty()) {
-                    JSONObject root = new JSONObject(json);
-                    Iterator<String> keys = root.keys();
-                    while (keys.hasNext()) {
-                        String prefName = keys.next();
-                        JSONObject prefObj = root.getJSONObject(prefName);
-                        Integer code = allPrefCodes.get(prefName);
-                        
-                        // Fallback: search in saved metas if not in master list
-                        if (code == null) {
-                            for (PrefMeta m : savedMetas) {
-                                if (m.getName().equals(prefName)) {
-                                    code = m.getPrefCode();
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        if (code != null) {
-                            PrefInfo pi = new PrefInfo(code, prefName);
-                            if (prefObj.has("sub")) {
-                                JSONObject subObj = prefObj.getJSONObject("sub");
-                                Iterator<String> subKeys = subObj.keys();
-                                while (subKeys.hasNext()) {
-                                    String subName = subKeys.next();
-                                    pi.subNames.add(subName);
-                                }
-                                Collections.sort(pi.subNames);
-                            }
-                            allItems.add(pi);
-                            processedPrefs.add(prefName);
-                        }
-                    }
-                }
-
-                // Add remaining from allPrefCodes
-                for (Map.Entry<String, Integer> entry : allPrefCodes.entrySet()) {
-                    if (!processedPrefs.contains(entry.getKey())) {
-                        allItems.add(new PrefInfo(entry.getValue(), entry.getKey()));
-                        processedPrefs.add(entry.getKey());
-                    }
-                }
-
-                // Add remaining from savedMetas
-                for (PrefMeta m : savedMetas) {
-                    if (!processedPrefs.contains(m.getName())) {
-                        allItems.add(new PrefInfo(m.getPrefCode(), m.getName()));
-                        processedPrefs.add(m.getName());
-                    }
-                }
-
-                // Sort: Current > Saved > Others. Within groups, sort by code.
-                Collections.sort(allItems, (o1, o2) -> {
-                    boolean isCurr1 = o1.name.equals(currentPref);
-                    boolean isCurr2 = o2.name.equals(currentPref);
-                    if (isCurr1 && !isCurr2) return -1;
-                    if (!isCurr1 && isCurr2) return 1;
-
-                    boolean s1 = hasAnySaved(o1, savedMap);
-                    boolean s2 = hasAnySaved(o2, savedMap);
-                    if (s1 && !s2) return -1;
-                    if (!s1 && s2) return 1;
-                    return Integer.compare(o1.code, o2.code);
-                });
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            return new Object[]{allItems, savedMap, remoteDates};
-        }).thenAccept(result -> {
-            List<PrefInfo> allItems = (List<PrefInfo>) result[0];
-            Map<String, PrefMeta> savedMap = (Map<String, PrefMeta>) result[1];
-            Map<String, Date> remoteDates = (Map<String, Date>) result[2];
-
-            if (context instanceof AppCompatActivity) {
-                ((AppCompatActivity) context).runOnUiThread(() -> {
-                    container.removeView(progressBar);
-                    if (allItems.isEmpty()) {
-                        emptyText.setVisibility(View.VISIBLE);
-                    } else {
-                        emptyText.setVisibility(View.GONE);
-                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.JAPAN);
-                        for (PrefInfo pi : allItems) {
-                            boolean isCurrent = pi.name.equals(currentPref);
-                            if (pi.subNames.isEmpty()) {
-                                PrefMeta meta = savedMap.get(pi.name);
-                                if (meta == null) meta = new PrefMeta(pi.code, pi.name, 0);
-                                Date sourceUpdatedAt = remoteDates.get(pi.name);
-                                boolean isSaved = savedMap.containsKey(pi.name);
-                                boolean hasUpdate = isSaved && sourceUpdatedAt != null && meta.getLastUpdated() < sourceUpdatedAt.getTime();
-                                container.addView(buildRow(context, viewModel, meta, sdf, sourceUpdatedAt, hasUpdate, isSaved, isCurrent));
-                            } else {
-                                container.addView(buildHierarchyRow(context, viewModel, pi, savedMap, remoteDates, sdf, isCurrent, currentSub));
-                            }
-                        }
-                    }
-                });
-            }
-        }).exceptionally(ex -> {
-            ex.printStackTrace();
-            if (context instanceof AppCompatActivity) {
-                ((AppCompatActivity) context).runOnUiThread(() -> container.removeView(progressBar));
-            }
-            return null;
-        });
-
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
         builder.setTitle("データの更新");
         builder.setView(view);
@@ -234,6 +91,170 @@ public class PrefRefreshDialog {
             Toast.makeText(context, "表示範囲を取得しています...", Toast.LENGTH_SHORT).show();
             dialog.dismiss();
         });
+
+        // データの構築処理を関数化して、DataDateの取得後に呼び出せるようにする
+        Runnable buildList = () -> {
+            // Fetch saved data and remote data date from background, then combine with JpPostal master data
+            CompletableFuture.supplyAsync(() -> {
+                List<PrefMeta> savedMetas = viewModel.getSavedPrefectures();
+                Map<String, PrefMeta> savedMap = new HashMap<>();
+                for (PrefMeta m : savedMetas) {
+                    String key = m.getName() + (m.getSubName() == null ? "" : ":" + m.getSubName());
+                    savedMap.put(key, m);
+                }
+                return new Object[]{savedMetas, savedMap};
+            }).thenCombine(JpPostalUtil.getPrefectures(), (data, allPrefCodes) -> {
+                List<PrefMeta> savedMetas = (List<PrefMeta>) data[0];
+                Map<String, PrefMeta> savedMap = (Map<String, PrefMeta>) data[1];
+                return new Object[]{savedMetas, savedMap, allPrefCodes};
+            }).thenCombine(JpPostalUtil.getRawPrefecturesJson(), (data, json) -> {
+                List<PrefMeta> savedMetas = (List<PrefMeta>) data[0];
+                Map<String, PrefMeta> savedMap = (Map<String, PrefMeta>) data[1];
+                Map<String, Integer> allPrefCodes = (Map<String, Integer>) data[2];
+
+                Map<String, Date> remoteDates = new HashMap<>();
+                DataDateResponse remoteData = viewModel.getDataDate().getValue();
+                SimpleDateFormat remoteSdf = new SimpleDateFormat("yyyy/MM/dd'T'HH:mm:ss", Locale.JAPAN);
+                if (remoteData != null && remoteData.getPrefectures() != null) {
+                    for (DataDateResponse.PrefectureDate pd : remoteData.getPrefectures()) {
+                        try {
+                            Date date = remoteSdf.parse(pd.getLastModified());
+                            if (date != null) {
+                                remoteDates.put(pd.getName(), date);
+                            }
+                        } catch (ParseException ignored) {
+                        }
+                    }
+                }
+
+                List<PrefInfo> allItems = new ArrayList<>();
+                java.util.Set<String> processedPrefs = new java.util.HashSet<>();
+
+                try {
+                    if (json != null && !json.isEmpty()) {
+                        JSONObject root = new JSONObject(json);
+                        Iterator<String> keys = root.keys();
+                        while (keys.hasNext()) {
+                            String prefName = keys.next();
+                            JSONObject prefObj = root.getJSONObject(prefName);
+                            Integer code = allPrefCodes.get(prefName);
+
+                            // Fallback: search in saved metas if not in master list
+                            if (code == null) {
+                                for (PrefMeta m : savedMetas) {
+                                    if (m.getName().equals(prefName)) {
+                                        code = m.getPrefCode();
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (code != null) {
+                                PrefInfo pi = new PrefInfo(code, prefName);
+                                if (prefObj.has("sub")) {
+                                    JSONObject subObj = prefObj.getJSONObject("sub");
+                                    Iterator<String> subKeys = subObj.keys();
+                                    while (subKeys.hasNext()) {
+                                        String subName = subKeys.next();
+                                        pi.subNames.add(subName);
+                                    }
+                                    Collections.sort(pi.subNames);
+                                }
+                                allItems.add(pi);
+                                processedPrefs.add(prefName);
+                            }
+                        }
+                    }
+
+                    // Add remaining from allPrefCodes
+                    for (Map.Entry<String, Integer> entry : allPrefCodes.entrySet()) {
+                        if (!processedPrefs.contains(entry.getKey())) {
+                            allItems.add(new PrefInfo(entry.getValue(), entry.getKey()));
+                            processedPrefs.add(entry.getKey());
+                        }
+                    }
+
+                    // Add remaining from savedMetas
+                    for (PrefMeta m : savedMetas) {
+                        if (!processedPrefs.contains(m.getName())) {
+                            allItems.add(new PrefInfo(m.getPrefCode(), m.getName()));
+                            processedPrefs.add(m.getName());
+                        }
+                    }
+
+                    // Sort: Current > Saved > Others. Within groups, sort by code.
+                    Collections.sort(allItems, (o1, o2) -> {
+                        boolean isCurr1 = o1.name.equals(currentPref);
+                        boolean isCurr2 = o2.name.equals(currentPref);
+                        if (isCurr1 && !isCurr2) return -1;
+                        if (!isCurr1 && isCurr2) return 1;
+
+                        boolean s1 = hasAnySaved(o1, savedMap);
+                        boolean s2 = hasAnySaved(o2, savedMap);
+                        if (s1 && !s2) return -1;
+                        if (!s1 && s2) return 1;
+                        return Integer.compare(o1.code, o2.code);
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                return new Object[]{allItems, savedMap, remoteDates};
+            }).thenAccept(result -> {
+                List<PrefInfo> allItems = (List<PrefInfo>) result[0];
+                Map<String, PrefMeta> savedMap = (Map<String, PrefMeta>) result[1];
+                Map<String, Date> remoteDates = (Map<String, Date>) result[2];
+
+                if (context instanceof AppCompatActivity) {
+                    ((AppCompatActivity) context).runOnUiThread(() -> {
+                        container.removeView(progressBar);
+                        if (allItems.isEmpty()) {
+                            emptyText.setVisibility(View.VISIBLE);
+                        } else {
+                            emptyText.setVisibility(View.GONE);
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.JAPAN);
+                            for (PrefInfo pi : allItems) {
+                                boolean isCurrent = pi.name.equals(currentPref);
+                                if (pi.subNames.isEmpty()) {
+                                    PrefMeta meta = savedMap.get(pi.name);
+                                    if (meta == null) meta = new PrefMeta(pi.code, pi.name, 0);
+                                    Date sourceUpdatedAt = remoteDates.get(pi.name);
+                                    boolean isSaved = savedMap.containsKey(pi.name);
+                                    boolean hasUpdate = isSaved && sourceUpdatedAt != null && meta.getLastUpdated() < sourceUpdatedAt.getTime();
+                                    container.addView(buildRow(context, viewModel, meta, sdf, sourceUpdatedAt, hasUpdate, isSaved, isCurrent));
+                                } else {
+                                    container.addView(buildHierarchyRow(context, viewModel, pi, savedMap, remoteDates, sdf, isCurrent, currentSub));
+                                }
+                            }
+                        }
+                    });
+                }
+            }).exceptionally(ex -> {
+                ex.printStackTrace();
+                if (context instanceof AppCompatActivity) {
+                    ((AppCompatActivity) context).runOnUiThread(() -> container.removeView(progressBar));
+                }
+                return null;
+            });
+        };
+
+        // Observe DataDate updates.
+        // We need to handle the lifecycle correctly.
+        if (context instanceof AppCompatActivity) {
+            AppCompatActivity activity = (AppCompatActivity) context;
+            viewModel.getDataDate().observe(activity, dataDateResponse -> {
+                // When data is fetched or updated, refresh the list.
+                // We clear the container (except progressBar if it's still there) and rebuild.
+                container.removeAllViews();
+                container.addView(progressBar);
+                buildList.run();
+            });
+            // Initial trigger
+            viewModel.fetchDataDate();
+        } else {
+            // Fallback for non-lifecycle contexts
+            buildList.run();
+        }
 
         dialog.show();
     }
