@@ -415,14 +415,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             if (subName != null) {
                 String label = prefName + " " + subName;
                 loadingStatusLiveData.postValue(label + "のデータを取得中");
-                String subArg = subName;
-                if (subAll != null && subAll.containsKey(subName)) {
-                    Integer subCode = subAll.get(subName);
-                    if (subCode != null) {
-                        subArg = String.valueOf(subCode);
-                    }
-                }
-                List<OsmPoi> fetched = JpPostalUtil.getPoiData(prefName, subArg).join();
+                List<OsmPoi> fetched = JpPostalUtil.getPoiData(prefName, subName).join();
                 if (local != null) {
                     loadingStatusLiveData.postValue(label + "のデータを処理中");
                     local.upsertArea(prefCode, subName, prefName, fetched, System.currentTimeMillis());
@@ -433,6 +426,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                 if (subs != null && !subs.isEmpty()) {
                     for (String sub : subs) {
                         loadingStatusLiveData.postValue(prefName + " " + sub + " のデータを取得中");
+                        
                         String subCodeStr = String.valueOf(subAll.get(sub));
                         List<OsmPoi> subData = JpPostalUtil.getPoiData(prefName, subCodeStr).join();
                         if (subData != null && local != null) {
@@ -441,7 +435,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                     }
                 } else {
                     loadingStatusLiveData.postValue(prefName + "のデータを取得中");
-                    List<OsmPoi> fetched = JpPostalUtil.getPoiData(prefName, null).join();
+                    List<OsmPoi> fetched = JpPostalUtil.getPoiData(prefName).join();
                     if (local != null) {
                         loadingStatusLiveData.postValue(prefName + "のデータを処理中");
                         local.upsertArea(prefCode, null, prefName, fetched, System.currentTimeMillis());
