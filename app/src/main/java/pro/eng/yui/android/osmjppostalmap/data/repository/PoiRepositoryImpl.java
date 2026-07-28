@@ -405,22 +405,30 @@ public class PoiRepositoryImpl implements PoiRepository {
             return; // SQLiteの内容をそのまま利用（postCombinedで読み出す）
         }
         try {
+            Map<String, Integer> subAll = JpPostalUtil.getSubAreas(prefName).join();
             if (subName != null) {
                 String label = prefName + " " + subName;
                 loadingStatusLiveData.postValue(label + "のデータを取得中");
-                List<OsmPoi> fetched = JpPostalUtil.getPoiData(prefName, subName).join();
+                String subArg = subName;
+                if (subAll != null && subAll.containsKey(subName)) {
+                    Integer subCode = subAll.get(subName);
+                    if (subCode != null) {
+                        subArg = String.valueOf(subCode);
+                    }
+                }
+                List<OsmPoi> fetched = JpPostalUtil.getPoiData(prefName, subArg).join();
                 if (local != null) {
                     loadingStatusLiveData.postValue(label + "のデータを処理中");
                     local.upsertArea(prefCode, subName, prefName, fetched, System.currentTimeMillis());
                 }
             } else {
                 // サブ領域指定がない場合、もしサブ領域が存在するならそれらを全て取得する
-                Map<String, Integer> subAll = JpPostalUtil.getSubAreas(prefName).join();
-                Set<String> subs = subAll.keySet();
+                Set<String> subs = (subAll != null) ? subAll.keySet() : null;
                 if (subs != null && !subs.isEmpty()) {
                     for (String sub : subs) {
                         loadingStatusLiveData.postValue(prefName + " " + sub + " のデータを取得中");
-                        List<OsmPoi> subData = JpPostalUtil.getPoiData(prefName, sub).join();
+                        String subCodeStr = String.valueOf(subAll.get(sub));
+                        List<OsmPoi> subData = JpPostalUtil.getPoiData(prefName, subCodeStr).join();
                         if (subData != null && local != null) {
                             local.upsertArea(prefCode, sub, prefName, subData, System.currentTimeMillis());
                         }
