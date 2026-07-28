@@ -126,7 +126,8 @@ public class PoiLocalDataSource {
      */
     public List<OsmPoi> getByBoundingBox(double latMin, double latMax, double lonMin, double lonMax) {
         SQLiteDatabase db = helper.getReadableDatabase();
-        List<OsmPoi> result = new ArrayList<>();
+        // 1地点に複数の都道府県が判定される可能性を考慮し、IDとTypeで重複排除する
+        Map<String, OsmPoi> result = new java.util.LinkedHashMap<>();
         String selection = PoiDbHelper.COL_LAT + " BETWEEN ? AND ? AND " +
                           PoiDbHelper.COL_LON + " BETWEEN ? AND ?";
         String[] selectionArgs = new String[]{
@@ -137,10 +138,13 @@ public class PoiLocalDataSource {
                 selection, selectionArgs, null, null, null)) {
             while (c.moveToNext()) {
                 OsmPoi poi = fromCursor(c);
-                if (poi != null) { result.add(poi); }
+                if (poi != null) {
+                    String key = poi.getType() + ":" + poi.getId();
+                    result.put(key, poi);
+                }
             }
         }
-        return result;
+        return new ArrayList<>(result.values());
     }
 
     /**

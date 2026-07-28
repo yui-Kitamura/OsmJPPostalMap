@@ -563,6 +563,11 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        // GPS座標そのものも判定対象に含める
+        if (lastLocation != null) {
+            pointsList.add(new double[]{lastLocation.getLatitude(), lastLocation.getLongitude()});
+        }
+
         viewModel.fetchPoisForArea(pointsList.toArray(new double[0][0]), forceNotify);
     }
 

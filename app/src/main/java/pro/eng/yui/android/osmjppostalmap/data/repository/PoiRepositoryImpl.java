@@ -183,6 +183,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             try {
                 task.run();
             } catch (Exception e) {
+                Log.e("PoiRepository", "Error in " + operation, e);
                 errorLiveData.postValue("処理中にエラーが発生しました");
             } finally {
                 if (pendingOperations.decrementAndGet() == 0) {
@@ -376,7 +377,8 @@ public class PoiRepositoryImpl implements PoiRepository {
                     }
                 }
             }
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
+            Log.e("PoiRepository", "Failed to load area: " + prefName, e);
             errorLiveData.postValue("データの取得に失敗しました: " + prefName);
         }
     }
@@ -496,9 +498,8 @@ public class PoiRepositoryImpl implements PoiRepository {
                 // CS close
                 postProgress(callback, "Changesetを確定中…");
                 JpPostalUtil.callOsmCloseChangeset(accessToken, csInfoActive).join();
-            } catch (RuntimeException e) {
-                System.err.println(e.getMessage());
-                e.printStackTrace();
+            } catch (Exception e) {
+                Log.e("PoiRepository", "Failed to save POI", e);
                 postError(callback, "入力内容の反映に失敗しました。リトライしてください");
                 return;
             }
@@ -562,7 +563,8 @@ public class PoiRepositoryImpl implements PoiRepository {
                 long tempId = -System.currentTimeMillis();
                 OsmPoi cachePoi = new OsmPoi(tempId, lat, lon, "node", poiTags, 0);
                 executor.execute(() -> cacheEditedPoi(cachePoi));
-            } catch (RuntimeException e) {
+            } catch (Exception e) {
+                Log.e("PoiRepository", "Failed to add post box", e);
                 postError(callback, "通信エラー: " + e.getMessage());
             }
         });
