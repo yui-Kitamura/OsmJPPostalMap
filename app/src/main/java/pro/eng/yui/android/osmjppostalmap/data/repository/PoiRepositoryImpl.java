@@ -428,7 +428,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                         loadingStatusLiveData.postValue(prefName + " " + sub + " のデータを取得中");
                         
                         String subCodeStr = String.valueOf(subAll.get(sub));
-                        List<OsmPoi> subData = JpPostalUtil.getPoiData(prefName, subCodeStr).join();
+                        List<OsmPoi> subData = JpPostalUtil.getPoiData(prefName, sub).join();
                         if (subData != null && local != null) {
                             local.upsertArea(prefCode, sub, prefName, subData, System.currentTimeMillis());
                         }
@@ -446,11 +446,6 @@ public class PoiRepositoryImpl implements PoiRepository {
             Log.e("PoiRepository", "Failed to load area: " + prefName, e);
             errorLiveData.postValue("データの取得に失敗しました: " + prefName);
         }
-    }
-
-    /** 互換用。 */
-    private void loadPref(int prefCode, String prefName, boolean forceNetwork) {
-        loadArea(prefCode, prefName, null, forceNetwork);
     }
 
     /**
