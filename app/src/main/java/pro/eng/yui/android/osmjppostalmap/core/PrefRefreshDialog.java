@@ -93,9 +93,24 @@ public class PrefRefreshDialog {
         });
 
         // データの構築処理を関数化して、DataDateの取得後に呼び出せるようにする
+        String currentPref = viewModel.getCurrentPrefecture().getValue();
+        String currentSub = viewModel.getCurrentSubArea().getValue();
+        // If initial value is not available, we can't show GPS icon correctly.
+        // But re-observing causes flicker.
+        
+        final String finalCurrentPref = currentPref;
+        final String finalCurrentSub = currentSub;
+
         Runnable buildList = () -> {
-            String currentPref = viewModel.getCurrentPrefecture().getValue();
-            String currentSub = viewModel.getCurrentSubArea().getValue();
+            String cPref = finalCurrentPref;
+            String cSub = finalCurrentSub;
+            if (cPref == null && context instanceof AppCompatActivity) {
+                cPref = viewModel.getCurrentPrefecture().getValue();
+                cSub = viewModel.getCurrentSubArea().getValue();
+            }
+            final String effectivePref = cPref;
+            final String effectiveSub = cSub;
+
             // Fetch saved data and remote data date from background, then combine with JpPostal master data
             CompletableFuture.supplyAsync(() -> {
                 List<PrefMeta> savedMetas = viewModel.getSavedPrefectures();
@@ -280,8 +295,8 @@ public class PrefRefreshDialog {
 
                     // Sort: Current > Saved > Others. Within groups, sort by code.
                     Collections.sort(allItems, (o1, o2) -> {
-                        boolean isCurr1 = o1.name.equals(currentPref);
-                        boolean isCurr2 = o2.name.equals(currentPref);
+                        boolean isCurr1 = o1.name.equals(effectivePref);
+                        boolean isCurr2 = o2.name.equals(effectivePref);
                         if (isCurr1 && !isCurr2) return -1;
                         if (!isCurr1 && isCurr2) return 1;
 
@@ -310,7 +325,7 @@ public class PrefRefreshDialog {
                             emptyText.setVisibility(View.GONE);
                             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.JAPAN);
                             for (PrefInfo pi : allItems) {
-                                boolean isCurrent = pi.name.equals(currentPref);
+                                boolean isCurrent = pi.name.equals(effectivePref);
                                 if (pi.subs.isEmpty()) {
                                     PrefMeta meta = savedMap.get(pi.name);
                                     if (meta == null) meta = new PrefMeta(pi.code, pi.name, 0);
@@ -319,7 +334,7 @@ public class PrefRefreshDialog {
                                     boolean hasUpdate = isSaved && sourceUpdatedAt != null && meta.getLastUpdated() < sourceUpdatedAt.getTime();
                                     container.addView(buildRow(context, viewModel, meta, sdf, sourceUpdatedAt, hasUpdate, isSaved, isCurrent));
                                 } else {
-                                    container.addView(buildHierarchyRow(context, viewModel, pi, savedMap, remoteDates, sdf, isCurrent, currentSub));
+                                    container.addView(buildHierarchyRow(context, viewModel, pi, savedMap, remoteDates, sdf, isCurrent, effectiveSub));
                                 }
                             }
                         }
@@ -340,7 +355,7 @@ public class PrefRefreshDialog {
             AppCompatActivity activity = (AppCompatActivity) context;
             
             Runnable refreshAction = () -> {
-                // When data is fetched or location updated, refresh the list.
+                // When data is fetched, refresh the list.
                 // We clear the container (except progressBar if it's still there) and rebuild.
                 container.removeAllViews();
                 container.addView(progressBar);
@@ -348,24 +363,38 @@ public class PrefRefreshDialog {
             };
 
             Observer<DataDateResponse> dateObserver = d -> refreshAction.run();
-            Observer<String> prefObserver = s -> refreshAction.run();
-            Observer<String> subObserver = s -> refreshAction.run();
             Observer<Boolean> loadingObserver = loading -> {
                 if (loading != null && !loading) {
-                    refreshAction.run();
+                    // Small delay to ensure DB update is committed before we read savedPrefectures
+                    container.postDelayed(refreshAction, 500);
+                }
+            };
+
+            // Also observe location if initial values were missing
+            Observer<String> prefObserver = new Observer<String>() {
+                @Override
+                public void onChanged(String s) {
+                    if (finalCurrentPref == null && s != null) {
+                        // Location found, rebuild once and stop observing
+                        viewModel.getCurrentPrefecture().removeObserver(this);
+                        // We need a new finalCurrentPref? No, we can't change it. 
+                        // But we can just call show() again or just rebuild with new values?
+                        // Actually, just rebuild is enough IF we handle the null check inside buildList.
+                        refreshAction.run();
+                    }
                 }
             };
 
             viewModel.getDataDate().observe(activity, dateObserver);
-            viewModel.getCurrentPrefecture().observe(activity, prefObserver);
-            viewModel.getCurrentSubArea().observe(activity, subObserver);
             viewModel.getLoading().observe(activity, loadingObserver);
+            if (finalCurrentPref == null) {
+                viewModel.getCurrentPrefecture().observe(activity, prefObserver);
+            }
 
             dialog.setOnDismissListener(d -> {
                 viewModel.getDataDate().removeObserver(dateObserver);
-                viewModel.getCurrentPrefecture().removeObserver(prefObserver);
-                viewModel.getCurrentSubArea().removeObserver(subObserver);
                 viewModel.getLoading().removeObserver(loadingObserver);
+                viewModel.getCurrentPrefecture().removeObserver(prefObserver);
             });
             // Initial trigger
             viewModel.fetchDataDate();
