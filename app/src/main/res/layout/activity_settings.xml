@@ -92,14 +92,13 @@
             style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
         <Button
-            android:id="@+id/btn_delete_boundary"
+            android:id="@+id/btn_import_boundary"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="行政界削除"
+            android:text="行政界取込"
             android:layout_marginStart="4dp"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:textColor="@color/jp_post_red" />
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
     </LinearLayout>
 

@@ -107,17 +107,7 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.btn_show_boundary).setOnClickListener(v -> showBoundaryDialog());
-        findViewById(R.id.btn_delete_boundary).setOnClickListener(v -> {
-            new MaterialAlertDialogBuilder(this)
-                .setTitle("行政界削除")
-                .setMessage("行政界のキャッシュデータを削除しますか？")
-                .setPositiveButton("はい", (dialog, which) -> {
-                    JpPostalUtil.truncatePrefectureCache();
-                    Toast.makeText(this, "行政界キャッシュを削除しました", Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("いいえ", null)
-                .show();
-        });
+        findViewById(R.id.btn_import_boundary).setOnClickListener(v -> updateBoundaryData());
 
         TextView appVersionInfo = findViewById(R.id.app_version_info);
         String versionInfo = String.format("v%s(%d) + %s", 
@@ -254,7 +244,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void updateBoundaryData() {
         Toast.makeText(this, "行政界データを更新しています...", Toast.LENGTH_SHORT).show();
-        JpPostalUtil.fetchPrefectures().thenAccept(v -> {
+        JpPostalUtil.getRawPrefecturesJson().thenAccept(v -> {
             runOnUiThread(() -> {
                 Toast.makeText(this, "行政界データを更新しました", Toast.LENGTH_SHORT).show();
                 showBoundaryDialog(); // リロードして再表示
