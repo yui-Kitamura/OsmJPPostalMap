@@ -6,6 +6,8 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateResponse;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
 import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
@@ -27,6 +29,7 @@ public class MainViewModel extends ViewModel {
     private final MutableLiveData<Boolean> filterPostOfficeOnly = new MutableLiveData<>(false);
     private final MutableLiveData<List<OsmPoi>> filteredPois = new MutableLiveData<>();
     private final MutableLiveData<DataDateResponse> dataDate = new MutableLiveData<>();
+    private final ExecutorService filterExecutor = Executors.newSingleThreadExecutor();
 
     public MainViewModel() {
         this.repository = PoiRepositoryImpl.getInstance();
@@ -73,52 +76,54 @@ public class MainViewModel extends ViewModel {
 
         boolean openOnly = filterOpenOnly.getValue() != null && filterOpenOnly.getValue();
         boolean postOfficeOnly = filterPostOfficeOnly.getValue() != null && filterPostOfficeOnly.getValue();
-        
+
         if (!openOnly && !postOfficeOnly) {
             filteredPois.postValue(allPois);
             return;
         }
 
-        List<OsmPoi> filtered = new java.util.ArrayList<>();
-        SimpleScheduleParser parser = new SimpleScheduleParser();
-        long now = System.currentTimeMillis();
+        filterExecutor.execute(() -> {
+            List<OsmPoi> filtered = new java.util.ArrayList<>();
+            SimpleScheduleParser parser = new SimpleScheduleParser();
+            long now = System.currentTimeMillis();
 
-        for (OsmPoi poi : allPois) {
-            String amenityStr = poi.getTag("amenity");
-            boolean isPostOffice = "post_office".equals(amenityStr);
-            
-            // 郵便局フィルタ
-            if (postOfficeOnly && !isPostOffice) {
-                continue;
-            }
+            for (OsmPoi poi : allPois) {
+                String amenityStr = poi.getTag("amenity");
+                boolean isPostOffice = "post_office".equals(amenityStr);
 
-            // 開店中フィルタ
-            if (openOnly) {
-                ScheduleParser.Amenity amenity = isPostOffice ?
-                    ScheduleParser.Amenity.POST_OFFICE :
-                    ScheduleParser.Amenity.POST_BOX;
-
-                String tagName = (amenity == ScheduleParser.Amenity.POST_OFFICE) ?
-                    "opening_hours" : "collection_times";
-                ScheduleParser.TimeType timeType = (amenity == ScheduleParser.Amenity.POST_OFFICE) ?
-                        ScheduleParser.TimeType.OPENING_HOURS : ScheduleParser.TimeType.COLLECTION_TIMES;
-
-                TextValue tagValue = (amenity == ScheduleParser.Amenity.POST_OFFICE) ?
-                        new OpeningHours(poi.getTag(tagName)) :
-                        new CollectionTimes(poi.getTag(tagName));
-
-                ScheduleResult res = parser.parse(tagValue, now, timeType);
-
-                if (!(res.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
-                    res.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON ||
-                    res.getCurrentState() == ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON)) {
+                // 郵便局フィルタ
+                if (postOfficeOnly && !isPostOffice) {
                     continue;
                 }
+
+                // 開店中フィルタ
+                if (openOnly) {
+                    ScheduleParser.Amenity amenity = isPostOffice ?
+                        ScheduleParser.Amenity.POST_OFFICE :
+                        ScheduleParser.Amenity.POST_BOX;
+
+                    String tagName = (amenity == ScheduleParser.Amenity.POST_OFFICE) ?
+                        "opening_hours" : "collection_times";
+                    ScheduleParser.TimeType timeType = (amenity == ScheduleParser.Amenity.POST_OFFICE) ?
+                            ScheduleParser.TimeType.OPENING_HOURS : ScheduleParser.TimeType.COLLECTION_TIMES;
+
+                    TextValue tagValue = (amenity == ScheduleParser.Amenity.POST_OFFICE) ?
+                            new OpeningHours(poi.getTag(tagName)) :
+                            new CollectionTimes(poi.getTag(tagName));
+
+                    ScheduleResult res = parser.parse(tagValue, now, timeType);
+
+                    if (!(res.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
+                        res.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON ||
+                        res.getCurrentState() == ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON)) {
+                        continue;
+                    }
+                }
+
+                filtered.add(poi);
             }
-            
-            filtered.add(poi);
-        }
-        filteredPois.postValue(filtered);
+            filteredPois.postValue(filtered);
+        });
     }
 
     /**
@@ -221,5 +226,11 @@ public class MainViewModel extends ViewModel {
 
     public long getCooldownInterval() {
         return repository.getCooldownInterval();
+    }
+
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        filterExecutor.shutdownNow();
     }
 }

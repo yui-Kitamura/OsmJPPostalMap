@@ -125,7 +125,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     private void preloadBoundaries() {
-        JpPostalUtil.getRawPrefecturesJson().thenAccept(json -> {
+        JpPostalUtil.getRawPrefecturesJson().thenAcceptAsync(json -> {
             try {
                 if (json == null || json.isEmpty()) return;
                 Gson gson = new Gson();
@@ -156,7 +156,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             } finally {
                 boundaryLatch.countDown();
             }
-        }).exceptionally(ex -> {
+        }, executor).exceptionally(ex -> {
             Log.e("PoiRepository", "Failed to preload boundaries future", ex);
             errorLiveData.postValue("境界データの取得に失敗しました");
             boundaryLatch.countDown();

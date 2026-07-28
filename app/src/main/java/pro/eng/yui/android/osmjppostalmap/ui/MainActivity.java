@@ -99,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /** 一度生成・解析したマーカーを、地図移動後の再通知でも再利用する。 */
-    private final Map<String, MarkerEntry> markerCache = new LinkedHashMap<>();
+    private final Map<String, MarkerEntry> markerCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -210,57 +210,102 @@ public class MainActivity extends AppCompatActivity {
         
         // Observe Filtered POIs
         viewModel.getFilteredPois().observe(this, pois -> {
-            int renderGeneration = markerRenderGeneration.incrementAndGet();
-            adjustGpsZoomForPoiCount(pois);
-            map.getOverlays().removeIf(overlay -> overlay instanceof PoiMarker);
-            viewModel.updateAccessToken(authRepository.getAccessToken());
+            if (pois == null) return;
+            final int renderGeneration = markerRenderGeneration.incrementAndGet();
+            
+            // UIスレッドで必要な情報を取得
+            final int mapWidth = map.getWidth();
+            final int mapHeight = map.getHeight();
+            final boolean zoomAdjustmentPending = gpsZoomAdjustmentPending;
+            final GeoPoint zoomCenter = gpsZoomCenter;
+            final double zoomBase = gpsZoomBase;
+            final boolean postOfficeOnly = Boolean.TRUE.equals(viewModel.getFilterPostOfficeOnly().getValue());
+            final List<OsmPoi> allPoisSnapshot = viewModel.getPois().getValue();
 
-            List<OsmPoi> allPois = viewModel.getPois().getValue();
-            if (allPois != null) {
-                Set<String> liveKeys = new HashSet<>();
-                for (OsmPoi poi : allPois) liveKeys.add(markerKey(poi));
-                markerCache.keySet().retainAll(liveKeys);
-            }
+            markerStateExecutor.execute(() -> {
+                if (markerRenderGeneration.get() != renderGeneration) return;
 
-            ArrayList<PoiMarker> markers = new ArrayList<>();
-            ArrayList<OsmPoi> poisToParse = new ArrayList<>();
-            ArrayList<PoiMarker> markersToParse = new ArrayList<>();
-            for (OsmPoi poi : pois) {
-                boolean postOffice = "post_office".equals(poi.getTag("amenity"));
-                String key = markerKey(poi);
-                String stateSource = markerStateSource(poi);
-                MarkerEntry entry = markerCache.get(key);
+                // 1. GPSズームの計算 (Background)
+                Double targetZoom = null;
+                boolean satisfied = false;
+                if (zoomAdjustmentPending && zoomCenter != null && mapWidth > 0 && mapHeight > 0) {
+                    // 計算部分は重複を避けるため helper に切り出すか、ここでインライン化
+                    targetZoom = calculateTargetZoomInBackground(pois, zoomCenter, zoomBase, mapWidth, mapHeight, postOfficeOnly);
+                    if (targetZoom != null) satisfied = true;
+                }
+                final Double fTargetZoom = targetZoom;
+                final boolean fSatisfied = satisfied;
 
-                if (entry == null || entry.postOffice != postOffice) {
-                    PoiMarker.PoiType type = postOffice
-                            ? PoiMarker.PoiType.POST_OFFICE : PoiMarker.PoiType.POST_BOX;
-                    entry = new MarkerEntry(new PoiMarker(map, type), postOffice);
-                    MarkerEntry clickEntry = entry;
-                    entry.marker.setOnMarkerClickListener((m, mapView) -> {
-                        PoiDetailsDialog.show(this, clickEntry.poi, ((PoiMarker) m).getSchedule(), lastLocation);
-                        return true;
-                    });
-                    markerCache.put(key, entry);
+                // 2. マーカーキャッシュのクリーンアップ (Background)
+                if (allPoisSnapshot != null) {
+                    Set<String> liveKeys = new HashSet<>();
+                    for (OsmPoi poi : allPoisSnapshot) liveKeys.add(markerKey(poi));
+                    markerCache.keySet().retainAll(liveKeys);
                 }
 
-                entry.poi = poi;
-                PoiMarker marker = entry.marker;
-                marker.setPosition(new GeoPoint(poi.getLat(), poi.getLon()));
-                markers.add(marker);
+                // 3. UIスレッドで描画反映
+                runOnUiThread(() -> {
+                    if (markerRenderGeneration.get() != renderGeneration) return;
 
-                if (!stateSource.equals(entry.stateSource)) {
-                    marker.setSchedule(null);
-                    poisToParse.add(poi);
-                    markersToParse.add(marker);
-                }
-            }
+                    if (fTargetZoom != null) {
+                        map.getController().setZoom(fTargetZoom);
+                        if (fSatisfied) {
+                            gpsZoomAdjustmentPending = false;
+                            if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
+                        } else {
+                            Boolean loading = viewModel.getLoading().getValue();
+                            if (!Boolean.TRUE.equals(loading)) {
+                                gpsZoomAdjustmentPending = false;
+                                if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
+                            }
+                        }
+                    }
 
-            markers.sort(this::compareMarkerPriority);
-            map.getOverlays().addAll(markers);
-            map.invalidate();
-            if (!poisToParse.isEmpty()) {
-                updateMarkerStatesAsync(poisToParse, markersToParse, markers, renderGeneration);
-            }
+                    map.getOverlays().removeIf(overlay -> overlay instanceof PoiMarker);
+                    viewModel.updateAccessToken(authRepository.getAccessToken());
+
+                    ArrayList<PoiMarker> markers = new ArrayList<>();
+                    ArrayList<OsmPoi> poisToParse = new ArrayList<>();
+                    ArrayList<PoiMarker> markersToParse = new ArrayList<>();
+                    
+                    for (OsmPoi poi : pois) {
+                        boolean postOffice = "post_office".equals(poi.getTag("amenity"));
+                        String key = markerKey(poi);
+                        String stateSource = markerStateSource(poi);
+                        MarkerEntry entry = markerCache.get(key);
+
+                        if (entry == null || entry.postOffice != postOffice) {
+                            PoiMarker.PoiType type = postOffice
+                                    ? PoiMarker.PoiType.POST_OFFICE : PoiMarker.PoiType.POST_BOX;
+                            entry = new MarkerEntry(new PoiMarker(map, type), postOffice);
+                            final MarkerEntry clickEntry = entry;
+                            entry.marker.setOnMarkerClickListener((m, mapView) -> {
+                                PoiDetailsDialog.show(this, clickEntry.poi, ((PoiMarker) m).getSchedule(), lastLocation);
+                                return true;
+                            });
+                            markerCache.put(key, entry);
+                        }
+
+                        entry.poi = poi;
+                        PoiMarker marker = entry.marker;
+                        marker.setPosition(new GeoPoint(poi.getLat(), poi.getLon()));
+                        markers.add(marker);
+
+                        if (!stateSource.equals(entry.stateSource)) {
+                            marker.setSchedule(null);
+                            poisToParse.add(poi);
+                            markersToParse.add(marker);
+                        }
+                    }
+
+                    markers.sort(this::compareMarkerPriority);
+                    map.getOverlays().addAll(markers);
+                    map.invalidate();
+                    if (!poisToParse.isEmpty()) {
+                        updateMarkerStatesAsync(poisToParse, markersToParse, markers, renderGeneration);
+                    }
+                });
+            });
         });
 
         // Menu Button
@@ -393,44 +438,32 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * GPS移動先のPOI密度に応じて、5POIが映る適切なズームレベルを選ぶ。
-     * 映る、の定義は、画面の短辺を1辺の長さとするGPS座標を中心に持つ正方形範囲に
-     * POIのアイコン（中心点）が収まること。ただし必ず1POIは郵便局を含むこと。
+     * GPS移動先のPOI密度に応じて、適切なズームレベルを計算する（バックグラウンド実行用）。
      */
-    private void adjustGpsZoomForPoiCount(List<OsmPoi> pois) {
-        if (!gpsZoomAdjustmentPending || gpsZoomCenter == null || pois == null) {
-            return;
-        }
+    private Double calculateTargetZoomInBackground(List<OsmPoi> pois, GeoPoint center, double zoomBase, int width, int height, boolean postOfficeOnly) {
+        if (pois == null || center == null) return null;
 
-        int width = map.getWidth();
-        int height = map.getHeight();
-        if (width <= 0 || height <= 0) return;
         int shortSide = Math.min(width, height);
 
         // gpsZoomBaseにおける1ピクセルあたりの緯度経度幅を計算で求める
-        // degree_per_pixel = 360 / (256 * 2^zoom)
-        double dLonPerPixel = 360.0 / (Math.pow(2.0, gpsZoomBase) * 256.0);
-        double dLatPerPixel = dLonPerPixel / Math.cos(Math.toRadians(gpsZoomCenter.getLatitude()));
+        double dLonPerPixel = 360.0 / (Math.pow(2.0, zoomBase) * 256.0);
+        double dLatPerPixel = dLonPerPixel / Math.cos(Math.toRadians(center.getLatitude()));
 
         // gpsZoomBaseにおける短辺相当の地理的範囲（半径）
         double halfLonBase = (shortSide * dLonPerPixel) / 2.0;
         double halfLatBase = (shortSide * dLatPerPixel) / 2.0;
 
-        // 計算の高速化のため、ループ前に必要な情報を抽出する
         List<PoiInfo> poiInfos = new ArrayList<>(pois.size());
         for (OsmPoi poi : pois) {
-            double dLat = Math.abs(poi.getLat() - gpsZoomCenter.getLatitude());
-            double dLon = longitudeDistance(poi.getLon(), gpsZoomCenter.getLongitude());
+            double dLat = Math.abs(poi.getLat() - center.getLatitude());
+            double dLon = longitudeDistance(poi.getLon(), center.getLongitude());
             String amenity = poi.getTag("amenity");
             poiInfos.add(new PoiInfo(dLat, dLon, "post_office".equals(amenity), "post_box".equals(amenity)));
         }
 
         double targetZoom = GPS_MAX_ZOOM;
-        boolean satisfied = false;
-        boolean postOfficeOnly = Boolean.TRUE.equals(viewModel.getFilterPostOfficeOnly().getValue());
-        // 最大ズームから順に下げていき、条件（5POI以上かつ郵便局1以上）を満たす最初のズームを採用する
         for (double candidateZoom = GPS_MAX_ZOOM; candidateZoom >= MIN_ZOOM; candidateZoom -= 1.0) {
-            double scale = Math.pow(2.0, candidateZoom - gpsZoomBase);
+            double scale = Math.pow(2.0, candidateZoom - zoomBase);
             double halfLon = halfLonBase / scale;
             double halfLat = halfLatBase / scale;
 
@@ -447,29 +480,18 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (visibleCount >= 5 && hasPostOffice && (postOfficeOnly || hasPostBox)) {
-                targetZoom = candidateZoom;
-                satisfied = true;
-                break;
+                return candidateZoom;
             }
             if (candidateZoom <= MIN_ZOOM) {
                 targetZoom = MIN_ZOOM;
             }
         }
+        return targetZoom;
+    }
 
-        if (satisfied) {
-            map.getController().setZoom(targetZoom);
-            gpsZoomAdjustmentPending = false;
-            if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
-        } else {
-            Boolean loading = viewModel.getLoading().getValue();
-            if (!Boolean.TRUE.equals(loading)) {
-                // すべての読み込みが終わって条件を満たさない場合は、最小ズームにして処理を完了する
-                map.getController().setZoom(targetZoom);
-                gpsZoomAdjustmentPending = false;
-                if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
-            }
-            // ロード中の場合は、次のPOIリスト通知を待つためにフラグを維持する
-        }
+    /** 互換用。 */
+    private void adjustGpsZoomForPoiCount(List<OsmPoi> pois) {
+        // Obsolete, moved to background logic
     }
 
     private void performInitialGpsZoom(Location location) {
