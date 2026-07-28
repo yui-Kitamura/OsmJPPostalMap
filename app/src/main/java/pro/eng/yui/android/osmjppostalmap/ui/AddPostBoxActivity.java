@@ -6,8 +6,6 @@ import android.content.pm.PackageManager;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputType;

@@ -36,8 +36,6 @@ import android.Manifest;
 import android.graphics.Color;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -163,8 +161,6 @@ public class MainActivity extends AppCompatActivity {
 
         locationOverlay.enableMyLocation();
         map.getOverlays().add(locationOverlay);
-
-        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
         // OSM JP Tile Server
         map.setTileSource(new XYTileSource("OSMJP", (int) MIN_ZOOM, 20, 256, ".png",
@@ -356,7 +352,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         viewModel.getLocation().observe(this, this::updateCurrentLocation);
-        viewModel.getError().observe(this, msg -> {
+        final TextView statusBar = findViewById(R.id.error_bar);
+        viewModel.getErrorMessage().observe(this, msg -> {
             if (msg == null || msg.isEmpty()) {
                 statusBar.setVisibility(View.GONE);
             } else {
