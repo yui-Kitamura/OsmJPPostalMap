@@ -112,6 +112,12 @@ public class MainActivity extends AppCompatActivity {
     /** 一度生成・解析したマーカーを、地図移動後の再通知でも再利用する。 */
     private final Map<String, MarkerEntry> markerCache = new java.util.concurrent.ConcurrentHashMap<>();
 
+    private static final String PREF_MAP_STATE = "map_state";
+    private static final String KEY_LAST_LAT = "last_lat";
+    private static final String KEY_LAST_LON = "last_lon";
+    private static final String KEY_LAST_ZOOM = "last_zoom";
+    private static final String KEY_HAS_SAVED_STATE = "has_saved_state";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -180,9 +186,20 @@ public class MainActivity extends AppCompatActivity {
         map.setScrollableAreaLimitDouble(JAPAN_BOUNDS);
         map.setMinZoomLevel(MIN_ZOOM);
 
-        GeoPoint startPoint = TOKYO_CENTRAL_POST_OFFICE;
-        map.getController().setZoom(18.0);
-        map.getController().setCenter(startPoint);
+        android.content.SharedPreferences mapPrefs = getSharedPreferences(PREF_MAP_STATE, MODE_PRIVATE);
+        if (mapPrefs.getBoolean(KEY_HAS_SAVED_STATE, false)) {
+            double lat = Double.longBitsToDouble(mapPrefs.getLong(KEY_LAST_LAT, Double.doubleToRawLongBits(TOKYO_CENTRAL_POST_OFFICE.getLatitude())));
+            double lon = Double.longBitsToDouble(mapPrefs.getLong(KEY_LAST_LON, Double.doubleToRawLongBits(TOKYO_CENTRAL_POST_OFFICE.getLongitude())));
+            double zoom = (double) mapPrefs.getFloat(KEY_LAST_ZOOM, 18.0f);
+            map.getController().setZoom(zoom);
+            map.getController().setCenter(new GeoPoint(lat, lon));
+            // 保存された位置から開始する場合は、GPS確定を待たずにロードを開始できるようにする
+            initialLocationSet = true;
+            // ただしGPSパーミッションがある場合は、GPS確定時の即時移動を許可するために lastLocation は null のままにする
+        } else {
+            map.getController().setZoom(18.0);
+            map.getController().setCenter(TOKYO_CENTRAL_POST_OFFICE);
+        }
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
         viewModel.updateAccessToken(authRepository.getAccessToken());
@@ -194,7 +211,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
                 map.removeOnLayoutChangeListener(this);
-                if (canLoadPois()) {
+                // 位置情報パーミッションが解決済み（許可・拒否問わず）で、かつGPSを待機していない場合のみ実行
+                if (canLoadPois() && (initialLocationSet || locationPermissionResolved)) {
+                    // もしパーミッションが許可されていて、まだ位置が確定していないならGPSを待つ
+                    if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && !initialLocationSet) {
+                        return;
+                    }
                     updatePois(true, UpdateMode.GPS_OR_INITIAL);
                 }
             }
@@ -508,15 +530,18 @@ public class MainActivity extends AppCompatActivity {
         gpsZoomCenter = mapTargetFor(location);
         gpsZoomBase = GPS_MIN_ZOOM;
 
-        // 地図のアニメーションと並行してPOIのフェッチを開始するため、即座にフラグを立ててロードを実行する。
         // 計算式による範囲算出を導入したため、移動完了を待つ必要がない。
         gpsZoomAdjustmentPending = true;
         initialLocationSet = true;
 
         map.getController().setZoom(gpsZoomBase);
-        map.getController().animateTo(gpsZoomCenter);
-
-        updatePois(true, UpdateMode.GPS_OR_INITIAL);
+        // アニメーション完了後にPOIを更新するように調整
+        map.getController().animateTo(gpsZoomCenter, gpsZoomBase, 1000L);
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            if (canLoadPois()) {
+                updatePois(true, UpdateMode.GPS_OR_INITIAL);
+            }
+        }, 1100L);
     }
 
     private static double longitudeDistance(double longitude1, double longitude2) {
@@ -622,9 +647,15 @@ public class MainActivity extends AppCompatActivity {
             map.invalidate();
         }
         if (firstLocation && !initialLocationSet) {
-            initialLocationSet = true;
+            // ここで即座に initialLocationSet = true にするとレイアウト完了時のロードが走る可能性があるが、
+            // ズームアニメーションを優先するため、performInitialGpsZoom 内で適切に管理する。
             gpsZoomLimit = map.getZoomLevelDouble();
             performInitialGpsZoom(location);
+        } else if (firstLocation && initialLocationSet) {
+            // すでに前回の位置が復旧されている場合、アニメーションさせずにGPS位置へ即時移動してPOIを更新する
+            gpsZoomCenter = mapTargetFor(location);
+            map.getController().setCenter(gpsZoomCenter);
+            updatePois(true, UpdateMode.GPS_OR_INITIAL);
         }
         if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
     }
@@ -690,9 +721,22 @@ public class MainActivity extends AppCompatActivity {
         updateHandler.postDelayed(updateRunnable, 60000);
     }
 
+    private void saveMapState() {
+        if (map == null) return;
+        org.osmdroid.api.IGeoPoint center = map.getMapCenter();
+        double zoom = map.getZoomLevelDouble();
+        getSharedPreferences(PREF_MAP_STATE, MODE_PRIVATE).edit()
+                .putLong(KEY_LAST_LAT, Double.doubleToRawLongBits(center.getLatitude()))
+                .putLong(KEY_LAST_LON, Double.doubleToRawLongBits(center.getLongitude()))
+                .putFloat(KEY_LAST_ZOOM, (float) zoom)
+                .putBoolean(KEY_HAS_SAVED_STATE, true)
+                .apply();
+    }
+
     @Override
     public void onPause() {
         super.onPause();
+        saveMapState();
         map.onPause();
         if (locationOverlay != null) {
             locationOverlay.disableMyLocation();
