@@ -101,7 +101,7 @@ dependencies {
     // Using signpost for OAuth 1.0a (OSM default)
     implementation 'oauth.signpost:signpost-core:2.1.1'
 
-    implementation 'pro.eng.yui.oss.osm.lib:jppostalcore:3.0.1'
+    implementation 'pro.eng.yui.oss.osm.lib:jppostalcore:3.0.2'
     
     testImplementation 'org.junit.jupiter:junit-jupiter:6.1.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
