@@ -1,6 +1,7 @@
 package pro.eng.yui.android.osmjppostalmap.data.repository;
 
 import android.content.Context;
+import android.util.Log;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -9,6 +10,9 @@ import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.api.osm.ChangeSetInfo;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.BBox;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -95,27 +99,44 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     private void preloadBoundaries() {
-        JpPostalUtil.getPrefectures().thenAccept(prefs -> {
-            for (String name : prefs.keySet()) {
-                JpPostalUtil.getSubAreas(name).thenAccept(subs -> {
-                    if (subs != null && !subs.keySet().isEmpty()) {
-                        for (String sub : subs.keySet()) {
-                            JpPostalUtil.getBoundary(name, sub).thenAccept(bbox -> {
-                                if (bbox != null) {
-                                    prefBoundaryCache.put(name + ":" + sub, bbox);
-                                }
-                            });
-                        }
-                    } else {
-                        JpPostalUtil.getBoundary(name, null).thenAccept(bbox -> {
-                            if (bbox != null) {
-                                prefBoundaryCache.put(name, bbox);
+        JpPostalUtil.getRawPrefecturesJson().thenAccept(json -> {
+            if (json == null || json.isEmpty()) return;
+            try {
+                Gson gson = new Gson();
+                java.lang.reflect.Type type = new TypeToken<Map<String, RawPrefData>>(){}.getType();
+                Map<String, RawPrefData> prefs = gson.fromJson(json, type);
+
+                if (prefs == null) return;
+
+                for (Map.Entry<String, RawPrefData> entry : prefs.entrySet()) {
+                    String prefName = entry.getKey();
+                    RawPrefData pref = entry.getValue();
+
+                    if (pref.subAreas != null && !pref.subAreas.isEmpty()) {
+                        for (Map.Entry<String, RawSubAreaData> subEntry : pref.subAreas.entrySet()) {
+                            String subName = subEntry.getKey();
+                            RawSubAreaData sub = subEntry.getValue();
+                            if (sub.bbox != null) {
+                                prefBoundaryCache.put(prefName + ":" + subName, sub.bbox);
                             }
-                        });
+                        }
+                    } else if (pref.bbox != null) {
+                        prefBoundaryCache.put(prefName, pref.bbox);
                     }
-                });
+                }
+            } catch (Exception e) {
+                Log.e("PoiRepository", "Failed to preload boundaries", e);
             }
         });
+    }
+
+    private static class RawPrefData {
+        BBox bbox;
+        Map<String, RawSubAreaData> subAreas;
+    }
+
+    private static class RawSubAreaData {
+        BBox bbox;
     }
 
     /* ---------- 取得系 ---------- */
