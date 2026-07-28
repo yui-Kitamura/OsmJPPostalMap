@@ -77,34 +77,43 @@ public class PrefRefreshDialog {
         progressBar.setLayoutParams(lp);
         container.addView(progressBar);
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                List<PrefMeta> savedMetas = viewModel.getSavedPrefectures();
-                Map<String, PrefMeta> savedMap = new HashMap<>();
-                for (PrefMeta m : savedMetas) {
-                    String key = m.getName() + (m.getSubName() == null ? "" : ":" + m.getSubName());
-                    savedMap.put(key, m);
-                }
+        // Fetch saved data and remote data date from background, then combine with JpPostal master data
+        CompletableFuture.supplyAsync(() -> {
+            List<PrefMeta> savedMetas = viewModel.getSavedPrefectures();
+            Map<String, PrefMeta> savedMap = new HashMap<>();
+            for (PrefMeta m : savedMetas) {
+                String key = m.getName() + (m.getSubName() == null ? "" : ":" + m.getSubName());
+                savedMap.put(key, m);
+            }
+            return new Object[]{savedMetas, savedMap};
+        }).thenCombine(JpPostalUtil.getPrefectures(), (data, allPrefCodes) -> {
+            List<PrefMeta> savedMetas = (List<PrefMeta>) data[0];
+            Map<String, PrefMeta> savedMap = (Map<String, PrefMeta>) data[1];
+            return new Object[]{savedMetas, savedMap, allPrefCodes};
+        }).thenCombine(JpPostalUtil.getRawPrefecturesJson(), (data, json) -> {
+            List<PrefMeta> savedMetas = (List<PrefMeta>) data[0];
+            Map<String, PrefMeta> savedMap = (Map<String, PrefMeta>) data[1];
+            Map<String, Integer> allPrefCodes = (Map<String, Integer>) data[2];
 
-                Map<String, Date> remoteDates = new HashMap<>();
-                DataDateResponse remoteData = viewModel.getDataDate().getValue();
-                SimpleDateFormat remoteSdf = new SimpleDateFormat("yyyy/MM/dd'T'HH:mm:ss", Locale.JAPAN);
-                if (remoteData != null && remoteData.getPrefectures() != null) {
-                    for (DataDateResponse.PrefectureDate pd : remoteData.getPrefectures()) {
-                        try {
-                            Date date = remoteSdf.parse(pd.getLastModified());
-                            if (date != null) {
-                                remoteDates.put(pd.getName(), date);
-                            }
-                        } catch (ParseException ignored) {
+            Map<String, Date> remoteDates = new HashMap<>();
+            DataDateResponse remoteData = viewModel.getDataDate().getValue();
+            SimpleDateFormat remoteSdf = new SimpleDateFormat("yyyy/MM/dd'T'HH:mm:ss", Locale.JAPAN);
+            if (remoteData != null && remoteData.getPrefectures() != null) {
+                for (DataDateResponse.PrefectureDate pd : remoteData.getPrefectures()) {
+                    try {
+                        Date date = remoteSdf.parse(pd.getLastModified());
+                        if (date != null) {
+                            remoteDates.put(pd.getName(), date);
                         }
+                    } catch (ParseException ignored) {
                     }
                 }
+            }
 
-                String json = JpPostalUtil.getRawPrefecturesJson().join();
-                Map<String, Integer> allPrefCodes = JpPostalUtil.getPrefectures().join();
-                List<PrefInfo> allItems = new ArrayList<>();
+            List<PrefInfo> allItems = new ArrayList<>();
+            java.util.Set<String> processedPrefs = new java.util.HashSet<>();
 
+            try {
                 if (json != null && !json.isEmpty()) {
                     JSONObject root = new JSONObject(json);
                     Iterator<String> keys = root.keys();
@@ -112,28 +121,51 @@ public class PrefRefreshDialog {
                         String prefName = keys.next();
                         JSONObject prefObj = root.getJSONObject(prefName);
                         Integer code = allPrefCodes.get(prefName);
-                        if (code == null) continue;
-
-                        PrefInfo pi = new PrefInfo(code, prefName);
-                        if (prefObj.has("sub")) {
-                            JSONObject subObj = prefObj.getJSONObject("sub");
-                            Iterator<String> subKeys = subObj.keys();
-                            while (subKeys.hasNext()) {
-                                String subName = subKeys.next();
-                                pi.subNames.add(subName);
+                        
+                        // Fallback: search in saved metas if not in master list
+                        if (code == null) {
+                            for (PrefMeta m : savedMetas) {
+                                if (m.getName().equals(prefName)) {
+                                    code = m.getPrefCode();
+                                    break;
+                                }
                             }
-                            Collections.sort(pi.subNames);
                         }
-                        allItems.add(pi);
-                    }
-                } else {
-                    // Fallback
-                    for (Map.Entry<String, Integer> entry : allPrefCodes.entrySet()) {
-                        allItems.add(new PrefInfo(entry.getValue(), entry.getKey()));
+                        
+                        if (code != null) {
+                            PrefInfo pi = new PrefInfo(code, prefName);
+                            if (prefObj.has("sub")) {
+                                JSONObject subObj = prefObj.getJSONObject("sub");
+                                Iterator<String> subKeys = subObj.keys();
+                                while (subKeys.hasNext()) {
+                                    String subName = subKeys.next();
+                                    pi.subNames.add(subName);
+                                }
+                                Collections.sort(pi.subNames);
+                            }
+                            allItems.add(pi);
+                            processedPrefs.add(prefName);
+                        }
                     }
                 }
 
-                // ソート: 現在地 > 取込済みがある県 > 全く未取得。各グループ内ではコード順
+                // Add remaining from allPrefCodes
+                for (Map.Entry<String, Integer> entry : allPrefCodes.entrySet()) {
+                    if (!processedPrefs.contains(entry.getKey())) {
+                        allItems.add(new PrefInfo(entry.getValue(), entry.getKey()));
+                        processedPrefs.add(entry.getKey());
+                    }
+                }
+
+                // Add remaining from savedMetas
+                for (PrefMeta m : savedMetas) {
+                    if (!processedPrefs.contains(m.getName())) {
+                        allItems.add(new PrefInfo(m.getPrefCode(), m.getName()));
+                        processedPrefs.add(m.getName());
+                    }
+                }
+
+                // Sort: Current > Saved > Others. Within groups, sort by code.
                 Collections.sort(allItems, (o1, o2) -> {
                     boolean isCurr1 = o1.name.equals(currentPref);
                     boolean isCurr2 = o2.name.equals(currentPref);
@@ -146,36 +178,46 @@ public class PrefRefreshDialog {
                     if (!s1 && s2) return 1;
                     return Integer.compare(o1.code, o2.code);
                 });
-
-                if (context instanceof AppCompatActivity) {
-                    ((AppCompatActivity) context).runOnUiThread(() -> {
-                        container.removeView(progressBar);
-                        if (allItems.isEmpty()) {
-                            emptyText.setVisibility(View.VISIBLE);
-                        } else {
-                            emptyText.setVisibility(View.GONE);
-                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.JAPAN);
-                            for (PrefInfo pi : allItems) {
-                                boolean isCurrent = pi.name.equals(currentPref);
-                                if (pi.subNames.isEmpty()) {
-                                    // 通常の県
-                                    PrefMeta meta = savedMap.get(pi.name);
-                                    if (meta == null) meta = new PrefMeta(pi.code, pi.name, 0);
-                                    Date sourceUpdatedAt = remoteDates.get(pi.name);
-                                    boolean isSaved = savedMap.containsKey(pi.name);
-                                    boolean hasUpdate = isSaved && sourceUpdatedAt != null && meta.getLastUpdated() < sourceUpdatedAt.getTime();
-                                    container.addView(buildRow(context, viewModel, meta, sdf, sourceUpdatedAt, hasUpdate, isSaved, isCurrent));
-                                } else {
-                                    // サブ領域あり
-                                    container.addView(buildHierarchyRow(context, viewModel, pi, savedMap, remoteDates, sdf, isCurrent));
-                                }
-                            }
-                        }
-                    });
-                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
+
+            return new Object[]{allItems, savedMap, remoteDates};
+        }).thenAccept(result -> {
+            List<PrefInfo> allItems = (List<PrefInfo>) result[0];
+            Map<String, PrefMeta> savedMap = (Map<String, PrefMeta>) result[1];
+            Map<String, Date> remoteDates = (Map<String, Date>) result[2];
+
+            if (context instanceof AppCompatActivity) {
+                ((AppCompatActivity) context).runOnUiThread(() -> {
+                    container.removeView(progressBar);
+                    if (allItems.isEmpty()) {
+                        emptyText.setVisibility(View.VISIBLE);
+                    } else {
+                        emptyText.setVisibility(View.GONE);
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.JAPAN);
+                        for (PrefInfo pi : allItems) {
+                            boolean isCurrent = pi.name.equals(currentPref);
+                            if (pi.subNames.isEmpty()) {
+                                PrefMeta meta = savedMap.get(pi.name);
+                                if (meta == null) meta = new PrefMeta(pi.code, pi.name, 0);
+                                Date sourceUpdatedAt = remoteDates.get(pi.name);
+                                boolean isSaved = savedMap.containsKey(pi.name);
+                                boolean hasUpdate = isSaved && sourceUpdatedAt != null && meta.getLastUpdated() < sourceUpdatedAt.getTime();
+                                container.addView(buildRow(context, viewModel, meta, sdf, sourceUpdatedAt, hasUpdate, isSaved, isCurrent));
+                            } else {
+                                container.addView(buildHierarchyRow(context, viewModel, pi, savedMap, remoteDates, sdf, isCurrent));
+                            }
+                        }
+                    }
+                });
+            }
+        }).exceptionally(ex -> {
+            ex.printStackTrace();
+            if (context instanceof AppCompatActivity) {
+                ((AppCompatActivity) context).runOnUiThread(() -> container.removeView(progressBar));
+            }
+            return null;
         });
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
