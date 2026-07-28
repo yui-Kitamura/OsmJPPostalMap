@@ -324,6 +324,7 @@ public class AddPostBoxActivity extends AppCompatActivity {
     }
 
     private void showProgress(String message) {
+        if (isFinishing() || isDestroyed()) return;
         if (progressDialog == null) {
             View view = getLayoutInflater().inflate(R.layout.dialog_progress, null);
             TextView tvMessage = view.findViewById(R.id.progress_message);
@@ -342,6 +343,10 @@ public class AddPostBoxActivity extends AppCompatActivity {
     }
 
     private void dismissProgress() {
+        if (isFinishing() || isDestroyed()) {
+            progressDialog = null;
+            return;
+        }
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
             progressDialog = null;

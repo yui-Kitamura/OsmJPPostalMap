@@ -230,6 +230,7 @@ public class SettingsActivity extends AppCompatActivity {
                     textView.setTextSize(12f);
                     scrollView.addView(textView);
 
+                    if (isFinishing() || isDestroyed()) return;
                     new MaterialAlertDialogBuilder(this)
                             .setTitle("行政界データ")
                             .setView(scrollView)
@@ -267,6 +268,7 @@ public class SettingsActivity extends AppCompatActivity {
             textView.setTextSize(12f);
             scrollView.addView(textView);
 
+            if (isFinishing() || isDestroyed()) return;
             new MaterialAlertDialogBuilder(this)
                     .setTitle("取得単位エリア")
                     .setView(scrollView)
