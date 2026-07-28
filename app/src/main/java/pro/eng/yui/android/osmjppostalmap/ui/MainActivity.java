@@ -75,6 +75,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean gpsZoomAdjustmentPending = false;
     private GeoPoint gpsZoomCenter;
     private double gpsZoomBase = GPS_MIN_ZOOM;
+    private double gpsZoomLimit = MIN_ZOOM;
     private ProgressBar gpsProgress;
     private final ExecutorService markerStateExecutor = Executors.newSingleThreadExecutor();
     private final AtomicInteger markerRenderGeneration = new AtomicInteger();
@@ -219,6 +220,7 @@ public class MainActivity extends AppCompatActivity {
             final boolean zoomAdjustmentPending = gpsZoomAdjustmentPending;
             final GeoPoint zoomCenter = gpsZoomCenter;
             final double zoomBase = gpsZoomBase;
+            final double zoomLimit = gpsZoomLimit;
             final boolean postOfficeOnly = Boolean.TRUE.equals(viewModel.getFilterPostOfficeOnly().getValue());
             final List<OsmPoi> allPoisSnapshot = viewModel.getPois().getValue();
 
@@ -230,7 +232,7 @@ public class MainActivity extends AppCompatActivity {
                 boolean satisfied = false;
                 if (zoomAdjustmentPending && zoomCenter != null && mapWidth > 0 && mapHeight > 0) {
                     // 計算部分は重複を避けるため helper に切り出すか、ここでインライン化
-                    targetZoom = calculateTargetZoomInBackground(pois, zoomCenter, zoomBase, mapWidth, mapHeight, postOfficeOnly);
+                    targetZoom = calculateTargetZoomInBackground(pois, zoomCenter, zoomBase, mapWidth, mapHeight, postOfficeOnly, zoomLimit);
                     if (targetZoom != null) satisfied = true;
                 }
                 final Double fTargetZoom = targetZoom;
@@ -380,6 +382,7 @@ public class MainActivity extends AppCompatActivity {
         // GPS Button
         findViewById(R.id.gps_button).setOnClickListener(v -> {
             if (lastLocation != null) {
+                gpsZoomLimit = map.getZoomLevelDouble();
                 performInitialGpsZoom(lastLocation);
             } else {
                 Toast.makeText(this, "現在地を取得中です...", Toast.LENGTH_SHORT).show();
@@ -440,7 +443,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * GPS移動先のPOI密度に応じて、適切なズームレベルを計算する（バックグラウンド実行用）。
      */
-    private Double calculateTargetZoomInBackground(List<OsmPoi> pois, GeoPoint center, double zoomBase, int width, int height, boolean postOfficeOnly) {
+    private Double calculateTargetZoomInBackground(List<OsmPoi> pois, GeoPoint center, double zoomBase, int width, int height, boolean postOfficeOnly, double zoomLimit) {
         if (pois == null || center == null) return null;
 
         int shortSide = Math.min(width, height);
@@ -461,7 +464,6 @@ public class MainActivity extends AppCompatActivity {
             poiInfos.add(new PoiInfo(dLat, dLon, "post_office".equals(amenity), "post_box".equals(amenity)));
         }
 
-        double targetZoom = GPS_MAX_ZOOM;
         for (double candidateZoom = GPS_MAX_ZOOM; candidateZoom >= MIN_ZOOM; candidateZoom -= 1.0) {
             double scale = Math.pow(2.0, candidateZoom - zoomBase);
             double halfLon = halfLonBase / scale;
@@ -482,11 +484,8 @@ public class MainActivity extends AppCompatActivity {
             if (visibleCount >= 5 && hasPostOffice && (postOfficeOnly || hasPostBox)) {
                 return candidateZoom;
             }
-            if (candidateZoom <= MIN_ZOOM) {
-                targetZoom = MIN_ZOOM;
-            }
         }
-        return targetZoom;
+        return Math.max(MIN_ZOOM, zoomLimit);
     }
 
     /** 互換用。 */
@@ -626,6 +625,7 @@ public class MainActivity extends AppCompatActivity {
             map.invalidate();
         }
         if (firstLocation && !initialLocationSet) {
+            gpsZoomLimit = map.getZoomLevelDouble();
             performInitialGpsZoom(location);
         }
         if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
