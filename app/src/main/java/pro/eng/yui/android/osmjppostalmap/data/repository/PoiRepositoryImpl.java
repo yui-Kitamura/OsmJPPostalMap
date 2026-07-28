@@ -130,17 +130,16 @@ public class PoiRepositoryImpl implements PoiRepository {
     private void preloadBoundaries() {
         runOnExecutor("境界データを読み込み中", () -> {
             try {
-                Map<String, Integer> prefCodesByName = JpPostalUtil.getPrefectures().join();
-                String bboxJson = JpPostalUtil.getRawPrefecturesJson().join();
+                Map<String, Integer> prefNameAndCode = JpPostalUtil.getPrefectures().join();
+                Map<Integer, String> prefCodeAndName = new HashMap<>();
+                for (Map.Entry<String, Integer> entry : prefNameAndCode.entrySet()) {
+                    prefCodeAndName.put(entry.getValue(), entry.getKey());
+                }
 
+                String bboxJson = JpPostalUtil.getRawPrefecturesJson().join();
                 if (bboxJson == null || bboxJson.isEmpty()) {
                     boundaryLatch.countDown();
                     return;
-                }
-
-                Map<Integer, String> prefNamesByCode = new HashMap<>();
-                for (Map.Entry<String, Integer> entry : prefCodesByName.entrySet()) {
-                    prefNamesByCode.put(entry.getValue(), entry.getKey());
                 }
 
                 Gson gson = new Gson();
@@ -153,7 +152,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                 for (Map.Entry<String, JsonElement> prefEntry : bboxRoot.entrySet()) {
                     int prefCode = Integer.parseInt(prefEntry.getKey());
 
-                    String prefName = prefNamesByCode.get(prefCode);
+                    String prefName = prefCodeAndName.get(prefCode);
                     if (prefName == null) { continue; }
 
                     Map<Integer, String> subNamesByCode = new HashMap<>();
@@ -173,19 +172,15 @@ public class PoiRepositoryImpl implements PoiRepository {
 
                     for (Map.Entry<String, JsonElement> subEntry : subObj.entrySet()) {
                         String subCodeKey = subEntry.getKey();
-                        if (hasOthers && "00".equals(subCodeKey)) {
-                            continue;
-                        }
                         int subCode = Integer.parseInt(subCodeKey);
-
-                        String subName = subNamesByCode.get(subCode);
-                        if (subName == null) {
+                        if (hasOthers && subCode == 0) {
                             continue;
                         }
+                        String subName = subNamesByCode.get(subCode);
 
                         JsonObject boundaryObj = subEntry.getValue().getAsJsonObject();
                         if (hasBBox(boundaryObj)) {
-                            if("00".equals(subCodeKey)) {
+                            if(subName == null) {
                                 prefBoundaryCache.put(prefName, readBBox(boundaryObj));
                             }else{
                                 prefBoundaryCache.put(prefName + ":" + subName, readBBox(boundaryObj));
