@@ -18,7 +18,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import pro.eng.yui.android.osmjppostalmap.core.PoiDetailsDialog;
@@ -77,7 +79,15 @@ public class MainActivity extends AppCompatActivity {
     private double gpsZoomBase = GPS_MIN_ZOOM;
     private double gpsZoomLimit = MIN_ZOOM;
     private ProgressBar gpsProgress;
-    private final ExecutorService markerStateExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService markerStateExecutor = new ThreadPoolExecutor(
+            1, 1, 0L, TimeUnit.MILLISECONDS,
+            new LinkedBlockingDeque<Runnable>() {
+                @Override
+                public boolean offer(Runnable runnable) {
+                    return offerFirst(runnable);
+                }
+            }
+    );
     private final AtomicInteger markerRenderGeneration = new AtomicInteger();
 
     private enum UpdateMode {
@@ -546,19 +556,12 @@ public class MainActivity extends AppCompatActivity {
             double rangeLon = (cosLat > 0.01) ? rangeDeg / cosLat : rangeDeg;
             lonMin = centerLon - rangeLon;
             lonMax = centerLon + rangeLon;
-        } else if (mode == UpdateMode.FULL_SCREEN) {
-            // ダイアログの描画範囲内取得ボタン押下時はその時映してる範囲で対応
+        } else {
+            // 通常表示・全画面取得: 画面内に映っている範囲全て
             latMin = bb.getLatSouth();
             latMax = bb.getLatNorth();
             lonMin = bb.getLonWest();
             lonMax = bb.getLonEast();
-        } else {
-            // 通常表示: 中心から約20km (11海里) の範囲を表示範囲内で制限
-            double range = 11.0 / 60.0;
-            latMin = Math.max(bb.getLatSouth(), centerLat - range);
-            latMax = Math.min(bb.getLatNorth(), centerLat + range);
-            lonMin = Math.max(bb.getLonWest(), centerLon - range);
-            lonMax = Math.min(bb.getLonEast(), centerLon + range);
         }
 
         // 固定グリッド（1海里＝1/60度）へのアライメント
