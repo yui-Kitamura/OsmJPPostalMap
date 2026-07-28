@@ -368,6 +368,7 @@ public class MainActivity extends AppCompatActivity {
         map.addMapListener(new org.osmdroid.events.MapListener() {
             @Override
             public boolean onScroll(org.osmdroid.events.ScrollEvent event) {
+                initialLocationSet = true;
                 if (map.isLayoutOccurred()) {
                     scheduleUpdatePois();
                 }
@@ -376,6 +377,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public boolean onZoom(org.osmdroid.events.ZoomEvent event) {
+                initialLocationSet = true;
                 if (!map.isLayoutOccurred()) {
                     return true;
                 }
@@ -587,7 +589,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean canLoadPois() {
-        return initialLocationSet || locationPermissionResolved;
+        return initialLocationSet;
     }
 
     private void startLocationUpdates() {
@@ -598,9 +600,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (!gpsEnabled && !networkEnabled) {
                 if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
-                // 位置情報プロバイダが無効な場合は、確定を待たずにデフォルト（東京）でロードを開始する
-                initialLocationSet = true;
-                updatePois(true);
+                // 位置情報プロバイダが無効な場合は、ユーザーの操作（スクロール等）を待つ
                 return;
             }
 
@@ -662,14 +662,8 @@ public class MainActivity extends AppCompatActivity {
             locationPermissionResolved = true;
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startLocationUpdates();
-                // 位置確定待ちの間も一旦初期位置でロードを開始する
-                if (!initialLocationSet) {
-                    updatePois(true);
-                }
             } else {
                 if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
-                // 許可が得られなかった場合は、デフォルト位置（東京）でロードを開始する
-                updatePois(true);
             }
         }
     }

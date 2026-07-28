@@ -86,9 +86,9 @@ public class PoiRepositoryImpl implements PoiRepository {
         PoiRepositoryImpl repo = getInstance();
         if (repo.local == null) {
             repo.local = new PoiLocalDataSource(context.getApplicationContext());
+            repo.preloadBoundaries();
             repo.loadAllFromCache();
             repo.loadGridCacheFromDb();
-            repo.preloadBoundaries();
         }
     }
 
@@ -128,11 +128,13 @@ public class PoiRepositoryImpl implements PoiRepository {
                 }
             } catch (Exception e) {
                 Log.e("PoiRepository", "Failed to preload boundaries", e);
+                errorLiveData.postValue("境界データの読み込みに失敗しました");
             } finally {
                 boundaryLatch.countDown();
             }
         }).exceptionally(ex -> {
             Log.e("PoiRepository", "Failed to preload boundaries future", ex);
+            errorLiveData.postValue("境界データの取得に失敗しました");
             boundaryLatch.countDown();
             return null;
         });
@@ -217,8 +219,8 @@ public class PoiRepositoryImpl implements PoiRepository {
 
         runOnExecutor("表示エリアを判定中", () -> {
             try {
-                // 境界データの読み込み完了を待機（最大5秒）
-                boundaryLatch.await(5, TimeUnit.SECONDS);
+                // 境界データの読み込み完了を待機（最大10秒）
+                boundaryLatch.await(10, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
