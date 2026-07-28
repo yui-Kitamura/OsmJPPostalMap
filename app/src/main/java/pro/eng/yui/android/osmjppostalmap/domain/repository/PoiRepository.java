@@ -10,11 +10,6 @@ import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
  * POIデータの取得と保存を担当するリポジトリインターフェース
  */
 public interface PoiRepository {
-    /**
-     * 指定された領域のPOIを取得する
-     * @param prefName 都道府県名
-     */
-    LiveData<List<OsmPoi>> getPois(String prefName);
 
     /**
      * 現在描画中のPOIリストを配信するLiveData（取得を伴わない購読用）。

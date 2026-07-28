@@ -156,20 +156,6 @@ public class PoiRepositoryImpl implements PoiRepository {
         return poisLiveData;
     }
 
-    @Override
-    public LiveData<List<OsmPoi>> getPois(String prefName) {
-        // 互換用。バックグラウンドでキャッシュ優先の単一県読み込みを行う。
-        runOnExecutor(prefName + "のデータを準備中", () -> {
-            Map<String, Integer> prefs = JpPostalUtil.getPrefectures().join();
-            Integer code = prefs.get(prefName);
-            if (code == null || code < 0) { return; }
-            currentPrefCodes.clear();
-            loadPref(code, prefName, false);
-            postCombined();
-        });
-        return poisLiveData;
-    }
-
     /**
      * 単一スレッドExecutor上でタスクを実行する。タスクが例外を投げても
      * Executorのワーカースレッドが死なないよう保護する。
@@ -227,32 +213,71 @@ public class PoiRepositoryImpl implements PoiRepository {
             }
 
             // 表示範囲にかかるエリア（都道府県またはサブ領域）を判定する。
-            Set<String> areaKeys;
+            Set<String> cachedAreaKeys;
             if (!prefBoundaryCache.isEmpty()) {
                 // BBoxを用いたローカル判定（高速）
-                areaKeys = findIntersectingAreas(fLatMin, fLatMax, fLonMin, fLonMax);
+                cachedAreaKeys = findIntersectingAreas(fLatMin, fLatMax, fLonMin, fLonMax);
             } else {
-                // まだBBoxが読み込まれていない場合は従来の逆ジオコーディング
-                areaKeys = reverseGeocodeAreas(latLonPoints);
+                cachedAreaKeys = new HashSet<>();
             }
 
-            if (areaKeys.isEmpty()) {
+            if (cachedAreaKeys.isEmpty()) {
                 if (forceNotify) postCombined();
                 return;
             }
 
             // 新規フェッチが必要なエリアを特定
             Map<String, Integer> prefs = JpPostalUtil.getPrefectures().join();
-            List<String[]> neededAreas = new ArrayList<>(); // [prefName, subName]
-            for (String key : areaKeys) {
-                String prefName = key.contains(":") ? key.split(":")[0] : key;
-                String subName = key.contains(":") ? key.split(":")[1] : null;
+            List<String[]> neededAreas = new ArrayList<>();
+
+            for (String key : cachedAreaKeys) {
+                String prefName;
+                String subName;
+
+                if (key.contains(":")) {
+                    String[] parts = key.split(":");
+                    prefName = parts[0];
+                    subName = parts[1];
+                } else {
+                    prefName = key;
+                    subName = null;
+                }
 
                 Integer code = prefs.get(prefName);
-                if (code == null || code < 0) { continue; }
+                if (code == null || code < 0) {
+                    continue;
+                }
+
                 currentPrefCodes.add(code);
-                if (local != null && !local.hasArea(code, subName)) {
-                    neededAreas.add(new String[]{prefName, subName});
+
+                if (subName != null) {
+                    // サブエリア指定がある場合
+                    if (local != null && !local.hasArea(code, subName)) {
+                        neededAreas.add(new String[]{prefName, subName});
+                    }
+                } else {
+                    // サブエリア指定がない場合、サブエリアの存在を確認
+                    Map<String, Integer> subAreas = JpPostalUtil.getSubAreas(prefName).join();
+                    if (subAreas != null && !subAreas.isEmpty()) {
+                        // サブエリアが存在する場合、表示範囲と交差するものを特定
+                        for (String sub : subAreas.keySet()) {
+                            String subKey = prefName + ":" + sub;
+                            BBox subBBox = prefBoundaryCache.get(subKey);
+                            if (subBBox != null) {
+                                if (fLatMin <= subBBox.getMaxLat() && fLatMax >= subBBox.getMinLat() &&
+                                        fLonMin <= subBBox.getMaxLon() && fLonMax >= subBBox.getMinLon()) {
+                                    if (local != null && !local.hasArea(code, sub)) {
+                                        neededAreas.add(new String[]{prefName, sub});
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // サブエリアが存在しない場合、都道府県全体を確認
+                        if (local != null && !local.hasArea(code, null)) {
+                            neededAreas.add(new String[]{prefName, null});
+                        }
+                    }
                 }
             }
 
