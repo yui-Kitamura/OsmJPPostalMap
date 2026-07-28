@@ -135,13 +135,13 @@ public class MainViewModel extends ViewModel {
     }
 
     /** 指定都道府県を強制的に再取得する（更新ダイアログの個別更新用） */
-    public void refreshPrefecture(int prefCode, String prefName) {
-        repository.refreshPrefecture(prefCode, prefName);
+    public void refreshPrefecture(int prefCode, String prefName, String subName) {
+        repository.refreshPrefecture(prefCode, prefName, subName);
     }
 
     /** 指定都道府県のローカルキャッシュを削除する。 */
-    public void deletePrefectureCache(int prefCode) {
-        repository.deletePrefectureCache(prefCode);
+    public void deletePrefectureCache(int prefCode, String subName) {
+        repository.deletePrefectureCache(prefCode, subName);
     }
 
     public void fetchDataDate() {

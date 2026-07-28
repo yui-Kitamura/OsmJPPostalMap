@@ -31,10 +31,10 @@ public interface PoiRepository {
      * 指定した都道府県をキャッシュ有無に関わらずネットワークから再取得し、
      * SQLiteを更新する（更新ダイアログの個別更新ボタン用）。
      */
-    void refreshPrefecture(int prefCode, String prefName);
+    void refreshPrefecture(int prefCode, String prefName, String subName);
 
     /** 指定した都道府県のローカルキャッシュを削除する。 */
-    void deletePrefectureCache(int prefCode);
+    void deletePrefectureCache(int prefCode, String subName);
 
     /**
      * ローカルに保存済みの都道府県メタ情報の一覧を返す（更新ダイアログ表示用）。

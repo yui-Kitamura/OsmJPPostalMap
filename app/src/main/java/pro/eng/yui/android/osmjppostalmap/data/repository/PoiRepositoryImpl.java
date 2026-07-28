@@ -305,7 +305,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     @Override
-    public void refreshPrefecture(int prefCode, String prefName) {
+    public void refreshPrefecture(int prefCode, String prefName, String subName) {
         long currentTime = System.currentTimeMillis();
         if (currentTime - lastFetchTime < MIN_INTERVAL_MS) {
             errorLiveData.postValue("しばらく待ってから再度お試しください");
@@ -314,18 +314,26 @@ public class PoiRepositoryImpl implements PoiRepository {
         lastFetchTime = currentTime;
         startCooldownTimer();
 
-        runOnExecutor(prefName + "のデータを再取得中", () -> {
-            loadArea(prefCode, prefName, null, true); // 強制ネットワーク取得
+        String label = (subName == null) ? prefName : prefName + " " + subName;
+        runOnExecutor(label + "のデータを再取得中", () -> {
+            loadArea(prefCode, prefName, subName, true); // 強制ネットワーク取得
             postCombined();
         });
     }
 
     @Override
-    public void deletePrefectureCache(int prefCode) {
+    public void deletePrefectureCache(int prefCode, String subName) {
         runOnExecutor("キャッシュを削除中", () -> {
             if (local == null) { return; }
-            local.deletePrefecture(prefCode);
-            currentPrefCodes.remove(prefCode);
+            if (subName == null) {
+                local.deletePrefecture(prefCode);
+                currentPrefCodes.remove(prefCode);
+            } else {
+                // TODO: local.deleteArea(prefCode, subName) を実装すべきだが、
+                // 現状は PoiLocalDataSource.upsertArea で削除ロジックがあるのでそれを利用するか
+                // とりあえず table_pref_meta と table_poi から消す
+                local.deleteArea(prefCode, subName);
+            }
             postCombined();
         });
     }

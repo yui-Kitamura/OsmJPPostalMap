@@ -92,6 +92,23 @@ public class PoiLocalDataSource {
         }
     }
 
+    public void deleteArea(int prefCode, String subName) {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            String subStr = (subName == null) ? "" : subName;
+            db.delete(PoiDbHelper.TABLE_POI,
+                    PoiDbHelper.COL_PREF_CODE + " = ? AND (" + PoiDbHelper.COL_SUB_NAME + " = ? OR " + PoiDbHelper.COL_SUB_NAME + " IS NULL)",
+                    new String[]{String.valueOf(prefCode), subStr});
+            db.delete(PoiDbHelper.TABLE_PREF_META,
+                    PoiDbHelper.COL_META_PREF_CODE + " = ? AND " + PoiDbHelper.COL_META_SUB_NAME + " = ?",
+                    new String[]{String.valueOf(prefCode), subStr});
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
     /* ---------- 読み込み ---------- */
 
     public boolean hasArea(int prefCode, String subName) {
