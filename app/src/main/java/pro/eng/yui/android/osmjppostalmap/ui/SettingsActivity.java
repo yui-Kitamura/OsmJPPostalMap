@@ -107,7 +107,6 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.btn_show_boundary).setOnClickListener(v -> showBoundaryDialog());
-        findViewById(R.id.btn_import_boundary).setOnClickListener(v -> updateBoundaryData());
 
         TextView appVersionInfo = findViewById(R.id.app_version_info);
         String versionInfo = String.format("v%s(%d) + %s", 
@@ -227,7 +226,7 @@ public class SettingsActivity extends AppCompatActivity {
                     scrollView.addView(textView);
 
                     new MaterialAlertDialogBuilder(this)
-                            .setTitle("行政界キャッシュ")
+                            .setTitle("行政界データ")
                             .setView(scrollView)
                             .setPositiveButton("閉じる", null)
                             .setNeutralButton("更新", (dialog, which) -> {
