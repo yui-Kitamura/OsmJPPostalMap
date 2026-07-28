@@ -1,10 +1,14 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
 import android.content.Intent;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import okhttp3.ResponseBody;
+import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
+import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.api.osm.OsmApi;
+import java.util.List;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -107,6 +111,7 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.btn_show_boundary).setOnClickListener(v -> showBoundaryDialog());
+        findViewById(R.id.btn_fetch_area).setOnClickListener(v -> showFetchAreaDialog());
 
         TextView appVersionInfo = findViewById(R.id.app_version_info);
         String versionInfo = String.format("v%s(%d) + %s", 
@@ -239,6 +244,41 @@ public class SettingsActivity extends AppCompatActivity {
                 }
             });
         });
+    }
+
+    private void showFetchAreaDialog() {
+        try {
+            List<PrefMeta> saved = PoiRepositoryImpl.getInstance().getSavedPrefectures();
+            JSONArray array = new JSONArray();
+            for (PrefMeta m : saved) {
+                JSONObject obj = new JSONObject();
+                obj.put("prefCode", m.getPrefCode());
+                obj.put("name", m.getName());
+                obj.put("subName", m.getSubName());
+                obj.put("lastUpdated", m.getLastUpdated());
+                array.put(obj);
+            }
+            String prettyJson = array.toString(4);
+
+            ScrollView scrollView = new ScrollView(this);
+            TextView textView = new TextView(this);
+            textView.setText(prettyJson);
+            textView.setPadding(32, 32, 32, 32);
+            textView.setTextSize(12f);
+            scrollView.addView(textView);
+
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle("取得単位エリア")
+                    .setView(scrollView)
+                    .setPositiveButton("閉じる", null)
+                    .setNeutralButton("更新", (dialog, which) -> {
+                        showFetchAreaDialog();
+                    })
+                    .show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "データの取得に失敗しました", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void updateBoundaryData() {

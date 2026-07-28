@@ -76,13 +76,30 @@
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:textColor="@color/jp_post_red" />
 
-    <Button
-        android:id="@+id/btn_show_boundary"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="行政界データ"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btn_show_boundary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="行政界データ"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+        <Button
+            android:id="@+id/btn_fetch_area"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:text="取得単位エリア"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+    </LinearLayout>
 
     <View
         android:layout_width="match_parent"
