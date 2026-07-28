@@ -587,10 +587,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean canLoadPois() {
-        return initialLocationSet
-                || (locationPermissionResolved
-                && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED);
+        return initialLocationSet || locationPermissionResolved;
     }
 
     private void startLocationUpdates() {
@@ -665,6 +662,10 @@ public class MainActivity extends AppCompatActivity {
             locationPermissionResolved = true;
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startLocationUpdates();
+                // 位置確定待ちの間も一旦初期位置でロードを開始する
+                if (!initialLocationSet) {
+                    updatePois(true);
+                }
             } else {
                 if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
                 // 許可が得られなかった場合は、デフォルト位置（東京）でロードを開始する

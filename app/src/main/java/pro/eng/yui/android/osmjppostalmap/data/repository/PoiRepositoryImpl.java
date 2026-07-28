@@ -14,11 +14,12 @@ import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import pro.eng.yui.android.osmjppostalmap.BuildConfig;
@@ -51,6 +52,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     private static final int MAX_RENDER = 500;
     private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final CountDownLatch boundaryLatch = new CountDownLatch(1);
     private Runnable cooldownRunnable;
     private final AtomicInteger pendingOperations = new AtomicInteger();
 
@@ -100,8 +102,8 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     private void preloadBoundaries() {
         JpPostalUtil.getRawPrefecturesJson().thenAccept(json -> {
-            if (json == null || json.isEmpty()) return;
             try {
+                if (json == null || json.isEmpty()) return;
                 Gson gson = new Gson();
                 java.lang.reflect.Type type = new TypeToken<Map<String, RawPrefData>>(){}.getType();
                 Map<String, RawPrefData> prefs = gson.fromJson(json, type);
@@ -126,7 +128,13 @@ public class PoiRepositoryImpl implements PoiRepository {
                 }
             } catch (Exception e) {
                 Log.e("PoiRepository", "Failed to preload boundaries", e);
+            } finally {
+                boundaryLatch.countDown();
             }
+        }).exceptionally(ex -> {
+            Log.e("PoiRepository", "Failed to preload boundaries future", ex);
+            boundaryLatch.countDown();
+            return null;
         });
     }
 
@@ -208,6 +216,13 @@ public class PoiRepositoryImpl implements PoiRepository {
         final double fLonMax = lonMax;
 
         runOnExecutor("表示エリアを判定中", () -> {
+            try {
+                // 境界データの読み込み完了を待機（最大5秒）
+                boundaryLatch.await(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
             // 表示範囲にかかるエリア（都道府県またはサブ領域）を判定する。
             Set<String> areaKeys;
             if (!prefBoundaryCache.isEmpty()) {
