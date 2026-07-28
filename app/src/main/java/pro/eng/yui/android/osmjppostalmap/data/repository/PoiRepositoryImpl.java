@@ -52,12 +52,13 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final MutableLiveData<String> loadingStatusLiveData = new MutableLiveData<>("");
     private final MutableLiveData<Location> locationLiveData = new MutableLiveData<>();
     private final MutableLiveData<String> currentPrefectureLiveData = new MutableLiveData<>();
+    private final MutableLiveData<String> currentSubAreaLiveData = new MutableLiveData<>();
     private LocationManager locationManager;
     private final LocationListener locationListener = new LocationListener() {
         @Override
         public void onLocationChanged(@NonNull Location location) {
             locationLiveData.postValue(location);
-            updateCurrentPrefecture(location);
+            updateCurrentArea(location);
         }
     };
     private Context context;
@@ -274,16 +275,16 @@ public class PoiRepositoryImpl implements PoiRepository {
 
                 currentPrefCodes.add(code);
 
-                if (subName != null) {
-                    // サブエリア指定がある場合
-                    if (local != null && !local.hasArea(code, subName)) {
-                        neededAreas.add(new String[]{prefName, subName});
-                    }
-                } else {
-                    // サブエリア指定がない場合、サブエリアの存在を確認
-                    Map<String, Integer> subAll = JpPostalUtil.getSubAreas(prefName).join();
-                    if (subAll != null && !subAll.isEmpty()) {
-                        // サブエリアが存在する場合、表示範囲と交差するものを特定
+                // サブエリアの存在を常に確認し、ある場合はサブ単位での取得を優先する
+                Map<String, Integer> subAll = JpPostalUtil.getSubAreas(prefName).join();
+                if (subAll != null && !subAll.isEmpty()) {
+                    if (subName != null) {
+                        // 特定のサブエリアが判明している場合
+                        if (local != null && !local.hasArea(code, subName)) {
+                            neededAreas.add(new String[]{prefName, subName});
+                        }
+                    } else {
+                        // サブエリアがあるはずだがキーが都道府県名のみの場合、交差するサブエリアを全て特定
                         for (String sub : subAll.keySet()) {
                             String subKey = prefName + ":" + sub;
                             BBox subBBox = prefBoundaryCache.get(subKey);
@@ -294,13 +295,18 @@ public class PoiRepositoryImpl implements PoiRepository {
                                         neededAreas.add(new String[]{prefName, sub});
                                     }
                                 }
+                            } else {
+                                // BBoxがない場合は念のため全て追加
+                                if (local != null && !local.hasArea(code, sub)) {
+                                    neededAreas.add(new String[]{prefName, sub});
+                                }
                             }
                         }
-                    } else {
-                        // サブエリアが存在しない場合、都道府県全体を確認
-                        if (local != null && !local.hasArea(code, null)) {
-                            neededAreas.add(new String[]{prefName, null});
-                        }
+                    }
+                } else {
+                    // サブエリアがない都道府県の場合
+                    if (local != null && !local.hasArea(code, null)) {
+                        neededAreas.add(new String[]{prefName, null});
                     }
                 }
             }
@@ -513,7 +519,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     private Set<String> reverseGeocodeAreas(double[][] points) {
         Set<String> keys = new LinkedHashSet<>();
 
-        // 1. BBoxキャッシュで判定を試みる
+        // 1. BBoxキャッシュで判定を試みる。サブエリアがあればサブエリアのキー（pref:sub）が優先される。
         if (!prefBoundaryCache.isEmpty()) {
             for (double[] p : points) {
                 for (Map.Entry<String, BBox> entry : prefBoundaryCache.entrySet()) {
@@ -527,12 +533,27 @@ public class PoiRepositoryImpl implements PoiRepository {
         }
 
         // 2. グリッドキャッシュ（過去の判定結果）で補完する
-        double gridUnit = 1.0 / 60.0;
-        for (double[] p : points) {
-            long key = getGridKey(p, gridUnit);
-            Set<String> cached = gridPrefCache.get(key);
-            if (cached != null) {
-                keys.addAll(cached);
+        if (keys.isEmpty()) {
+            double gridUnit = 1.0 / 60.0;
+            for (double[] p : points) {
+                long key = getGridKey(p, gridUnit);
+                Set<String> cached = gridPrefCache.get(key);
+                if (cached != null) {
+                    keys.addAll(cached);
+                }
+            }
+        }
+
+        // 3. ヒットした結果をグリッドキャッシュにフィードバックする（経緯度グリッドでのエリア情報はサブの情報を持つ）
+        if (!keys.isEmpty() && points.length > 0) {
+            double gridUnit = 1.0 / 60.0;
+            long key = getGridKey(points[0], gridUnit);
+            if (!gridPrefCache.containsKey(key)) {
+                gridPrefCache.put(key, keys);
+                if (local != null) {
+                    final String names = String.join(",", keys);
+                    executor.execute(() -> local.upsertGridPref(key, names));
+                }
             }
         }
 
@@ -675,10 +696,10 @@ public class PoiRepositoryImpl implements PoiRepository {
         Location lastNetwork = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
         if (lastGps != null) {
             locationLiveData.postValue(lastGps);
-            updateCurrentPrefecture(lastGps);
+            updateCurrentArea(lastGps);
         } else if (lastNetwork != null) {
             locationLiveData.postValue(lastNetwork);
-            updateCurrentPrefecture(lastNetwork);
+            updateCurrentArea(lastNetwork);
         }
     }
 
@@ -694,14 +715,41 @@ public class PoiRepositoryImpl implements PoiRepository {
         return currentPrefectureLiveData;
     }
 
-    private void updateCurrentPrefecture(Location location) {
+    @Override
+    public LiveData<String> getCurrentSubArea() {
+        return currentSubAreaLiveData;
+    }
+
+    private void updateCurrentArea(Location location) {
         if (context == null) return;
         executor.execute(() -> {
+            // 1. まず自前の境界データで判定を試みる（サブエリアまで判明する）
+            try {
+                // 境界データの読み込み完了を待機
+                boundaryLatch.await(1, TimeUnit.SECONDS);
+            } catch (InterruptedException ignored) {}
+
+            Set<String> areas = reverseGeocodeAreas(new double[][]{{location.getLatitude(), location.getLongitude()}});
+            if (!areas.isEmpty()) {
+                String key = areas.iterator().next();
+                if (key.contains(":")) {
+                    String[] parts = key.split(":");
+                    currentPrefectureLiveData.postValue(parts[0]);
+                    currentSubAreaLiveData.postValue(parts[1]);
+                } else {
+                    currentPrefectureLiveData.postValue(key);
+                    currentSubAreaLiveData.postValue(null);
+                }
+                return;
+            }
+
+            // 2. 判定できなければ Geocoder をフォールバックとして使う
             Geocoder geocoder = new Geocoder(context, Locale.JAPAN);
             try {
                 List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
                 if (addresses != null && !addresses.isEmpty()) {
                     currentPrefectureLiveData.postValue(addresses.get(0).getAdminArea());
+                    currentSubAreaLiveData.postValue(null);
                 }
             } catch (Exception ignored) {}
         });

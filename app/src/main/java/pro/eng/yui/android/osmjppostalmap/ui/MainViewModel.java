@@ -176,6 +176,10 @@ public class MainViewModel extends ViewModel {
         return repository.getCurrentPrefecture();
     }
 
+    public LiveData<String> getCurrentSubArea() {
+        return repository.getCurrentSubArea();
+    }
+
     public void startLocationUpdates() {
         repository.startLocationUpdates();
     }

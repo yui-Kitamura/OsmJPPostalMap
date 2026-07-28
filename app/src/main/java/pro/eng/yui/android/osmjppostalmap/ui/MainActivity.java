@@ -179,12 +179,11 @@ public class MainActivity extends AppCompatActivity {
         viewModel.setFilterOpenOnly(false); // 初期化トリガー
         viewModel.fetchDataDate(); // データ鮮度情報の取得を開始
         
-        // 初回表示トリガー：レイアウト完了後に一度 updatePois を実行する
+        // 初回表示トリガー：レイアウト完了後に位置情報が確定していれば updatePois を実行する
         map.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
             public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
                 map.removeOnLayoutChangeListener(this);
-                // 位置がレイアウトより先に確定した場合、または位置情報が不許可と確定した場合にロードする。
                 if (canLoadPois()) {
                     updatePois(true, UpdateMode.GPS_OR_INITIAL);
                 }
@@ -604,16 +603,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean canLoadPois() {
-        if (initialLocationSet) return true;
-        if (!locationPermissionResolved) return false;
-
-        // 位置情報が利用不可であることが確定している場合はロードを許可
-        boolean hasPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-        if (!hasPermission) return true;
-
-        // プロバイダ状態のチェックは ViewModel/Repository 側で隠蔽されているか、
-        // あるいは個別にチェックが必要だが、ここでは簡略化のため許可とする
-        return true;
+        // レイアウト未完了ならロードしない
+        if (map == null || !map.isLayoutOccurred()) return false;
+        
+        // 位置確定済み、または権限判定済み（拒否含む）であればロード可能
+        return initialLocationSet || locationPermissionResolved;
     }
 
 
@@ -625,6 +619,7 @@ public class MainActivity extends AppCompatActivity {
             map.invalidate();
         }
         if (firstLocation && !initialLocationSet) {
+            initialLocationSet = true;
             gpsZoomLimit = map.getZoomLevelDouble();
             performInitialGpsZoom(location);
         }
@@ -642,7 +637,9 @@ public class MainActivity extends AppCompatActivity {
                 if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
                 // 許可が得られなかった場合は、デフォルト位置（東京）を初期位置として確定させる
                 initialLocationSet = true;
-                updatePois(true, UpdateMode.GPS_OR_INITIAL);
+                if (canLoadPois()) {
+                    updatePois(true, UpdateMode.GPS_OR_INITIAL);
+                }
             }
         }
     }

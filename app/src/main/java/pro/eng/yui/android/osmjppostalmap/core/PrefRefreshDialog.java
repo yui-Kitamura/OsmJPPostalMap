@@ -55,6 +55,7 @@ public class PrefRefreshDialog {
      * @param onRefreshArea 「表示範囲を取得」押下時の処理（通常は MainActivity#updatePois）
      */
     public static void show(Context context, MainViewModel viewModel, String currentPref, Runnable onRefreshArea) {
+        String currentSub = viewModel.getCurrentSubArea().getValue();
         View view = LayoutInflater.from(context).inflate(R.layout.dialog_pref_refresh, null);
         LinearLayout container = view.findViewById(R.id.pref_list_container);
         Button areaButton = view.findViewById(R.id.refresh_area_button);
@@ -202,7 +203,7 @@ public class PrefRefreshDialog {
                                 boolean hasUpdate = isSaved && sourceUpdatedAt != null && meta.getLastUpdated() < sourceUpdatedAt.getTime();
                                 container.addView(buildRow(context, viewModel, meta, sdf, sourceUpdatedAt, hasUpdate, isSaved, isCurrent));
                             } else {
-                                container.addView(buildHierarchyRow(context, viewModel, pi, savedMap, remoteDates, sdf, isCurrent));
+                                container.addView(buildHierarchyRow(context, viewModel, pi, savedMap, remoteDates, sdf, isCurrent, currentSub));
                             }
                         }
                     }
@@ -255,50 +256,82 @@ public class PrefRefreshDialog {
     }
 
     private static View buildHierarchyRow(Context context, MainViewModel viewModel, PrefInfo pi,
-                                          Map<String, PrefMeta> savedMap, Map<String, Date> remoteDates, SimpleDateFormat sdf, boolean isCurrent) {
+                                          Map<String, PrefMeta> savedMap, Map<String, Date> remoteDates,
+                                          SimpleDateFormat sdf, boolean isCurrent, String currentSub) {
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
 
-        TextView label = new TextView(context);
-        label.setText("▶ " + pi.name);
-        if (isCurrent) {
-            label.setCompoundDrawablesWithIntrinsicBounds(android.R.drawable.ic_menu_mylocation, 0, 0, 0);
-            label.setCompoundDrawablePadding(16);
+        // 親（都道府県）のメタ情報を集約（最終更新日はサブの中で最新のもの、または都道府県全体）
+        long lastUpdated = 0;
+        boolean allSaved = true;
+        boolean anySaved = false;
+        for (String sub : pi.subNames) {
+            PrefMeta m = savedMap.get(pi.name + ":" + sub);
+            if (m != null) {
+                lastUpdated = Math.max(lastUpdated, m.getLastUpdated());
+                anySaved = true;
+            } else {
+                allSaved = false;
+            }
         }
-        label.setTextSize(16f);
-        label.setPadding(0, 24, 0, 8);
-        label.setClickable(true);
-        label.setBackgroundResource(android.R.drawable.list_selector_background);
+        PrefMeta parentMeta = new PrefMeta(pi.code, pi.name, lastUpdated);
+        Date sourceUpdatedAt = remoteDates.get(pi.name);
+        boolean hasUpdate = anySaved && sourceUpdatedAt != null && parentMeta.getLastUpdated() < sourceUpdatedAt.getTime();
+
+        // 親行の作成（基本は buildRow と同様だが、タップで展開する）
+        View parentRow = buildRow(context, viewModel, parentMeta, sdf, sourceUpdatedAt, hasUpdate, anySaved, isCurrent);
+        // buildRow が返すのは LinearLayout(VERTICAL) なので、その中の TextView(nameView) を見つけてアイコンを変える
+        LinearLayout header = (LinearLayout) ((ViewGroup) parentRow).getChildAt(0);
+        TextView nameView = (TextView) header.getChildAt(0);
+        nameView.setText("▶ " + nameView.getText());
 
         LinearLayout subContainer = new LinearLayout(context);
         subContainer.setOrientation(LinearLayout.VERTICAL);
-        subContainer.setPadding(32, 0, 0, 0);
+        subContainer.setPadding(48, 0, 0, 0);
         subContainer.setVisibility(View.GONE);
 
-        label.setOnClickListener(v -> {
+        nameView.setClickable(true);
+        nameView.setBackgroundResource(android.R.drawable.list_selector_background);
+        nameView.setOnClickListener(v -> {
             if (subContainer.getVisibility() == View.VISIBLE) {
                 subContainer.setVisibility(View.GONE);
-                label.setText("▶ " + pi.name);
+                nameView.setText(nameView.getText().toString().replace("▼ ", "▶ "));
             } else {
                 subContainer.setVisibility(View.VISIBLE);
-                label.setText("▼ " + pi.name);
+                nameView.setText(nameView.getText().toString().replace("▶ ", "▼ "));
             }
         });
+
+        // 現在地がこの都道府県（かつサブエリア一致、またはサブエリア未特定）なら展開
+        if (isCurrent) {
+            boolean subMatches = false;
+            if (currentSub != null) {
+                for (String sub : pi.subNames) {
+                    if (sub.equals(currentSub)) {
+                        subMatches = true;
+                        break;
+                    }
+                }
+            }
+            if (currentSub == null || subMatches) {
+                subContainer.setVisibility(View.VISIBLE);
+                nameView.setText(nameView.getText().toString().replace("▶ ", "▼ "));
+            }
+        }
 
         for (String sub : pi.subNames) {
             String key = pi.name + ":" + sub;
             PrefMeta meta = savedMap.get(key);
             if (meta == null) meta = new PrefMeta(pi.code, pi.name, sub, 0);
 
-            // サブ領域の更新日は現状親と同じか、個別にあればそれを使う（現状は親単位で管理されている想定）
-            Date sourceUpdatedAt = remoteDates.get(pi.name); 
             boolean isSaved = savedMap.containsKey(key);
-            boolean hasUpdate = isSaved && sourceUpdatedAt != null && meta.getLastUpdated() < sourceUpdatedAt.getTime();
+            boolean subHasUpdate = isSaved && sourceUpdatedAt != null && meta.getLastUpdated() < sourceUpdatedAt.getTime();
+            boolean isSubCurrent = isCurrent && sub.equals(currentSub);
 
-            subContainer.addView(buildRow(context, viewModel, meta, sdf, sourceUpdatedAt, hasUpdate, isSaved, false));
+            subContainer.addView(buildRow(context, viewModel, meta, sdf, sourceUpdatedAt, subHasUpdate, isSaved, isSubCurrent));
         }
 
-        root.addView(label);
+        root.addView(parentRow);
         root.addView(subContainer);
         return root;
     }

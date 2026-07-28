@@ -120,6 +120,11 @@ public interface PoiRepository {
     LiveData<String> getCurrentPrefecture();
 
     /**
+     * 現在地から逆ジオコーディングされたサブエリア名を取得する
+     */
+    LiveData<String> getCurrentSubArea();
+
+    /**
      * エラーメッセージをクリアする
      */
     void clearError();
