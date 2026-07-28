@@ -181,7 +181,9 @@ public class PrefRefreshDialog {
                                         String subName = subKeys.next();
                                         Integer subCode = (subCodes != null) ? subCodes.get(subName) : null;
                                         if (subCode == null) subCode = 0;
-                                        pi.subs.add(new SubInfo(subCode, subName));
+                                        if (subCode != 0) {
+                                            pi.subs.add(new SubInfo(subCode, subName));
+                                        }
                                     }
                                 }
                                 // Also merge from savedMetas for this prefName
@@ -197,7 +199,9 @@ public class PrefRefreshDialog {
                                         if (!exists) {
                                             Integer subCode = (subCodes != null) ? subCodes.get(m.getSubName()) : null;
                                             if (subCode == null) subCode = 0;
-                                            pi.subs.add(new SubInfo(subCode, m.getSubName()));
+                                            if (subCode != 0) {
+                                                pi.subs.add(new SubInfo(subCode, m.getSubName()));
+                                            }
                                         }
                                     }
                                 }
@@ -228,7 +232,9 @@ public class PrefRefreshDialog {
                                     if (!exists) {
                                         Integer subCode = (subCodes != null) ? subCodes.get(m.getSubName()) : null;
                                         if (subCode == null) subCode = 0;
-                                        pi.subs.add(new SubInfo(subCode, m.getSubName()));
+                                        if (subCode != 0) {
+                                            pi.subs.add(new SubInfo(subCode, m.getSubName()));
+                                        }
                                     }
                                 }
                             }
@@ -258,7 +264,9 @@ public class PrefRefreshDialog {
                                     if (!exists) {
                                         Integer subCode = (subCodes != null) ? subCodes.get(m2.getSubName()) : null;
                                         if (subCode == null) subCode = 0;
-                                        pi.subs.add(new SubInfo(subCode, m2.getSubName()));
+                                        if (subCode != 0) {
+                                            pi.subs.add(new SubInfo(subCode, m2.getSubName()));
+                                        }
                                     }
                                 }
                             }
@@ -414,6 +422,10 @@ public class PrefRefreshDialog {
         PrefMeta parentMeta = new PrefMeta(pi.code, pi.name, lastUpdated);
         Date sourceUpdatedAt = remoteDates.get(pi.name);
         boolean hasUpdate = anySaved && sourceUpdatedAt != null && parentMeta.getLastUpdated() < sourceUpdatedAt.getTime();
+
+        if (pi.subs.isEmpty()) {
+            return buildRow(context, viewModel, parentMeta, sdf, sourceUpdatedAt, hasUpdate, anySaved, isCurrent);
+        }
 
         // 親行の作成（基本は buildRow と同様だが、タップで展開する）
         View parentRow = buildRow(context, viewModel, parentMeta, sdf, sourceUpdatedAt, hasUpdate, anySaved, isCurrent);
