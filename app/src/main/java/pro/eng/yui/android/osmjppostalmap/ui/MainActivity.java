@@ -535,13 +535,11 @@ public class MainActivity extends AppCompatActivity {
         initialLocationSet = true;
 
         map.getController().setZoom(gpsZoomBase);
-        // アニメーション完了後にPOIを更新するように調整
-        map.getController().animateTo(gpsZoomCenter, gpsZoomBase, 1000L);
-        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-            if (canLoadPois()) {
-                updatePois(true, UpdateMode.GPS_OR_INITIAL);
-            }
-        }, 1100L);
+        map.getController().setCenter(gpsZoomCenter);
+
+        if (canLoadPois()) {
+            updatePois(true, UpdateMode.GPS_OR_INITIAL);
+        }
     }
 
     private static double longitudeDistance(double longitude1, double longitude2) {
