@@ -109,10 +109,30 @@ public class PrefRefreshDialog {
                 List<PrefMeta> savedMetas = (List<PrefMeta>) data[0];
                 Map<String, PrefMeta> savedMap = (Map<String, PrefMeta>) data[1];
                 return new Object[]{savedMetas, savedMap, allPrefCodes};
+            }).thenCompose(data -> {
+                List<PrefMeta> savedMetas = (List<PrefMeta>) data[0];
+                Map<String, PrefMeta> savedMap = (Map<String, PrefMeta>) data[1];
+                Map<String, Integer> allPrefCodes = (Map<String, Integer>) data[2];
+
+                List<CompletableFuture<Map<String, Integer>>> subAreaFutures = new ArrayList<>();
+                List<String> prefNames = new ArrayList<>(allPrefCodes.keySet());
+                for (String prefName : prefNames) {
+                    subAreaFutures.add(JpPostalUtil.getSubAreas(prefName));
+                }
+                
+                return CompletableFuture.allOf(subAreaFutures.toArray(new CompletableFuture[0]))
+                    .thenApply(v -> {
+                        Map<String, Map<String, Integer>> allSubCodes = new HashMap<>();
+                        for (int i = 0; i < prefNames.size(); i++) {
+                            allSubCodes.put(prefNames.get(i), subAreaFutures.get(i).join());
+                        }
+                        return new Object[]{savedMetas, savedMap, allPrefCodes, allSubCodes};
+                    });
             }).thenCombine(JpPostalUtil.getRawPrefecturesJson(), (data, json) -> {
                 List<PrefMeta> savedMetas = (List<PrefMeta>) data[0];
                 Map<String, PrefMeta> savedMap = (Map<String, PrefMeta>) data[1];
                 Map<String, Integer> allPrefCodes = (Map<String, Integer>) data[2];
+                Map<String, Map<String, Integer>> allSubCodes = (Map<String, Map<String, Integer>>) data[3];
 
                 Map<String, Date> remoteDates = new HashMap<>();
                 DataDateResponse remoteData = viewModel.getDataDate().getValue();
@@ -153,14 +173,36 @@ public class PrefRefreshDialog {
 
                             if (code != null) {
                                 PrefInfo pi = new PrefInfo(code, prefName);
+                                Map<String, Integer> subCodes = allSubCodes.get(prefName);
                                 if (prefObj.has("sub")) {
                                     JSONObject subObj = prefObj.getJSONObject("sub");
                                     Iterator<String> subKeys = subObj.keys();
                                     while (subKeys.hasNext()) {
                                         String subName = subKeys.next();
-                                        pi.subNames.add(subName);
+                                        Integer subCode = (subCodes != null) ? subCodes.get(subName) : null;
+                                        if (subCode == null) subCode = 0;
+                                        pi.subs.add(new SubInfo(subCode, subName));
                                     }
-                                    Collections.sort(pi.subNames);
+                                }
+                                // Also merge from savedMetas for this prefName
+                                for (PrefMeta m : savedMetas) {
+                                    if (m.getName().equals(prefName) && m.getSubName() != null) {
+                                        boolean exists = false;
+                                        for (SubInfo si : pi.subs) {
+                                            if (si.name.equals(m.getSubName())) {
+                                                exists = true;
+                                                break;
+                                            }
+                                        }
+                                        if (!exists) {
+                                            Integer subCode = (subCodes != null) ? subCodes.get(m.getSubName()) : null;
+                                            if (subCode == null) subCode = 0;
+                                            pi.subs.add(new SubInfo(subCode, m.getSubName()));
+                                        }
+                                    }
+                                }
+                                if (!pi.subs.isEmpty()) {
+                                    Collections.sort(pi.subs, (a, b) -> Integer.compare(a.code, b.code));
                                 }
                                 allItems.add(pi);
                                 processedPrefs.add(prefName);
@@ -171,7 +213,29 @@ public class PrefRefreshDialog {
                     // Add remaining from allPrefCodes
                     for (Map.Entry<String, Integer> entry : allPrefCodes.entrySet()) {
                         if (!processedPrefs.contains(entry.getKey())) {
-                            allItems.add(new PrefInfo(entry.getValue(), entry.getKey()));
+                            PrefInfo pi = new PrefInfo(entry.getValue(), entry.getKey());
+                            Map<String, Integer> subCodes = allSubCodes.get(entry.getKey());
+                            // Fallback: search in saved metas for subareas
+                            for (PrefMeta m : savedMetas) {
+                                if (m.getName().equals(entry.getKey()) && m.getSubName() != null) {
+                                    boolean exists = false;
+                                    for (SubInfo si : pi.subs) {
+                                        if (si.name.equals(m.getSubName())) {
+                                            exists = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!exists) {
+                                        Integer subCode = (subCodes != null) ? subCodes.get(m.getSubName()) : null;
+                                        if (subCode == null) subCode = 0;
+                                        pi.subs.add(new SubInfo(subCode, m.getSubName()));
+                                    }
+                                }
+                            }
+                            if (!pi.subs.isEmpty()) {
+                                Collections.sort(pi.subs, (a, b) -> Integer.compare(a.code, b.code));
+                            }
+                            allItems.add(pi);
                             processedPrefs.add(entry.getKey());
                         }
                     }
@@ -179,7 +243,29 @@ public class PrefRefreshDialog {
                     // Add remaining from savedMetas
                     for (PrefMeta m : savedMetas) {
                         if (!processedPrefs.contains(m.getName())) {
-                            allItems.add(new PrefInfo(m.getPrefCode(), m.getName()));
+                            PrefInfo pi = new PrefInfo(m.getPrefCode(), m.getName());
+                            Map<String, Integer> subCodes = allSubCodes.get(m.getName());
+                            // Add all subnames for this pref from savedMetas
+                            for (PrefMeta m2 : savedMetas) {
+                                if (m2.getName().equals(m.getName()) && m2.getSubName() != null) {
+                                    boolean exists = false;
+                                    for (SubInfo si : pi.subs) {
+                                        if (si.name.equals(m2.getSubName())) {
+                                            exists = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!exists) {
+                                        Integer subCode = (subCodes != null) ? subCodes.get(m2.getSubName()) : null;
+                                        if (subCode == null) subCode = 0;
+                                        pi.subs.add(new SubInfo(subCode, m2.getSubName()));
+                                    }
+                                }
+                            }
+                            if (!pi.subs.isEmpty()) {
+                                Collections.sort(pi.subs, (a, b) -> Integer.compare(a.code, b.code));
+                            }
+                            allItems.add(pi);
                             processedPrefs.add(m.getName());
                         }
                     }
@@ -217,7 +303,7 @@ public class PrefRefreshDialog {
                             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.JAPAN);
                             for (PrefInfo pi : allItems) {
                                 boolean isCurrent = pi.name.equals(currentPref);
-                                if (pi.subNames.isEmpty()) {
+                                if (pi.subs.isEmpty()) {
                                     PrefMeta meta = savedMap.get(pi.name);
                                     if (meta == null) meta = new PrefMeta(pi.code, pi.name, 0);
                                     Date sourceUpdatedAt = remoteDates.get(pi.name);
@@ -284,19 +370,25 @@ public class PrefRefreshDialog {
     }
 
     private static boolean hasAnySaved(PrefInfo pi, Map<String, PrefMeta> savedMap) {
-        if (pi.subNames.isEmpty()) {
+        if (pi.subs.isEmpty()) {
             return savedMap.containsKey(pi.name);
         }
-        for (String sub : pi.subNames) {
-            if (savedMap.containsKey(pi.name + ":" + sub)) return true;
+        for (SubInfo sub : pi.subs) {
+            if (savedMap.containsKey(pi.name + ":" + sub.name)) return true;
         }
         return false;
+    }
+
+    private static class SubInfo {
+        int code;
+        String name;
+        SubInfo(int code, String name) { this.code = code; this.name = name; }
     }
 
     private static class PrefInfo {
         int code;
         String name;
-        List<String> subNames = new ArrayList<>();
+        List<SubInfo> subs = new ArrayList<>();
         PrefInfo(int code, String name) { this.code = code; this.name = name; }
     }
 
@@ -310,8 +402,8 @@ public class PrefRefreshDialog {
         long lastUpdated = 0;
         boolean allSaved = true;
         boolean anySaved = false;
-        for (String sub : pi.subNames) {
-            PrefMeta m = savedMap.get(pi.name + ":" + sub);
+        for (SubInfo sub : pi.subs) {
+            PrefMeta m = savedMap.get(pi.name + ":" + sub.name);
             if (m != null) {
                 lastUpdated = Math.max(lastUpdated, m.getLastUpdated());
                 anySaved = true;
@@ -337,7 +429,7 @@ public class PrefRefreshDialog {
 
         nameView.setClickable(true);
         nameView.setBackgroundResource(android.R.drawable.list_selector_background);
-        nameView.setOnClickListener(v -> {
+        View.OnClickListener toggleListener = v -> {
             if (subContainer.getVisibility() == View.VISIBLE) {
                 subContainer.setVisibility(View.GONE);
                 nameView.setText(nameView.getText().toString().replace("▼ ", "▶ "));
@@ -345,14 +437,17 @@ public class PrefRefreshDialog {
                 subContainer.setVisibility(View.VISIBLE);
                 nameView.setText(nameView.getText().toString().replace("▶ ", "▼ "));
             }
-        });
+        };
+        nameView.setOnClickListener(toggleListener);
+        // Also allow clicking the area around the name
+        header.setOnClickListener(toggleListener);
 
         // 現在地がこの都道府県（かつサブエリア一致、またはサブエリア未特定）なら展開
         if (isCurrent) {
             boolean subMatches = false;
             if (currentSub != null) {
-                for (String sub : pi.subNames) {
-                    if (sub.equals(currentSub)) {
+                for (SubInfo sub : pi.subs) {
+                    if (sub.name.equals(currentSub)) {
                         subMatches = true;
                         break;
                     }
@@ -364,14 +459,14 @@ public class PrefRefreshDialog {
             }
         }
 
-        for (String sub : pi.subNames) {
-            String key = pi.name + ":" + sub;
+        for (SubInfo sub : pi.subs) {
+            String key = pi.name + ":" + sub.name;
             PrefMeta meta = savedMap.get(key);
-            if (meta == null) meta = new PrefMeta(pi.code, pi.name, sub, 0);
+            if (meta == null) meta = new PrefMeta(pi.code, pi.name, sub.name, 0);
 
             boolean isSaved = savedMap.containsKey(key);
             boolean subHasUpdate = isSaved && sourceUpdatedAt != null && meta.getLastUpdated() < sourceUpdatedAt.getTime();
-            boolean isSubCurrent = isCurrent && sub.equals(currentSub);
+            boolean isSubCurrent = isCurrent && sub.name.equals(currentSub);
 
             subContainer.addView(buildRow(context, viewModel, meta, sdf, sourceUpdatedAt, subHasUpdate, isSaved, isSubCurrent));
         }
@@ -412,10 +507,16 @@ public class PrefRefreshDialog {
             String action = isSaved ? "を更新しています..." : "を取得しています...";
             Toast.makeText(context, displayName + action, Toast.LENGTH_SHORT).show();
         });
+        // Prevent click from bubbling up to header's toggleListener
+        actionButton.setFocusable(true);
+        actionButton.setClickable(true);
 
         header.addView(nameView);
         header.addView(actionButton);
 
+        // Make the whole header (including name and update button area) expandable if it's a hierarchy row
+        // Actually, nameView already has the listener if it's hierarchy, but let's make it more robust.
+        
         if (isSaved) {
             ImageButton deleteButton = new ImageButton(context);
             deleteButton.setImageResource(R.drawable.ic_delete_24);
@@ -434,8 +535,11 @@ public class PrefRefreshDialog {
                         }
                     })
                     .show());
-            header.addView(deleteButton);
-        }
+        // Prevent click from bubbling up to header's toggleListener
+        deleteButton.setFocusable(true);
+        deleteButton.setClickable(true);
+        header.addView(deleteButton);
+    }
         row.addView(header);
 
         TextView dateView = new TextView(context);
