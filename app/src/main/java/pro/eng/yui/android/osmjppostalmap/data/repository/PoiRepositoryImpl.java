@@ -127,72 +127,74 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     private void preloadBoundaries() {
-        JpPostalUtil.getPrefectures()
-            .thenCombine(JpPostalUtil.getRawPrefecturesJson(), (prefCodesByName, json) -> {
-                try {
-                    if (json == null || json.isEmpty()) {
-                        return null;
+        runOnExecutor("境界データを読み込み中", () -> {
+            try {
+                Map<String, Integer> prefCodesByName = JpPostalUtil.getPrefectures().join();
+                String json = JpPostalUtil.getRawPrefecturesJson().join();
+
+                if (json == null || json.isEmpty()) {
+                    boundaryLatch.countDown();
+                    return;
+                }
+
+                Map<Integer, String> prefNamesByCode = new HashMap<>();
+                for (Map.Entry<String, Integer> entry : prefCodesByName.entrySet()) {
+                    prefNamesByCode.put(entry.getValue(), entry.getKey());
+                }
+
+                Gson gson = new Gson();
+                JsonObject root = gson.fromJson(json, JsonObject.class);
+                if (root == null) {
+                    boundaryLatch.countDown();
+                    return;
+                }
+
+                for (Map.Entry<String, JsonElement> prefEntry : root.entrySet()) {
+                    int prefCode = Integer.parseInt(prefEntry.getKey());
+
+                    String prefName = prefNamesByCode.get(prefCode);
+                    if (prefName == null) {
+                        continue;
                     }
 
-                    Map<Integer, String> prefNamesByCode = new HashMap<>();
-                    for (Map.Entry<String, Integer> entry : prefCodesByName.entrySet()) {
-                        prefNamesByCode.put(entry.getValue(), entry.getKey());
+                    JsonObject prefObj = prefEntry.getValue().getAsJsonObject();
+
+                    if (hasBBox(prefObj)) {
+                        prefBoundaryCache.put(prefName, readBBox(prefObj));
                     }
 
-                    Gson gson = new Gson();
-                    JsonObject root = gson.fromJson(json, JsonObject.class);
-                    if (root == null) {
-                        return null;
-                    }
-
-                    for (Map.Entry<String, JsonElement> prefEntry : root.entrySet()) {
-                        int prefCode = Integer.parseInt(prefEntry.getKey());
-
-                        String prefName = prefNamesByCode.get(prefCode);
-                        if (prefName == null) { continue; }
-
-                        JsonObject prefObj = prefEntry.getValue().getAsJsonObject();
-
-                        if (hasBBox(prefObj)) {
-                            prefBoundaryCache.put(prefName, readBBox(prefObj));
-                        }
-
-                        if (prefObj.has("sub") && prefObj.get("sub").isJsonObject()) {
-                            Map<String, Integer> subCodesByName = JpPostalUtil.getSubAreas(prefName).join();
-                            Map<Integer, String> subNamesByCode = new HashMap<>();
-                            if (subCodesByName != null) {
-                                for (Map.Entry<String, Integer> subEntry : subCodesByName.entrySet()) {
-                                    subNamesByCode.put(subEntry.getValue(), subEntry.getKey());
-                                }
-                            }
-
-                            JsonObject subObj = prefObj.getAsJsonObject("sub");
-                            for (Map.Entry<String, JsonElement> subEntry : subObj.entrySet()) {
-                                int subCode = Integer.parseInt(subEntry.getKey());
-
-                                String subName = subNamesByCode.get(subCode);
-                                if (subName == null) { continue; }
-
-                                JsonObject boundaryObj = subEntry.getValue().getAsJsonObject();
-                                if (hasBBox(boundaryObj)) {
-                                    prefBoundaryCache.put(prefName + ":" + subName, readBBox(boundaryObj));
-                                }
+                    if (prefObj.has("sub") && prefObj.get("sub").isJsonObject()) {
+                        Map<String, Integer> subCodesByName = JpPostalUtil.getSubAreas(prefName).join();
+                        Map<Integer, String> subNamesByCode = new HashMap<>();
+                        if (subCodesByName != null) {
+                            for (Map.Entry<String, Integer> subEntry : subCodesByName.entrySet()) {
+                                subNamesByCode.put(subEntry.getValue(), subEntry.getKey());
                             }
                         }
+
+                        JsonObject subObj = prefObj.getAsJsonObject("sub");
+                        for (Map.Entry<String, JsonElement> subEntry : subObj.entrySet()) {
+                            int subCode = Integer.parseInt(subEntry.getKey());
+
+                            String subName = subNamesByCode.get(subCode);
+                            if (subName == null) {
+                                continue;
+                            }
+
+                            JsonObject boundaryObj = subEntry.getValue().getAsJsonObject();
+                            if (hasBBox(boundaryObj)) {
+                                prefBoundaryCache.put(prefName + ":" + subName, readBBox(boundaryObj));
+                            }
+                        }
                     }
-                } catch (Exception e) {
-                    Log.e("PoiRepository", "Failed to preload boundaries", e);
-                    errorLiveData.postValue("境界データの読み込みに失敗しました");
                 }
-                return null;
-            })
-            .whenCompleteAsync((ignored, ex) -> {
-                if (ex != null) {
-                    Log.e("PoiRepository", "Failed to preload boundaries future", ex);
-                    errorLiveData.postValue("境界データの取得に失敗しました");
-                }
+            } catch (Exception e) {
+                Log.e("PoiRepository", "Failed to preload boundaries", e);
+                errorLiveData.postValue("境界データの読み込みに失敗しました");
+            } finally {
                 boundaryLatch.countDown();
-            }, executor);
+            }
+        });
     }
 
     private static boolean hasBBox(JsonObject obj) {
