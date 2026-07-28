@@ -3,9 +3,6 @@ package pro.eng.yui.android.osmjppostalmap.core;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.location.Address;
-import android.location.Geocoder;
-import android.location.Location;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,7 +19,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.ParseException;

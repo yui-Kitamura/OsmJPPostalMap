@@ -138,8 +138,8 @@ public class PoiRepositoryImpl implements PoiRepository {
                     String prefName = entry.getKey();
                     RawPrefData pref = entry.getValue();
 
-                    if (pref.subAreas != null && !pref.subAreas.isEmpty()) {
-                        for (Map.Entry<String, RawSubAreaData> subEntry : pref.subAreas.entrySet()) {
+                    if (pref.sub != null && !pref.sub.isEmpty()) {
+                        for (Map.Entry<String, RawSubAreaData> subEntry : pref.sub.entrySet()) {
                             String subName = subEntry.getKey();
                             RawSubAreaData sub = subEntry.getValue();
                             if (sub.bbox != null) {
@@ -166,7 +166,7 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     private static class RawPrefData {
         BBox bbox;
-        Map<String, RawSubAreaData> subAreas;
+        Map<String, RawSubAreaData> sub;
     }
 
     private static class RawSubAreaData {
@@ -281,10 +281,10 @@ public class PoiRepositoryImpl implements PoiRepository {
                     }
                 } else {
                     // サブエリア指定がない場合、サブエリアの存在を確認
-                    Map<String, Integer> subAreas = JpPostalUtil.getSubAreas(prefName).join();
-                    if (subAreas != null && !subAreas.isEmpty()) {
+                    Map<String, Integer> subAll = JpPostalUtil.getSubAreas(prefName).join();
+                    if (subAll != null && !subAll.isEmpty()) {
                         // サブエリアが存在する場合、表示範囲と交差するものを特定
-                        for (String sub : subAreas.keySet()) {
+                        for (String sub : subAll.keySet()) {
                             String subKey = prefName + ":" + sub;
                             BBox subBBox = prefBoundaryCache.get(subKey);
                             if (subBBox != null) {
