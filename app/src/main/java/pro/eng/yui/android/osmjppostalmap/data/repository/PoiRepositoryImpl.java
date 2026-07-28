@@ -15,13 +15,14 @@ import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.api.osm.ChangeSetInfo;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.BBox;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -126,52 +127,89 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     private void preloadBoundaries() {
-        JpPostalUtil.getRawPrefecturesJson().thenAcceptAsync(json -> {
-            try {
-                if (json == null || json.isEmpty()) return;
-                Gson gson = new Gson();
-                java.lang.reflect.Type type = new TypeToken<Map<String, RawPrefData>>(){}.getType();
-                Map<String, RawPrefData> prefs = gson.fromJson(json, type);
+        JpPostalUtil.getPrefectures()
+            .thenCombine(JpPostalUtil.getRawPrefecturesJson(), (prefCodesByName, json) -> {
+                try {
+                    if (json == null || json.isEmpty()) {
+                        return null;
+                    }
 
-                if (prefs == null) return;
+                    Map<Integer, String> prefNamesByCode = new HashMap<>();
+                    for (Map.Entry<String, Integer> entry : prefCodesByName.entrySet()) {
+                        prefNamesByCode.put(entry.getValue(), entry.getKey());
+                    }
 
-                for (Map.Entry<String, RawPrefData> entry : prefs.entrySet()) {
-                    String prefName = entry.getKey();
-                    RawPrefData pref = entry.getValue();
+                    Gson gson = new Gson();
+                    JsonObject root = gson.fromJson(json, JsonObject.class);
+                    if (root == null) {
+                        return null;
+                    }
 
-                    if (pref.sub != null && !pref.sub.isEmpty()) {
-                        for (Map.Entry<String, RawSubAreaData> subEntry : pref.sub.entrySet()) {
-                            String subName = subEntry.getKey();
-                            RawSubAreaData sub = subEntry.getValue();
-                            if (sub.bbox != null) {
-                                prefBoundaryCache.put(prefName + ":" + subName, sub.bbox);
+                    for (Map.Entry<String, JsonElement> prefEntry : root.entrySet()) {
+                        int prefCode = Integer.parseInt(prefEntry.getKey());
+
+                        String prefName = prefNamesByCode.get(prefCode);
+                        if (prefName == null) { continue; }
+
+                        JsonObject prefObj = prefEntry.getValue().getAsJsonObject();
+
+                        if (hasBBox(prefObj)) {
+                            prefBoundaryCache.put(prefName, readBBox(prefObj));
+                        }
+
+                        if (prefObj.has("sub") && prefObj.get("sub").isJsonObject()) {
+                            Map<String, Integer> subCodesByName = JpPostalUtil.getSubAreas(prefName).join();
+                            Map<Integer, String> subNamesByCode = new HashMap<>();
+                            if (subCodesByName != null) {
+                                for (Map.Entry<String, Integer> subEntry : subCodesByName.entrySet()) {
+                                    subNamesByCode.put(subEntry.getValue(), subEntry.getKey());
+                                }
+                            }
+
+                            JsonObject subObj = prefObj.getAsJsonObject("sub");
+                            for (Map.Entry<String, JsonElement> subEntry : subObj.entrySet()) {
+                                int subCode = Integer.parseInt(subEntry.getKey());
+
+                                String subName = subNamesByCode.get(subCode);
+                                if (subName == null) { continue; }
+
+                                JsonObject boundaryObj = subEntry.getValue().getAsJsonObject();
+                                if (hasBBox(boundaryObj)) {
+                                    prefBoundaryCache.put(prefName + ":" + subName, readBBox(boundaryObj));
+                                }
                             }
                         }
-                    } else if (pref.bbox != null) {
-                        prefBoundaryCache.put(prefName, pref.bbox);
                     }
+                } catch (Exception e) {
+                    Log.e("PoiRepository", "Failed to preload boundaries", e);
+                    errorLiveData.postValue("境界データの読み込みに失敗しました");
                 }
-            } catch (Exception e) {
-                Log.e("PoiRepository", "Failed to preload boundaries", e);
-                errorLiveData.postValue("境界データの読み込みに失敗しました");
-            } finally {
+                return null;
+            })
+            .whenCompleteAsync((ignored, ex) -> {
+                if (ex != null) {
+                    Log.e("PoiRepository", "Failed to preload boundaries future", ex);
+                    errorLiveData.postValue("境界データの取得に失敗しました");
+                }
                 boundaryLatch.countDown();
-            }
-        }, executor).exceptionally(ex -> {
-            Log.e("PoiRepository", "Failed to preload boundaries future", ex);
-            errorLiveData.postValue("境界データの取得に失敗しました");
-            boundaryLatch.countDown();
-            return null;
-        });
+            }, executor);
     }
 
-    private static class RawPrefData {
-        BBox bbox;
-        Map<String, RawSubAreaData> sub;
+    private static boolean hasBBox(JsonObject obj) {
+        return obj != null
+                && obj.has("minLat")
+                && obj.has("minLon")
+                && obj.has("maxLat")
+                && obj.has("maxLon");
     }
 
-    private static class RawSubAreaData {
-        BBox bbox;
+    private static BBox readBBox(JsonObject obj) {
+        return new BBox(
+                obj.get("minLat").getAsDouble(),
+                obj.get("minLon").getAsDouble(),
+                obj.get("maxLat").getAsDouble(),
+                obj.get("maxLon").getAsDouble()
+        );
     }
 
     /* ---------- 取得系 ---------- */
@@ -427,7 +465,6 @@ public class PoiRepositoryImpl implements PoiRepository {
                     for (String sub : subs) {
                         loadingStatusLiveData.postValue(prefName + " " + sub + " のデータを取得中");
                         
-                        String subCodeStr = String.valueOf(subAll.get(sub));
                         List<OsmPoi> subData = JpPostalUtil.getPoiData(prefName, sub).join();
                         if (subData != null && local != null) {
                             local.upsertArea(prefCode, sub, prefName, subData, System.currentTimeMillis());
