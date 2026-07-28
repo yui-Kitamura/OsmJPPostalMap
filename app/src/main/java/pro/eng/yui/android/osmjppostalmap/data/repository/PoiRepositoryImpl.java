@@ -220,8 +220,8 @@ public class PoiRepositoryImpl implements PoiRepository {
 
         runOnExecutor("表示エリアを判定中", () -> {
             try {
-                // 境界データの読み込み完了を待機（最大10秒）
-                boundaryLatch.await(10, TimeUnit.SECONDS);
+                // 境界データの読み込み完了を待機（最大5秒）
+                boundaryLatch.await(5, TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }

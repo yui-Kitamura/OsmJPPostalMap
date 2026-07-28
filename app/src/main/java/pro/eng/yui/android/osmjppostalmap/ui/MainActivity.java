@@ -82,6 +82,12 @@ public class MainActivity extends AppCompatActivity {
     private final ExecutorService markerStateExecutor = Executors.newSingleThreadExecutor();
     private final AtomicInteger markerRenderGeneration = new AtomicInteger();
 
+    private enum UpdateMode {
+        NORMAL,           // 11海里制限あり
+        GPS_OR_INITIAL,   // 50km制限
+        FULL_SCREEN       // 制限なし（表示範囲全域）
+    }
+
     private static class PoiInfo {
         final double dLat;
         final double dLon;
@@ -184,7 +190,7 @@ public class MainActivity extends AppCompatActivity {
                 map.removeOnLayoutChangeListener(this);
                 // 位置がレイアウトより先に確定した場合、または位置情報が不許可と確定した場合にロードする。
                 if (canLoadPois()) {
-                    updatePois(true);
+                    updatePois(true, UpdateMode.GPS_OR_INITIAL);
                 }
             }
         });
@@ -284,7 +290,7 @@ public class MainActivity extends AppCompatActivity {
                 if (!initialLocationSet) {
                     initialLocationSet = true;
                 }
-                PrefRefreshDialog.show(this, viewModel, this::updatePois);
+                PrefRefreshDialog.show(this, viewModel, () -> updatePois(true, UpdateMode.FULL_SCREEN));
             }
         });
 
@@ -485,7 +491,7 @@ public class MainActivity extends AppCompatActivity {
         map.getController().setZoom(gpsZoomBase);
         map.getController().animateTo(gpsZoomCenter);
 
-        updatePois(true);
+        updatePois(true, UpdateMode.GPS_OR_INITIAL);
     }
 
     private static double longitudeDistance(double longitude1, double longitude2) {
@@ -505,7 +511,7 @@ public class MainActivity extends AppCompatActivity {
         return TOKYO_CENTRAL_POST_OFFICE;
     }
 
-    private void updatePois(boolean forceNotify) {
+    private void updatePois(boolean forceNotify, UpdateMode mode) {
         if (!canLoadPois() || map == null || !map.isLayoutOccurred()) {
             return;
         }
@@ -516,25 +522,21 @@ public class MainActivity extends AppCompatActivity {
         double centerLon = center.getLongitude();
 
         double latMin, latMax, lonMin, lonMax;
-        if (gpsZoomAdjustmentPending) {
-            // GPSボタン押下直後など、適切なズーム判定に必要な広域をカバーする。
-            // 全国(5.0)を対象にすると処理が重いため、一旦11.0（約32km四方）を上限とする。
-            double searchMinZoom = Math.max(MIN_ZOOM, 11.0);
-            double scale = Math.pow(2.0, searchMinZoom - gpsZoomBase);
-            int width = map.getWidth();
-            int height = map.getHeight();
-            int shortSide = Math.min(width, height);
-
-            double dLonPerPixel = 360.0 / (Math.pow(2.0, gpsZoomBase) * 256.0);
-            double dLatPerPixel = dLonPerPixel / Math.cos(Math.toRadians(centerLat));
-
-            double halfLat = (shortSide * dLatPerPixel / 2.0) / scale;
-            double halfLon = (shortSide * dLonPerPixel / 2.0) / scale;
-
-            latMin = centerLat - halfLat;
-            latMax = centerLat + halfLat;
-            lonMin = centerLon - halfLon;
-            lonMax = centerLon + halfLon;
+        if (mode == UpdateMode.GPS_OR_INITIAL) {
+            // GPSボタン押下時と初期表示は、GPS座標と周辺50km以内
+            double rangeDeg = 50.0 / 111.0;
+            latMin = centerLat - rangeDeg;
+            latMax = centerLat + rangeDeg;
+            double cosLat = Math.cos(Math.toRadians(centerLat));
+            double rangeLon = (cosLat > 0.01) ? rangeDeg / cosLat : rangeDeg;
+            lonMin = centerLon - rangeLon;
+            lonMax = centerLon + rangeLon;
+        } else if (mode == UpdateMode.FULL_SCREEN) {
+            // ダイアログの描画範囲内取得ボタン押下時はその時映してる範囲で対応
+            latMin = bb.getLatSouth();
+            latMax = bb.getLatNorth();
+            lonMin = bb.getLonWest();
+            lonMax = bb.getLonEast();
         } else {
             // 通常表示: 中心から約20km (11海里) の範囲を表示範囲内で制限
             double range = 11.0 / 60.0;
@@ -572,7 +574,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updatePois() {
-        updatePois(false);
+        updatePois(false, UpdateMode.NORMAL);
     }
 
     private void requestLocationPermissions() {
@@ -608,7 +610,7 @@ public class MainActivity extends AppCompatActivity {
                 if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
                 // 位置情報プロバイダが無効な場合は、デフォルト位置（東京）を初期位置として確定させる
                 initialLocationSet = true;
-                updatePois(true);
+                updatePois(true, UpdateMode.GPS_OR_INITIAL);
                 return;
             }
 
@@ -674,7 +676,7 @@ public class MainActivity extends AppCompatActivity {
                 if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
                 // 許可が得られなかった場合は、デフォルト位置（東京）を初期位置として確定させる
                 initialLocationSet = true;
-                updatePois(true);
+                updatePois(true, UpdateMode.GPS_OR_INITIAL);
             }
         }
     }
