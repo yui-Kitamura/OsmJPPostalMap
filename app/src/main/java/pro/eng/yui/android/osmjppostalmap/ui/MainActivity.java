@@ -363,7 +363,7 @@ public class MainActivity extends AppCompatActivity {
                 if (!initialLocationSet) {
                     initialLocationSet = true;
                 }
-                PrefRefreshDialog.show(this, viewModel, viewModel.getCurrentPrefecture().getValue(), () -> updatePois(true, UpdateMode.FULL_SCREEN));
+                PrefRefreshDialog.show(this, viewModel, () -> updatePois(true, UpdateMode.FULL_SCREEN));
             }
         });
 

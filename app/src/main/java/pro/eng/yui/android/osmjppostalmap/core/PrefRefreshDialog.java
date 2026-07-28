@@ -33,6 +33,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import androidx.lifecycle.Observer;
 import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateResponse;
@@ -54,8 +55,7 @@ public class PrefRefreshDialog {
      * @param viewModel     取得/更新の窓口
      * @param onRefreshArea 「表示範囲を取得」押下時の処理（通常は MainActivity#updatePois）
      */
-    public static void show(Context context, MainViewModel viewModel, String currentPref, Runnable onRefreshArea) {
-        String currentSub = viewModel.getCurrentSubArea().getValue();
+    public static void show(Context context, MainViewModel viewModel, Runnable onRefreshArea) {
         View view = LayoutInflater.from(context).inflate(R.layout.dialog_pref_refresh, null);
         LinearLayout container = view.findViewById(R.id.pref_list_container);
         Button areaButton = view.findViewById(R.id.refresh_area_button);
@@ -94,6 +94,8 @@ public class PrefRefreshDialog {
 
         // データの構築処理を関数化して、DataDateの取得後に呼び出せるようにする
         Runnable buildList = () -> {
+            String currentPref = viewModel.getCurrentPrefecture().getValue();
+            String currentSub = viewModel.getCurrentSubArea().getValue();
             // Fetch saved data and remote data date from background, then combine with JpPostal master data
             CompletableFuture.supplyAsync(() -> {
                 List<PrefMeta> savedMetas = viewModel.getSavedPrefectures();
@@ -238,16 +240,38 @@ public class PrefRefreshDialog {
             });
         };
 
-        // Observe DataDate updates.
+        // Observe DataDate and current area updates.
         // We need to handle the lifecycle correctly.
         if (context instanceof AppCompatActivity) {
             AppCompatActivity activity = (AppCompatActivity) context;
-            viewModel.getDataDate().observe(activity, dataDateResponse -> {
-                // When data is fetched or updated, refresh the list.
+            
+            Runnable refreshAction = () -> {
+                // When data is fetched or location updated, refresh the list.
                 // We clear the container (except progressBar if it's still there) and rebuild.
                 container.removeAllViews();
                 container.addView(progressBar);
                 buildList.run();
+            };
+
+            Observer<DataDateResponse> dateObserver = d -> refreshAction.run();
+            Observer<String> prefObserver = s -> refreshAction.run();
+            Observer<String> subObserver = s -> refreshAction.run();
+            Observer<Boolean> loadingObserver = loading -> {
+                if (loading != null && !loading) {
+                    refreshAction.run();
+                }
+            };
+
+            viewModel.getDataDate().observe(activity, dateObserver);
+            viewModel.getCurrentPrefecture().observe(activity, prefObserver);
+            viewModel.getCurrentSubArea().observe(activity, subObserver);
+            viewModel.getLoading().observe(activity, loadingObserver);
+
+            dialog.setOnDismissListener(d -> {
+                viewModel.getDataDate().removeObserver(dateObserver);
+                viewModel.getCurrentPrefecture().removeObserver(prefObserver);
+                viewModel.getCurrentSubArea().removeObserver(subObserver);
+                viewModel.getLoading().removeObserver(loadingObserver);
             });
             // Initial trigger
             viewModel.fetchDataDate();
@@ -370,7 +394,7 @@ public class PrefRefreshDialog {
         TextView nameView = new TextView(context);
         String displayName = meta.getSubName() == null ? meta.getName() : meta.getSubName();
         nameView.setText(displayName);
-        if (isCurrent && meta.getSubName() == null) {
+        if (isCurrent) {
             nameView.setCompoundDrawablesWithIntrinsicBounds(android.R.drawable.ic_menu_mylocation, 0, 0, 0);
             nameView.setCompoundDrawablePadding(16);
         }
