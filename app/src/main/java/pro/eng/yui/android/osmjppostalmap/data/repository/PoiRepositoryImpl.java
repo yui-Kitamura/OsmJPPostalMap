@@ -156,12 +156,15 @@ public class PoiRepositoryImpl implements PoiRepository {
                     String prefName = prefNamesByCode.get(prefCode);
                     if (prefName == null) { continue; }
 
-                    JsonObject prefObj = prefEntry.getValue().getAsJsonObject();
-                    Map<String, Integer> subCodesByName = JpPostalUtil.getSubAreas(prefName).join();
                     Map<Integer, String> subNamesByCode = new HashMap<>();
-                    if (subCodesByName != null) {
-                        for (Map.Entry<String, Integer> subEntry : subCodesByName.entrySet()) {
-                            subNamesByCode.put(subEntry.getValue(), subEntry.getKey());
+
+                    JsonObject prefObj = prefEntry.getValue().getAsJsonObject();
+                    if (prefCode != 0) {
+                        Map<String, Integer> subCodesByName = JpPostalUtil.getSubAreas(prefName).join();
+                        if (subCodesByName != null) {
+                            for (Map.Entry<String, Integer> subEntry : subCodesByName.entrySet()) {
+                                subNamesByCode.put(subEntry.getValue(), subEntry.getKey());
+                            }
                         }
                     }
 
