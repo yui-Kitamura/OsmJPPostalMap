@@ -189,6 +189,22 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        map.addMapListener(new org.osmdroid.events.MapListener() {
+            @Override
+            public boolean onScroll(org.osmdroid.events.ScrollEvent event) {
+                initialLocationSet = true;
+                scheduleUpdatePois();
+                return true;
+            }
+
+            @Override
+            public boolean onZoom(org.osmdroid.events.ZoomEvent event) {
+                initialLocationSet = true;
+                scheduleUpdatePois();
+                return true;
+            }
+        });
+
         requestLocationPermissions();
         
         // Observe Filtered POIs
@@ -365,30 +381,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-        map.addMapListener(new org.osmdroid.events.MapListener() {
-            @Override
-            public boolean onScroll(org.osmdroid.events.ScrollEvent event) {
-                initialLocationSet = true;
-                if (map.isLayoutOccurred()) {
-                    scheduleUpdatePois();
-                }
-                return true;
-            }
-
-            @Override
-            public boolean onZoom(org.osmdroid.events.ZoomEvent event) {
-                initialLocationSet = true;
-                if (!map.isLayoutOccurred()) {
-                    return true;
-                }
-                // 表示中のPOIがない場合は再取得を試みる
-                List<OsmPoi> currentPois = viewModel.getFilteredPois().getValue();
-                if (currentPois == null || currentPois.isEmpty()) {
-                    scheduleUpdatePois();
-                }
-                return true;
-            }
-        });
     }
 
     private void scheduleUpdatePois() {
@@ -396,7 +388,7 @@ public class MainActivity extends AppCompatActivity {
             debounceHandler.removeCallbacks(debounceRunnable);
         }
         debounceRunnable = this::updatePois;
-        debounceHandler.postDelayed(debounceRunnable, 1500);
+        debounceHandler.postDelayed(debounceRunnable, 800);
     }
 
     /**
@@ -589,7 +581,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean canLoadPois() {
-        return initialLocationSet;
+        if (initialLocationSet) return true;
+        if (!locationPermissionResolved) return false;
+
+        // 位置情報が利用不可であることが確定している場合はロードを許可
+        boolean hasPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        if (!hasPermission) return true;
+
+        boolean gpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        boolean networkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        return !gpsEnabled && !networkEnabled;
     }
 
     private void startLocationUpdates() {
@@ -600,7 +601,9 @@ public class MainActivity extends AppCompatActivity {
 
             if (!gpsEnabled && !networkEnabled) {
                 if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
-                // 位置情報プロバイダが無効な場合は、ユーザーの操作（スクロール等）を待つ
+                // 位置情報プロバイダが無効な場合は、デフォルト位置（東京）を初期位置として確定させる
+                initialLocationSet = true;
+                updatePois(true);
                 return;
             }
 
@@ -664,6 +667,9 @@ public class MainActivity extends AppCompatActivity {
                 startLocationUpdates();
             } else {
                 if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
+                // 許可が得られなかった場合は、デフォルト位置（東京）を初期位置として確定させる
+                initialLocationSet = true;
+                updatePois(true);
             }
         }
     }
