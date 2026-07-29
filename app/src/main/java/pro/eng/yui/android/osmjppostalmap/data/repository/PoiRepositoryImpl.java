@@ -715,12 +715,17 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public void startLocationUpdates() {
+        startLocationUpdates(5000, 10);
+    }
+
+    @Override
+    public void startLocationUpdates(long minTimeMs, float minDistanceM) {
         if (locationManager == null || context == null) return;
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
-        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 10, locationListener);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, minTimeMs, minDistanceM, locationListener);
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, minTimeMs, minDistanceM, locationListener);
         Location lastGps = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
         Location lastNetwork = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
         if (lastGps != null) {

@@ -184,6 +184,10 @@ public class MainViewModel extends ViewModel {
         repository.startLocationUpdates();
     }
 
+    public void startLocationUpdates(long minTimeMs, float minDistanceM) {
+        repository.startLocationUpdates(minTimeMs, minDistanceM);
+    }
+
     public void stopLocationUpdates() {
         repository.stopLocationUpdates();
     }

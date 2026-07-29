@@ -77,6 +77,7 @@ public class EditPoiActivity extends AppCompatActivity {
     private TextView addressValue;
     private TextView textLocationStatus;
     private TextView topBanner;
+    private TextInputEditText editSpecialNote;
     private MyLocationNewOverlay myLocationOverlay;
     private boolean isNew;
     private int lastCheckedShapeId = -1;
@@ -156,23 +157,7 @@ public class EditPoiActivity extends AppCompatActivity {
         viewModel = new androidx.lifecycle.ViewModelProvider(this).get(MainViewModel.class);
         textLocationStatus = findViewById(R.id.text_location_status);
         topBanner = findViewById(R.id.top_banner);
-        viewModel.getLocation().observe(this, location -> {
-            lastLocation = location;
-            if (location != null) {
-                String status = getString(R.string.location_status_tracking, location.getAccuracy());
-                if (location.getAccuracy() > 50) {
-                    status += getString(R.string.location_status_low_accuracy);
-                    textLocationStatus.setTextColor(0xFFFF0000);
-                } else {
-                    textLocationStatus.setTextColor(0xFF008800);
-                }
-                textLocationStatus.setText(status);
-            } else {
-                textLocationStatus.setText(R.string.location_status_fetching);
-                textLocationStatus.setTextColor(0xFFFF0000);
-            }
-        });
-
+        
         // IntentからPOI情報を受け取る
         long id = getIntent().getLongExtra("POI_ID", 0);
         isNew = id <= 0;
@@ -182,7 +167,32 @@ public class EditPoiActivity extends AppCompatActivity {
         // 既存の座標があればそれを使用、なければデフォルト
         double initialLat = getIntent().getDoubleExtra("POI_LAT", MainActivity.TOKYO_CENTRAL_POST_OFFICE.getLatitude());
         double initialLon = getIntent().getDoubleExtra("POI_LON", MainActivity.TOKYO_CENTRAL_POST_OFFICE.getLongitude());
-        
+
+        map = findViewById(R.id.edit_map);
+        // 地図の初期化
+        map.setTileSource(new XYTileSource("OSMJP", (int) MIN_ZOOM, 18, 256, ".png", 
+                new String[] { "https://tile.openstreetmap.jp/" }));
+        map.setMultiTouchControls(true);
+        map.setMinZoomLevel(MIN_ZOOM);
+        GeoPoint startPoint = new GeoPoint(initialLat, initialLon);
+        double zoom = getIntent().getDoubleExtra("ZOOM_LEVEL", 19.0);
+        map.getController().setZoom(zoom);
+        map.getController().setCenter(startPoint);
+
+        marker = new ReticleMarker(map);
+        marker.setPosition(startPoint);
+        marker.setDraggable(false);
+        marker.setTitle("位置を調整");
+        marker.setInfoWindow(null);
+        marker.setOnMarkerClickListener((m, mv) -> true);
+        map.getOverlays().add(marker);
+
+        viewModel.getLocation().observe(this, location -> {
+            lastLocation = location;
+            updateLocationStatus(location);
+        });
+
+        // Intentタグのパースなど続く
         java.util.Map<String, String> tags;
         if (getIntent().hasExtra("POI_TAGS")) {
             // POI_TAGS があればそれを使用（新しい方式）
@@ -200,15 +210,8 @@ public class EditPoiActivity extends AppCompatActivity {
         targetPoi = new OsmPoi(id, initialLat, initialLon, type != null ? type : "node", tags, ver);
 
         TextView title = findViewById(R.id.edit_title);
-        if (isNew) {
-            title.setText(R.string.title_add_postbox);
-        } else {
-            if ("post_office".equals(targetPoi.getTag("amenity"))) {
-                title.setText(R.string.title_edit_postoffice);
-            } else {
-                title.setText(R.string.title_edit_postbox);
-            }
-        }
+        // タイトル設定は amenity タグなどが判明してから再度行うため、ここでは初期設定のみ
+        title.setText(isNew ? R.string.title_add_postbox : R.string.title_edit_postbox);
 
         tagInput = findViewById(R.id.edit_tag_value);
         View tagLayout = findViewById(R.id.edit_tag_layout);
@@ -240,15 +243,18 @@ public class EditPoiActivity extends AppCompatActivity {
         addressValue = findViewById(R.id.edit_address_value);
         View btnAddressEdit = findViewById(R.id.btn_address_edit);
 
-        View noteLayout = findViewById(R.id.edit_note_layout);
-        TextInputEditText noteInput = findViewById(R.id.edit_note_value);
-        if (isNew || authRepository.getAccessToken() == null) {
-            noteLayout.setVisibility(View.VISIBLE);
+        editSpecialNote = findViewById(R.id.edit_special_note_value);
+        String currentNote = targetPoi.getTag("note");
+        if (currentNote != null) {
+            editSpecialNote.setText(currentNote);
         }
 
         findViewById(R.id.btn_my_location).setOnClickListener(v -> {
             if (lastLocation != null) {
-                map.getController().animateTo(new GeoPoint(lastLocation));
+                GeoPoint gp = new GeoPoint(lastLocation);
+                map.getController().animateTo(gp);
+                marker.setPosition(gp);
+                updateLocationStatus(lastLocation);
             } else {
                 Toast.makeText(this, R.string.error_location_not_found, Toast.LENGTH_SHORT).show();
             }
@@ -331,7 +337,7 @@ public class EditPoiActivity extends AppCompatActivity {
             targetPoi.getTags().remove("ref");
         }
 
-        title.setText(isPostBox ? "郵便ポストの編集" : "郵便局の編集");
+        title.setText(isPostBox ? (isNew ? getString(R.string.title_add_postbox) : getString(R.string.title_edit_postbox)) : getString(R.string.title_edit_postoffice));
 
         // 住所は addr:* の集合なので専用ダイアログで編集し、結果を targetPoi のタグへ直接書き戻す。
         // saveChanges() は targetPoi.getTags() を写して送信するため、これで保存対象に乗る
@@ -502,25 +508,27 @@ public class EditPoiActivity extends AppCompatActivity {
             }
         }
 
-        // 地図の初期化
-        map.setTileSource(new XYTileSource("OSMJP", (int) MIN_ZOOM, 18, 256, ".png", 
-                new String[] { "https://tile.openstreetmap.jp/" }));
-        map.setMultiTouchControls(true);
-        map.setMinZoomLevel(MIN_ZOOM);
-        GeoPoint startPoint = new GeoPoint(targetPoi.getLat(), targetPoi.getLon());
-        double zoom = getIntent().getDoubleExtra("ZOOM_LEVEL", 19.0);
-        map.getController().setZoom(zoom);
-        map.getController().setCenter(startPoint);
-
-        marker = new ReticleMarker(map);
-        marker.setPosition(startPoint);
-        marker.setDraggable(false);
-        marker.setTitle("位置を調整");
-        marker.setInfoWindow(null);
-        marker.setOnMarkerClickListener((m, mv) -> true);
-        map.getOverlays().add(marker);
 
         myLocationOverlay = new MyLocationNewOverlay(new GpsMyLocationProvider(this), map);
+        
+        // Use a simple blue circle for current location instead of the default person icon
+        android.graphics.Bitmap personBitmap = android.graphics.Bitmap.createBitmap(48, 48, android.graphics.Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas canvas = new android.graphics.Canvas(personBitmap);
+        android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(0x330000FF); // Semi-transparent blue for the outer ring
+        canvas.drawCircle(24, 24, 24, paint);
+        paint.setColor(0xFFFFFFFF); // White border
+        paint.setStyle(android.graphics.Paint.Style.STROKE);
+        paint.setStrokeWidth(2);
+        canvas.drawCircle(24, 24, 10, paint);
+        paint.setColor(0xFF4285F4); // Google Maps blue
+        paint.setStyle(android.graphics.Paint.Style.FILL);
+        canvas.drawCircle(24, 24, 10, paint);
+        
+        myLocationOverlay.setPersonIcon(personBitmap);
+        myLocationOverlay.setDirectionIcon(personBitmap);
+        myLocationOverlay.setPersonHotspot(24, 24);
+
         myLocationOverlay.enableMyLocation();
         map.getOverlays().add(myLocationOverlay);
 
@@ -534,21 +542,30 @@ public class EditPoiActivity extends AppCompatActivity {
             @Override
             public boolean onScroll(ScrollEvent event) {
                 marker.setPosition((GeoPoint) map.getMapCenter());
+                updateLocationStatus(lastLocation);
                 return true;
             }
 
             @Override
             public boolean onZoom(ZoomEvent event) {
                 marker.setPosition((GeoPoint) map.getMapCenter());
+                updateLocationStatus(lastLocation);
                 return true;
             }
         });
 
         btnSave.setOnClickListener(v -> {
-            if (lastLocation == null || lastLocation.getAccuracy() > 50) {
+            float[] results = new float[1];
+            GeoPoint markerPos = marker.getPosition();
+            if (lastLocation != null) {
+                Location.distanceBetween(markerPos.getLatitude(), markerPos.getLongitude(), lastLocation.getLatitude(), lastLocation.getLongitude(), results);
+            }
+            float distance = lastLocation != null ? results[0] : Float.MAX_VALUE;
+
+            if (lastLocation == null || lastLocation.getAccuracy() > 50 || distance > 100) {
                 String msg = getString(R.string.error_location_required);
                 if (lastLocation != null) {
-                    msg += String.format("\n(現在の精度: %.1fm)", lastLocation.getAccuracy());
+                    msg += String.format("\n(現在の精度: %.1fm, 距離: %.1fm)", lastLocation.getAccuracy(), distance);
                 }
                 showErrorBanner(msg);
                 return;
@@ -618,6 +635,10 @@ public class EditPoiActivity extends AppCompatActivity {
                     String addr = JpPostalUtil.getAddressText(targetPoi.getTags());
                     
                     String memo = getString(R.string.memo_postbox, collection, addr, branch, ref);
+                    String specialNote = editSpecialNote.getText() != null ? editSpecialNote.getText().toString().trim() : "";
+                    if (!specialNote.isEmpty()) {
+                        memo += "\n特殊収集時刻パターン: " + specialNote;
+                    }
                     JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name), memo, pos.getLatitude(), pos.getLongitude());
                 } else {
                     // 郵便局の場合は営業時間
@@ -628,6 +649,10 @@ public class EditPoiActivity extends AppCompatActivity {
                     String addr = JpPostalUtil.getAddressText(targetPoi.getTags());
                     
                     String memo = getString(R.string.memo_postoffice, collection, addr);
+                    String specialNote = editSpecialNote.getText() != null ? editSpecialNote.getText().toString().trim() : "";
+                    if (!specialNote.isEmpty()) {
+                        memo += "\n特殊収集時刻パターン: " + specialNote;
+                    }
                     JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name), memo, pos.getLatitude(), pos.getLongitude());
                 }
 
@@ -829,8 +854,8 @@ public class EditPoiActivity extends AppCompatActivity {
         
         // 移動後の位置を取得
         GeoPoint pos = marker.getPosition();
-        TextInputEditText noteInput = findViewById(R.id.edit_note_value);
-        String note = noteInput.getText() != null ? noteInput.getText().toString().trim() : "";
+        String note = editSpecialNote.getText() != null ? editSpecialNote.getText().toString().trim() : "";
+        currentTags.put("note", note);
 
         PoiRepository.PoiSaveCallback callback = new PoiRepository.PoiSaveCallback() {
             @Override
@@ -874,6 +899,27 @@ public class EditPoiActivity extends AppCompatActivity {
                     targetPoi.getVer()
             );
             repository.savePoi(updatedPoi, "update " + (updatedPoi.getTag("name") != null ? updatedPoi.getTag("name") : updatedPoi.getType()), callback);
+        }
+    }
+
+    private void updateLocationStatus(Location location) {
+        if (location != null) {
+            float[] results = new float[1];
+            GeoPoint markerPos = marker.getPosition();
+            Location.distanceBetween(markerPos.getLatitude(), markerPos.getLongitude(), location.getLatitude(), location.getLongitude(), results);
+            float distance = results[0];
+
+            String status = getString(R.string.location_status_tracking, distance);
+            if (location.getAccuracy() > 50) {
+                status += getString(R.string.location_status_low_accuracy);
+                textLocationStatus.setTextColor(0xFFFF0000);
+            } else {
+                textLocationStatus.setTextColor(0xFF008800);
+            }
+            textLocationStatus.setText(status);
+        } else {
+            textLocationStatus.setText(R.string.location_status_fetching);
+            textLocationStatus.setTextColor(0xFFFF0000);
         }
     }
 
@@ -1137,7 +1183,7 @@ public class EditPoiActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            viewModel.startLocationUpdates();
+            viewModel.startLocationUpdates(1000, 0);
             if (myLocationOverlay != null) {
                 myLocationOverlay.enableMyLocation();
             }

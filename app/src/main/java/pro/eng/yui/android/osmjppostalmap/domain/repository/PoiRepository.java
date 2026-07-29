@@ -110,6 +110,11 @@ public interface PoiRepository {
     void startLocationUpdates();
 
     /**
+     * 更新頻度を指定して位置情報の更新を開始する
+     */
+    void startLocationUpdates(long minTimeMs, float minDistanceM);
+
+    /**
      * 位置情報の更新を停止する
      */
     void stopLocationUpdates();

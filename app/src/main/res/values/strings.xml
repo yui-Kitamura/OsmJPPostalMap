@@ -33,7 +33,8 @@
     <string name="msg_save_success">保存しました</string>
     <string name="msg_add_success">追加しました</string>
     <string name="msg_note_success">地図メモを保存しました</string>
-    <string name="location_status_tracking">現在地: 精度 %1$.1fm</string>
+    <string name="location_status_tracking">現在地との距離: %1$.1fm</string>
+    <string name="label_special_note">特殊収集時刻パターン</string>
     <string name="location_status_low_accuracy"> (精度不足: 50m以内が必要)</string>
     <string name="location_status_fetching">位置情報を取得中...</string>
     <string name="error_location_not_found">現在地を取得できていません</string>
