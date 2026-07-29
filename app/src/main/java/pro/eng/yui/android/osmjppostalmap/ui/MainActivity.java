@@ -1,7 +1,7 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
 import android.os.Bundle;
-
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -122,6 +122,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         
         authRepository = new AuthRepository(this);
