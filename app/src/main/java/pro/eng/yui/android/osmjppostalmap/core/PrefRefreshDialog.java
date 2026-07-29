@@ -287,13 +287,12 @@ public class PrefRefreshDialog {
                     Collections.sort(allItems, (o1, o2) -> {
                         boolean isCurr1 = o1.name.equals(effectivePref);
                         boolean isCurr2 = o2.name.equals(effectivePref);
-                        if (isCurr1 && !isCurr2) return -1;
-                        if (!isCurr1 && isCurr2) return 1;
+                        if (isCurr1 != isCurr2) return isCurr1 ? -1 : 1;
 
                         boolean s1 = hasAnySaved(o1, savedMap);
                         boolean s2 = hasAnySaved(o2, savedMap);
-                        if (s1 && !s2) return -1;
-                        if (!s1 && s2) return 1;
+                        if (s1 != s2) return s1 ? -1 : 1;
+
                         return Integer.compare(o1.code, o2.code);
                     });
                 } catch (Exception e) {
