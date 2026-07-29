@@ -483,7 +483,9 @@ public class PrefRefreshDialog {
 
         // Make the whole header (including name and update button area) expandable if it's a hierarchy row
         // Actually, nameView already has the listener if it's hierarchy, but let's make it more robust.
-        
+
+        TextView dateView = new TextView(context);
+
         if (isSaved) {
             ImageButton deleteButton = new ImageButton(context);
             deleteButton.setImageResource(R.drawable.ic_delete_24);
@@ -500,7 +502,7 @@ public class PrefRefreshDialog {
                         actionButton.setBackgroundResource(R.drawable.bg_button_update_highlight);
                         deleteButton.setVisibility(View.GONE);
                         String sDate = sourceUpdatedAt == null ? "-" : sdf.format(sourceUpdatedAt);
-                        dateView.setText("最終取得日時: -\nデータ源更新日: " + sDate);
+                        dateView.setText("最終取得日時:\t-\nデータ源更新日:\t" + sDate);
                     })
                     .show());
             // Prevent click from bubbling up to header's toggleListener
@@ -510,12 +512,14 @@ public class PrefRefreshDialog {
         }
         row.addView(header);
 
-        TextView dateView = new TextView(context);
         String sourceDate = sourceUpdatedAt == null ? "-" : sdf.format(sourceUpdatedAt);
         String lastAcquired = (meta.getLastUpdated() == 0) ? "-" : sdf.format(new Date(meta.getLastUpdated()));
-        dateView.setText("最終取得日時: " + lastAcquired
-                + "\nデータ源更新日: " + sourceDate);
+        dateView.setText("最終取得日時:\t" + lastAcquired
+                + "\nデータ源更新日:\t" + sourceDate);
         dateView.setTextSize(12f);
+
+        final TextView finalDateView = dateView;
+
         row.addView(dateView);
         return row;
     }
