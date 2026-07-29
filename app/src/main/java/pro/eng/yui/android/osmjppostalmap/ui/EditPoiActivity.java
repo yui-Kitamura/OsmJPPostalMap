@@ -84,6 +84,10 @@ public class EditPoiActivity extends AppCompatActivity {
     private final ScheduleParser scheduleParser = new SimpleScheduleParser();
     private androidx.appcompat.app.AlertDialog progressDialog;
     private Location lastLocation;
+    private double originalLat;
+    private double originalLon;
+    private boolean isMapUnlocked = false;
+    private boolean isResettingCenter = false;
     private static final double MIN_ZOOM = 15.0;
 
     private class ReticleMarker extends Marker {
@@ -167,6 +171,8 @@ public class EditPoiActivity extends AppCompatActivity {
         // 既存の座標があればそれを使用、なければデフォルト
         double initialLat = getIntent().getDoubleExtra("POI_LAT", MainActivity.TOKYO_CENTRAL_POST_OFFICE.getLatitude());
         double initialLon = getIntent().getDoubleExtra("POI_LON", MainActivity.TOKYO_CENTRAL_POST_OFFICE.getLongitude());
+        originalLat = initialLat;
+        originalLon = initialLon;
 
         map = findViewById(R.id.edit_map);
         // 地図の初期化
@@ -229,8 +235,21 @@ public class EditPoiActivity extends AppCompatActivity {
         Button btnAddRow = findViewById(R.id.btn_add_row);
         Button btnCopyToSat = findViewById(R.id.btn_copy_to_sat);
         Button btnCopyToSun = findViewById(R.id.btn_copy_to_sun);
+        Button btnLockMap = findViewById(R.id.btn_lock_map);
+        btnLockMap.setOnClickListener(v -> {
+            isMapUnlocked = !isMapUnlocked;
+            btnLockMap.setText(isMapUnlocked ? "🔓" : "🔒");
+            if (isMapUnlocked) {
+                Toast.makeText(this, "地図の移動を許可しました", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "地図の移動をロックしました", Toast.LENGTH_SHORT).show();
+            }
+        });
         map = findViewById(R.id.edit_map);
         map.setOnTouchListener((v, event) -> {
+            if (!isMapUnlocked) {
+                return true;
+            }
             v.getParent().requestDisallowInterceptTouchEvent(true);
             return false;
         });
@@ -251,6 +270,12 @@ public class EditPoiActivity extends AppCompatActivity {
 
         findViewById(R.id.btn_my_location).setOnClickListener(v -> {
             if (lastLocation != null) {
+                float[] results = new float[1];
+                Location.distanceBetween(originalLat, originalLon, lastLocation.getLatitude(), lastLocation.getLongitude(), results);
+                if (results[0] > 50) {
+                    Toast.makeText(this, "現在地が初期位置から50m以上離れているため移動できません", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 GeoPoint gp = new GeoPoint(lastLocation);
                 map.getController().animateTo(gp);
                 marker.setPosition(gp);
@@ -541,16 +566,12 @@ public class EditPoiActivity extends AppCompatActivity {
         map.addMapListener(new MapListener() {
             @Override
             public boolean onScroll(ScrollEvent event) {
-                marker.setPosition((GeoPoint) map.getMapCenter());
-                updateLocationStatus(lastLocation);
-                return true;
+                return checkMapDistanceAndRestrict();
             }
 
             @Override
             public boolean onZoom(ZoomEvent event) {
-                marker.setPosition((GeoPoint) map.getMapCenter());
-                updateLocationStatus(lastLocation);
-                return true;
+                return checkMapDistanceAndRestrict();
             }
         });
 
@@ -562,7 +583,7 @@ public class EditPoiActivity extends AppCompatActivity {
             }
             float distance = lastLocation != null ? results[0] : Float.MAX_VALUE;
 
-            if (lastLocation == null || lastLocation.getAccuracy() > 50 || distance > 100) {
+            if (lastLocation == null || lastLocation.getAccuracy() > 50 || distance > 50) {
                 String msg = getString(R.string.error_location_required);
                 if (lastLocation != null) {
                     msg += String.format("\n(現在の精度: %.1fm, 距離: %.1fm)", lastLocation.getAccuracy(), distance);
@@ -905,6 +926,23 @@ public class EditPoiActivity extends AppCompatActivity {
             String comment = getString(R.string.changeset_comment_update, poiName);
             repository.savePoi(updatedPoi, comment, callback);
         }
+    }
+
+    private boolean checkMapDistanceAndRestrict() {
+        if (isResettingCenter) return true;
+        GeoPoint center = (GeoPoint) map.getMapCenter();
+        float[] results = new float[1];
+        Location.distanceBetween(originalLat, originalLon, center.getLatitude(), center.getLongitude(), results);
+        if (results[0] > 50) {
+            isResettingCenter = true;
+            map.getController().setCenter(new GeoPoint(originalLat, originalLon));
+            isResettingCenter = false;
+            Toast.makeText(EditPoiActivity.this, "50m以上の移動は認められません", Toast.LENGTH_SHORT).show();
+            return true;
+        }
+        marker.setPosition(center);
+        updateLocationStatus(lastLocation);
+        return true;
     }
 
     private void updateLocationStatus(Location location) {
