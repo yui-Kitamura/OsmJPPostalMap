@@ -24,6 +24,8 @@ import pro.eng.yui.oss.osm.lib.jppostalcore.types.BBox;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
 import com.google.gson.Gson;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -37,6 +39,7 @@ import pro.eng.yui.android.osmjppostalmap.BuildConfig;
 import pro.eng.yui.android.osmjppostalmap.data.local.PoiLocalDataSource;
 import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateApi;
 import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateResponse;
+import pro.eng.yui.android.osmjppostalmap.data.remote.OverpassApi;
 import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import retrofit2.Call;
@@ -81,6 +84,20 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     /** ローカルキャッシュ（{@link #init(Context)} で初期化） */
     private PoiLocalDataSource local;
+    /** Overpass API client */
+    private OverpassApi overpassApi;
+
+    private OverpassApi getOverpassApi() {
+        if (overpassApi == null) {
+            Retrofit retrofit = new Retrofit.Builder()
+                    .baseUrl("https://overpass-api.de/api/")
+                    .addConverterFactory(retrofit2.converter.scalars.ScalarsConverterFactory.create())
+                    .build();
+            overpassApi = retrofit.create(OverpassApi.class);
+        }
+        return overpassApi;
+    }
+
     /** 現在描画対象としている都道府県コード（再描画の再構成に使用） */
     private final Set<Integer> currentPrefCodes = new LinkedHashSet<>();
     /** 現在表示・計算対象としている地理的範囲 */
@@ -440,6 +457,84 @@ public class PoiRepositoryImpl implements PoiRepository {
         });
     }
 
+    private List<OsmPoi> mergeAndVerify(List<OsmPoi> cached, List<OsmPoi> fetched) {
+        if (cached == null || cached.isEmpty()) {
+            return fetched;
+        }
+        Map<String, OsmPoi> fetchedMap = new HashMap<>();
+        for (OsmPoi p : fetched) {
+            fetchedMap.put(p.getType() + ":" + p.getId(), p);
+        }
+
+        List<OsmPoi> missing = new ArrayList<>();
+        for (OsmPoi p : cached) {
+            String key = p.getType() + ":" + p.getId();
+            if (!fetchedMap.containsKey(key)) {
+                missing.add(p);
+            }
+        }
+
+        if (missing.isEmpty()) {
+            return fetched;
+        }
+
+        // Overpassで存在確認
+        List<OsmPoi> stillExists = verifyMissingPois(missing);
+
+        List<OsmPoi> result = new ArrayList<>(fetched);
+        result.addAll(stillExists);
+        return result;
+    }
+
+    private List<OsmPoi> verifyMissingPois(List<OsmPoi> missing) {
+        List<OsmPoi> stillExists = new ArrayList<>();
+        List<OsmPoi> toCheck = new ArrayList<>();
+        for (OsmPoi p : missing) {
+            if (p.getId() >= 0) {
+                toCheck.add(p);
+            } else {
+                stillExists.add(p); // 暫定IDは維持
+            }
+        }
+        if (toCheck.isEmpty()) return stillExists;
+
+        // Overpass Query
+        StringBuilder sb = new StringBuilder();
+        sb.append("[out:json];(");
+        for (OsmPoi p : toCheck) {
+            String type = p.getType();
+            if ("node".equals(type) || "way".equals(type) || "relation".equals(type)) {
+                sb.append(type).append("(").append(p.getId()).append(");");
+            }
+        }
+        sb.append(");out;");
+
+        try {
+            retrofit2.Response<String> response = getOverpassApi().query(sb.toString()).execute();
+            if (response.isSuccessful() && response.body() != null) {
+                JSONObject root = new JSONObject(response.body());
+                JSONArray elements = root.optJSONArray("elements");
+                if (elements != null) {
+                    Set<String> existingKeys = new HashSet<>();
+                    for (int i = 0; i < elements.length(); i++) {
+                        JSONObject el = elements.getJSONObject(i);
+                        existingKeys.add(el.getString("type") + ":" + el.getLong("id"));
+                    }
+                    for (OsmPoi p : toCheck) {
+                        if (existingKeys.contains(p.getType() + ":" + p.getId())) {
+                            stillExists.add(p);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e("PoiRepository", "Overpass check failed", e);
+            // エラー時は安全のため残す
+            stillExists.addAll(toCheck);
+        }
+        return stillExists;
+    }
+
     /**
      * 指定のエリアを読み込む。{@code forceNetwork} が false かつキャッシュ済みなら
      * SQLiteから読み、そうでなければネットワーク取得してSQLiteへ保存する。
@@ -459,7 +554,9 @@ public class PoiRepositoryImpl implements PoiRepository {
                 List<OsmPoi> fetched = JpPostalUtil.getPoiData(prefName, subName).join();
                 if (local != null) {
                     loadingStatusLiveData.postValue(label + "のデータを処理中");
-                    local.upsertArea(prefCode, subName, prefName, fetched, System.currentTimeMillis());
+                    List<OsmPoi> cachedPois = local.getByArea(prefCode, subName);
+                    List<OsmPoi> verified = mergeAndVerify(cachedPois, fetched);
+                    local.upsertArea(prefCode, subName, prefName, verified, System.currentTimeMillis());
                 }
             } else {
                 // サブ領域指定がない場合、もしサブ領域が存在するならそれらを全て取得する
@@ -470,7 +567,9 @@ public class PoiRepositoryImpl implements PoiRepository {
                         
                         List<OsmPoi> subData = JpPostalUtil.getPoiData(prefName, sub).join();
                         if (subData != null && local != null) {
-                            local.upsertArea(prefCode, sub, prefName, subData, System.currentTimeMillis());
+                            List<OsmPoi> cachedPois = local.getByArea(prefCode, sub);
+                            List<OsmPoi> verified = mergeAndVerify(cachedPois, subData);
+                            local.upsertArea(prefCode, sub, prefName, verified, System.currentTimeMillis());
                         }
                     }
                 } else {
@@ -478,7 +577,9 @@ public class PoiRepositoryImpl implements PoiRepository {
                     List<OsmPoi> fetched = JpPostalUtil.getPoiData(prefName).join();
                     if (local != null) {
                         loadingStatusLiveData.postValue(prefName + "のデータを処理中");
-                        local.upsertArea(prefCode, null, prefName, fetched, System.currentTimeMillis());
+                        List<OsmPoi> cachedPois = local.getByArea(prefCode, null);
+                        List<OsmPoi> verified = mergeAndVerify(cachedPois, fetched);
+                        local.upsertArea(prefCode, null, prefName, verified, System.currentTimeMillis());
                     }
                 }
             }

@@ -138,6 +138,23 @@ public class PoiLocalDataSource {
         return result;
     }
 
+    public List<OsmPoi> getByArea(int prefCode, String subName) {
+        SQLiteDatabase db = helper.getReadableDatabase();
+        List<OsmPoi> result = new ArrayList<>();
+        String subStr = (subName == null) ? "" : subName;
+        String selection = PoiDbHelper.COL_PREF_CODE + " = ? AND (" + PoiDbHelper.COL_SUB_NAME + " = ? OR " + PoiDbHelper.COL_SUB_NAME + " IS NULL)";
+        String[] selectionArgs = new String[]{String.valueOf(prefCode), subStr};
+        try (Cursor c = db.query(PoiDbHelper.TABLE_POI, null,
+                selection, selectionArgs,
+                null, null, null)) {
+            while (c.moveToNext()) {
+                OsmPoi poi = fromCursor(c);
+                if (poi != null) { result.add(poi); }
+            }
+        }
+        return result;
+    }
+
     /**
      * 座標範囲（Bounding Box）に含まれるPOIを取得する。
      */
