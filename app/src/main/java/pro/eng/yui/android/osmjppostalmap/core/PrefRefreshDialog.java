@@ -84,13 +84,15 @@ public class PrefRefreshDialog {
         builder.setPositiveButton("閉じる", null);
         AlertDialog dialog = builder.create();
 
-        areaButton.setOnClickListener(v -> {
-            if (onRefreshArea != null) {
+        if (onRefreshArea != null) {
+            areaButton.setOnClickListener(v -> {
                 onRefreshArea.run();
-            }
-            Toast.makeText(context, "表示範囲を取得しています...", Toast.LENGTH_SHORT).show();
-            dialog.dismiss();
-        });
+                Toast.makeText(context, "表示範囲を取得しています...", Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
+            });
+        } else {
+            areaButton.setVisibility(View.GONE);
+        }
 
         // データの構築処理を関数化して、DataDateの取得後に呼び出せるようにする
         Runnable buildList = () -> {
@@ -283,18 +285,8 @@ public class PrefRefreshDialog {
                         }
                     }
 
-                    // Sort: Current > Saved > Others. Within groups, sort by code.
-                    Collections.sort(allItems, (o1, o2) -> {
-                        boolean isCurr1 = o1.name.equals(effectivePref);
-                        boolean isCurr2 = o2.name.equals(effectivePref);
-                        if (isCurr1 != isCurr2) return isCurr1 ? -1 : 1;
-
-                        boolean s1 = hasAnySaved(o1, savedMap);
-                        boolean s2 = hasAnySaved(o2, savedMap);
-                        if (s1 != s2) return s1 ? -1 : 1;
-
-                        return Integer.compare(o1.code, o2.code);
-                    });
+                    // 純粋な都道府県順ソート
+                    Collections.sort(allItems, (o1, o2) -> Integer.compare(o1.code, o2.code));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

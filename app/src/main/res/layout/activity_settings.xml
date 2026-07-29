@@ -76,6 +76,14 @@
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:textColor="@color/jp_post_red" />
 
+    <Button
+        android:id="@+id/btn_data_management"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/settings_data_management"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

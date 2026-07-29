@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import pro.eng.yui.android.osmjppostalmap.core.PoiDetailsDialog;
 import pro.eng.yui.android.osmjppostalmap.core.PoiMarker;
-import pro.eng.yui.android.osmjppostalmap.core.PrefRefreshDialog;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.CollectionTimes;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OpeningHours;
@@ -348,35 +347,8 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        // Refresh Button
-        CooldownRefreshButton refreshButton = findViewById(R.id.refresh_button);
-        refreshButton.setOnClickListener(v -> {
-            boolean loading = Boolean.TRUE.equals(viewModel.getLoading().getValue());
-            Long remaining = viewModel.getCooldownRemaining().getValue();
-            if (loading || (remaining != null && remaining > 0)) {
-                String status = viewModel.getLoadingStatus().getValue();
-                if (status == null || status.isEmpty()) {
-                    status = (loading) ? "処理中..." : "クールダウン中...";
-                }
-                showStatusTooltip(refreshButton, status);
-            } else {
-                if (!initialLocationSet) {
-                    initialLocationSet = true;
-                }
-                PrefRefreshDialog.show(this, viewModel, () -> updatePois(true, UpdateMode.FULL_SCREEN));
-            }
-        });
-
-        viewModel.getCooldownRemaining().observe(this, remaining -> {
-            refreshButton.setCooldown(remaining, viewModel.getCooldownInterval());
-            updateRefreshButtonVisuals(refreshButton);
-        });
-
         viewModel.getLoading().observe(this, loadingValue -> {
             boolean isLoading = Boolean.TRUE.equals(loadingValue);
-            refreshButton.setLoading(isLoading);
-            updateRefreshButtonVisuals(refreshButton);
-
             if (!isLoading && gpsZoomAdjustmentPending) {
                 // ロードが完了した時点でまだズーム調整が保留されている場合、
                 // 最新のPOIリストを用いて最終的なズーム調整を実行する。
@@ -468,7 +440,7 @@ public class MainActivity extends AppCompatActivity {
             debounceHandler.removeCallbacks(debounceRunnable);
         }
         debounceRunnable = this::updatePois;
-        debounceHandler.postDelayed(debounceRunnable, 800);
+        debounceHandler.postDelayed(debounceRunnable, 1000);
     }
 
     /**
@@ -830,39 +802,6 @@ public class MainActivity extends AppCompatActivity {
             this.marker = marker;
             this.postOffice = postOffice;
         }
-    }
-
-    private void updateRefreshButtonVisuals(CooldownRefreshButton button) {
-        boolean loading = Boolean.TRUE.equals(viewModel.getLoading().getValue());
-        Long remaining = viewModel.getCooldownRemaining().getValue();
-        if (loading || (remaining != null && remaining > 0)) {
-            button.setAlpha(0.5f);
-        } else {
-            button.setAlpha(1.0f);
-        }
-    }
-
-    private void showStatusTooltip(View anchor, String message) {
-        TextView textView = new TextView(this);
-        textView.setText(message);
-        textView.setTextColor(android.graphics.Color.WHITE);
-        textView.setPadding(24, 16, 24, 16);
-        textView.setBackground(ContextCompat.getDrawable(this, R.drawable.bg_tooltip));
-
-        android.widget.PopupWindow popupWindow = new android.widget.PopupWindow(
-                textView,
-                android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
-                android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
-                true
-        );
-        popupWindow.setElevation(10f);
-
-        textView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        int xOffset = -(textView.getMeasuredWidth() + 24);
-        int yOffset = -(anchor.getHeight() + textView.getMeasuredHeight()) / 2;
-
-        popupWindow.showAsDropDown(anchor, xOffset, yOffset);
-        anchor.postDelayed(popupWindow::dismiss, 3000);
     }
 
     private int compareMarkerPriority(PoiMarker a, PoiMarker b) {

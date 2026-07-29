@@ -24,14 +24,17 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.graphics.Insets;
+import androidx.lifecycle.ViewModelProvider;
 import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.android.osmjppostalmap.BuildConfig;
+import pro.eng.yui.android.osmjppostalmap.core.PrefRefreshDialog;
 import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
 import org.osmdroid.tileprovider.modules.SqlTileWriter;
 
 public class SettingsActivity extends AppCompatActivity {
 
     private AuthRepository authRepository;
+    private MainViewModel viewModel;
     private static final String CLIENT_ID = BuildConfig.OSM_CLIENT_ID;
     private static final String CLIENT_SECRET = BuildConfig.OSM_CLIENT_SECRET;
     private static final String REDIRECT_URI = "osmjppostalmap://oauth";
@@ -49,6 +52,7 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         authRepository = new AuthRepository(this);
+        viewModel = new ViewModelProvider(this).get(MainViewModel.class);
 
         TextView loginStatus = findViewById(R.id.login_status);
         Button btnLogin = findViewById(R.id.btn_login);
@@ -112,6 +116,9 @@ public class SettingsActivity extends AppCompatActivity {
 
         findViewById(R.id.btn_show_boundary).setOnClickListener(v -> showBoundaryDialog());
         findViewById(R.id.btn_fetch_area).setOnClickListener(v -> showFetchAreaDialog());
+        findViewById(R.id.btn_data_management).setOnClickListener(v -> {
+            PrefRefreshDialog.show(this, viewModel, null);
+        });
 
         TextView appVersionInfo = findViewById(R.id.app_version_info);
         String versionInfo = String.format("v%s(%d) + %s", 
