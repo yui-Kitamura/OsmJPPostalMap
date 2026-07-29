@@ -452,7 +452,7 @@ public class PoiRepositoryImpl implements PoiRepository {
         }
         try {
             Map<String, Integer> subAll = JpPostalUtil.getSubAreas(prefName).join();
-            if (subName != null) {
+            if (subName != null && subName.trim().isEmpty() == false) {
                 String label = prefName + " " + subName;
                 loadingStatusLiveData.postValue(label + "のデータを取得中");
                 List<OsmPoi> fetched = JpPostalUtil.getPoiData(prefName, subName).join();
@@ -463,7 +463,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             } else {
                 // サブ領域指定がない場合、もしサブ領域が存在するならそれらを全て取得する
                 Set<String> subs = (subAll != null) ? subAll.keySet() : null;
-                if (subs != null && !subs.isEmpty()) {
+                if (subs != null && subs.isEmpty() == false) {
                     for (String sub : subs) {
                         loadingStatusLiveData.postValue(prefName + " " + sub + " のデータを取得中");
                         
