@@ -699,6 +699,9 @@ public class MainActivity extends AppCompatActivity {
         if (locationOverlay != null) {
             locationOverlay.enableMyLocation();
         }
+        if (viewModel != null) {
+            viewModel.startLocationUpdates();
+        }
         if (authRepository != null && viewModel != null) {
             viewModel.updateAccessToken(authRepository.getAccessToken());
             viewModel.forceRefresh(); // リングの状態などを最新時刻で再評価

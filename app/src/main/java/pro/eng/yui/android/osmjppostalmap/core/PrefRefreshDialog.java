@@ -93,21 +93,10 @@ public class PrefRefreshDialog {
         });
 
         // データの構築処理を関数化して、DataDateの取得後に呼び出せるようにする
-        String currentPref = viewModel.getCurrentPrefecture().getValue();
-        String currentSub = viewModel.getCurrentSubArea().getValue();
-        // If initial value is not available, we can't show GPS icon correctly.
-        // But re-observing causes flicker.
-        
-        final String finalCurrentPref = currentPref;
-        final String finalCurrentSub = currentSub;
-
         Runnable buildList = () -> {
-            String cPref = finalCurrentPref;
-            String cSub = finalCurrentSub;
-            if (cPref == null && context instanceof AppCompatActivity) {
-                cPref = viewModel.getCurrentPrefecture().getValue();
-                cSub = viewModel.getCurrentSubArea().getValue();
-            }
+            String cPref = viewModel.getCurrentPrefecture().getValue();
+            String cSub = viewModel.getCurrentSubArea().getValue();
+
             final String effectivePref = cPref;
             final String effectiveSub = cSub;
 
@@ -116,7 +105,8 @@ public class PrefRefreshDialog {
                 List<PrefMeta> savedMetas = viewModel.getSavedPrefectures();
                 Map<String, PrefMeta> savedMap = new HashMap<>();
                 for (PrefMeta m : savedMetas) {
-                    String key = m.getName() + (m.getSubName() == null ? "" : ":" + m.getSubName());
+                    String subName = m.getSubName();
+                    String key = m.getName() + (subName == null || subName.isEmpty() ? "" : ":" + subName);
                     savedMap.put(key, m);
                 }
                 return new Object[]{savedMetas, savedMap};
@@ -374,12 +364,9 @@ public class PrefRefreshDialog {
             Observer<String> prefObserver = new Observer<String>() {
                 @Override
                 public void onChanged(String s) {
-                    if (finalCurrentPref == null && s != null) {
+                    if (s != null) {
                         // Location found, rebuild once and stop observing
                         viewModel.getCurrentPrefecture().removeObserver(this);
-                        // We need a new finalCurrentPref? No, we can't change it. 
-                        // But we can just call show() again or just rebuild with new values?
-                        // Actually, just rebuild is enough IF we handle the null check inside buildList.
                         refreshAction.run();
                     }
                 }
@@ -387,7 +374,7 @@ public class PrefRefreshDialog {
 
             viewModel.getDataDate().observe(activity, dateObserver);
             viewModel.getLoading().observe(activity, loadingObserver);
-            if (finalCurrentPref == null) {
+            if (viewModel.getCurrentPrefecture().getValue() == null) {
                 viewModel.getCurrentPrefecture().observe(activity, prefObserver);
             }
 
@@ -398,6 +385,7 @@ public class PrefRefreshDialog {
             });
             // Initial trigger
             viewModel.fetchDataDate();
+            viewModel.startLocationUpdates();
         } else {
             // Fallback for non-lifecycle contexts
             buildList.run();
@@ -576,11 +564,11 @@ public class PrefRefreshDialog {
                         }
                     })
                     .show());
-        // Prevent click from bubbling up to header's toggleListener
-        deleteButton.setFocusable(true);
-        deleteButton.setClickable(true);
-        header.addView(deleteButton);
-    }
+            // Prevent click from bubbling up to header's toggleListener
+            deleteButton.setFocusable(true);
+            deleteButton.setClickable(true);
+            header.addView(deleteButton);
+        }
         row.addView(header);
 
         TextView dateView = new TextView(context);
