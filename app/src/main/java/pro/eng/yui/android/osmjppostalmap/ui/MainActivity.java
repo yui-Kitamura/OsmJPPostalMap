@@ -572,6 +572,12 @@ public class MainActivity extends AppCompatActivity {
         double step = Math.ceil(rawStep / gridUnit) * gridUnit;
 
         List<double[]> pointsList = new ArrayList<>();
+        // 表示範囲の4隅を確実に入れる（RepositoryのactiveLatMin/Maxを正確にするため）
+        pointsList.add(new double[]{latMin, lonMin});
+        pointsList.add(new double[]{latMin, lonMax});
+        pointsList.add(new double[]{latMax, lonMin});
+        pointsList.add(new double[]{latMax, lonMax});
+
         for (double lat = gridLatMin; lat <= gridLatMax + (gridUnit / 2.0); lat += step) {
             for (double lon = gridLonMin; lon <= gridLonMax + (gridUnit / 2.0); lon += step) {
                 pointsList.add(new double[]{lat, lon});

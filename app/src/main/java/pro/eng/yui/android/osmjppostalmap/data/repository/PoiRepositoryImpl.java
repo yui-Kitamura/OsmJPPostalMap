@@ -287,7 +287,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             }
 
             if (cachedAreaKeys.isEmpty()) {
-                if (forceNotify) postCombined();
+                postCombined();
                 return;
             }
 
@@ -352,13 +352,14 @@ public class PoiRepositoryImpl implements PoiRepository {
             }
 
             if (neededAreas.isEmpty()) {
-                if (forceNotify) postCombined();
+                postCombined();
                 return;
             }
 
             // クールダウン判定（新規ネットワーク取得が発生する場合のみ適用）
             long currentTime = System.currentTimeMillis();
             if (currentTime - lastFetchTime < MIN_INTERVAL_MS) {
+                postCombined();
                 return;
             }
             lastFetchTime = currentTime;
