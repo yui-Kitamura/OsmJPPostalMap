@@ -181,35 +181,9 @@ public class PrefRefreshDialog {
                             if (code != null) {
                                 PrefInfo pi = new PrefInfo(code, prefName);
                                 Map<String, Integer> subCodes = allSubCodes.get(prefName);
-                                if (prefObj.has("sub")) {
-                                    JSONObject subObj = prefObj.getJSONObject("sub");
-                                    Iterator<String> subKeys = subObj.keys();
-                                    while (subKeys.hasNext()) {
-                                        String subName = subKeys.next();
-                                        Integer subCode = (subCodes != null) ? subCodes.get(subName) : null;
-                                        if (subCode == null) subCode = 0;
-                                        if (subCode != 0) {
-                                            pi.subs.add(new SubInfo(subCode, subName));
-                                        }
-                                    }
-                                }
-                                // Also merge from savedMetas for this prefName
-                                for (PrefMeta m : savedMetas) {
-                                    if (m.getName().equals(prefName) && m.getSubName() != null) {
-                                        boolean exists = false;
-                                        for (SubInfo si : pi.subs) {
-                                            if (si.name.equals(m.getSubName())) {
-                                                exists = true;
-                                                break;
-                                            }
-                                        }
-                                        if (!exists) {
-                                            Integer subCode = (subCodes != null) ? subCodes.get(m.getSubName()) : null;
-                                            if (subCode == null) subCode = 0;
-                                            if (subCode != 0) {
-                                                pi.subs.add(new SubInfo(subCode, m.getSubName()));
-                                            }
-                                        }
+                                if (subCodes != null && !subCodes.isEmpty()) {
+                                    for (Map.Entry<String, Integer> subEntry : subCodes.entrySet()) {
+                                        pi.subs.add(new SubInfo(subEntry.getValue(), subEntry.getKey()));
                                     }
                                 }
                                 if (!pi.subs.isEmpty()) {
@@ -226,23 +200,9 @@ public class PrefRefreshDialog {
                         if (!processedPrefs.contains(entry.getKey())) {
                             PrefInfo pi = new PrefInfo(entry.getValue(), entry.getKey());
                             Map<String, Integer> subCodes = allSubCodes.get(entry.getKey());
-                            // Fallback: search in saved metas for subareas
-                            for (PrefMeta m : savedMetas) {
-                                if (m.getName().equals(entry.getKey()) && m.getSubName() != null) {
-                                    boolean exists = false;
-                                    for (SubInfo si : pi.subs) {
-                                        if (si.name.equals(m.getSubName())) {
-                                            exists = true;
-                                            break;
-                                        }
-                                    }
-                                    if (!exists) {
-                                        Integer subCode = (subCodes != null) ? subCodes.get(m.getSubName()) : null;
-                                        if (subCode == null) subCode = 0;
-                                        if (subCode != 0) {
-                                            pi.subs.add(new SubInfo(subCode, m.getSubName()));
-                                        }
-                                    }
+                            if (subCodes != null && !subCodes.isEmpty()) {
+                                for (Map.Entry<String, Integer> subEntry : subCodes.entrySet()) {
+                                    pi.subs.add(new SubInfo(subEntry.getValue(), subEntry.getKey()));
                                 }
                             }
                             if (!pi.subs.isEmpty()) {
@@ -258,23 +218,9 @@ public class PrefRefreshDialog {
                         if (!processedPrefs.contains(m.getName())) {
                             PrefInfo pi = new PrefInfo(m.getPrefCode(), m.getName());
                             Map<String, Integer> subCodes = allSubCodes.get(m.getName());
-                            // Add all subnames for this pref from savedMetas
-                            for (PrefMeta m2 : savedMetas) {
-                                if (m2.getName().equals(m.getName()) && m2.getSubName() != null) {
-                                    boolean exists = false;
-                                    for (SubInfo si : pi.subs) {
-                                        if (si.name.equals(m2.getSubName())) {
-                                            exists = true;
-                                            break;
-                                        }
-                                    }
-                                    if (!exists) {
-                                        Integer subCode = (subCodes != null) ? subCodes.get(m2.getSubName()) : null;
-                                        if (subCode == null) subCode = 0;
-                                        if (subCode != 0) {
-                                            pi.subs.add(new SubInfo(subCode, m2.getSubName()));
-                                        }
-                                    }
+                            if (subCodes != null && !subCodes.isEmpty()) {
+                                for (Map.Entry<String, Integer> subEntry : subCodes.entrySet()) {
+                                    pi.subs.add(new SubInfo(subEntry.getValue(), subEntry.getKey()));
                                 }
                             }
                             if (!pi.subs.isEmpty()) {
@@ -504,13 +450,13 @@ public class PrefRefreshDialog {
 
         LinearLayout header = new LinearLayout(context);
         header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setGravity(Gravity.TOP);
 
         TextView nameView = new TextView(context);
         String subName = meta.getSubName();
         String displayName = (subName == null || subName.isEmpty()) ? meta.getName() : subName;
         nameView.setText(displayName);
-        if (isCurrent) {
+        if (isCurrent && !"東京都".equals(meta.getName())) {
             nameView.setCompoundDrawablesWithIntrinsicBounds(android.R.drawable.ic_menu_mylocation, 0, 0, 0);
             nameView.setCompoundDrawablePadding(16);
         }
@@ -550,10 +496,11 @@ public class PrefRefreshDialog {
                     .setNegativeButton(R.string.cancel, null)
                     .setPositiveButton(R.string.delete, (dialog, which) -> {
                         viewModel.deletePrefectureCache(meta.getPrefCode(), meta.getSubName());
-                        ViewGroup parent = (ViewGroup) row.getParent();
-                        if (parent != null) {
-                            parent.removeView(row);
-                        }
+                        actionButton.setText("取得");
+                        actionButton.setBackgroundResource(R.drawable.bg_button_update_highlight);
+                        deleteButton.setVisibility(View.GONE);
+                        String sDate = sourceUpdatedAt == null ? "-" : sdf.format(sourceUpdatedAt);
+                        dateView.setText("最終取得日時: -\nデータ源更新日: " + sDate);
                     })
                     .show());
             // Prevent click from bubbling up to header's toggleListener
