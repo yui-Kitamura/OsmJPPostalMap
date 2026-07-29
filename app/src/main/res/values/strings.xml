@@ -41,4 +41,6 @@
     <string name="data_none">データなし</string>
     <string name="memo_postbox">ポストの情報（現地確認）\n収集時刻 = %1$s\n住所 = %2$s\n収集局名 = %3$s\n参照番号 = %4$s</string>
     <string name="memo_postoffice">郵便局の情報（現地確認）\n営業時間 = %1$s\n住所 = %2$s</string>
+    <string name="changeset_comment_update">更新 %1$s</string>
+    <string name="changeset_comment_add_postbox">郵便ポストの追加</string>
 </resources>

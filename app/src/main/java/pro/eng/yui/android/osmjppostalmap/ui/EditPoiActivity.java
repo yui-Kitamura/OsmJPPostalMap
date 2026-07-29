@@ -898,7 +898,12 @@ public class EditPoiActivity extends AppCompatActivity {
                     currentTags,
                     targetPoi.getVer()
             );
-            repository.savePoi(updatedPoi, "update " + (updatedPoi.getTag("name") != null ? updatedPoi.getTag("name") : updatedPoi.getType()), callback);
+            String poiName = updatedPoi.getTag("name");
+            if (poiName == null) {
+                poiName = "post_box".equals(updatedPoi.getTag("amenity")) ? "郵便ポスト" : updatedPoi.getType();
+            }
+            String comment = getString(R.string.changeset_comment_update, poiName);
+            repository.savePoi(updatedPoi, comment, callback);
         }
     }
 
