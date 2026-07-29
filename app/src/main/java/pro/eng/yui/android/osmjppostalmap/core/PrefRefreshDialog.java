@@ -516,7 +516,8 @@ public class PrefRefreshDialog {
         header.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView nameView = new TextView(context);
-        String displayName = meta.getSubName() == null ? meta.getName() : meta.getSubName();
+        String subName = meta.getSubName();
+        String displayName = (subName == null || subName.isEmpty()) ? meta.getName() : subName;
         nameView.setText(displayName);
         if (isCurrent) {
             nameView.setCompoundDrawablesWithIntrinsicBounds(android.R.drawable.ic_menu_mylocation, 0, 0, 0);
