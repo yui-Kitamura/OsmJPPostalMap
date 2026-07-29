@@ -40,6 +40,8 @@ import android.location.Location;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -88,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
             }
     );
     private final AtomicInteger markerRenderGeneration = new AtomicInteger();
+    private ActivityResultLauncher<Intent> editPoiLauncher;
 
     private enum UpdateMode {
         NORMAL,           // 11海里制限あり
@@ -205,6 +208,21 @@ public class MainActivity extends AppCompatActivity {
         viewModel.setFilterOpenOnly(false); // 初期化トリガー
         viewModel.fetchDataDate(); // データ鮮度情報の取得を開始
         
+        editPoiLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        boolean isNote = result.getData().getBooleanExtra("is_note", false);
+                        if (isNote) {
+                            viewModel.setSuccessMessage(getString(R.string.msg_note_success));
+                        } else {
+                            boolean isNew = result.getData().getBooleanExtra("is_new", false);
+                            viewModel.setSuccessMessage(getString(isNew ? R.string.msg_add_success : R.string.msg_save_success));
+                        }
+                    }
+                }
+        );
+
         // 初回表示トリガー：レイアウト完了後に位置情報が確定していれば updatePois を実行する
         map.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             @Override
@@ -394,12 +412,13 @@ public class MainActivity extends AppCompatActivity {
 
         // Add PostBox Button
         findViewById(R.id.add_postbox_button).setOnClickListener(v -> {
-            Intent intent = new Intent(this, AddPostBoxActivity.class);
+            Intent intent = new Intent(this, EditPoiActivity.class);
             org.osmdroid.api.IGeoPoint center = map.getMapCenter();
-            intent.putExtra("LATITUDE", center.getLatitude());
-            intent.putExtra("LONGITUDE", center.getLongitude());
+            intent.putExtra("POI_ID", 0L);
+            intent.putExtra("POI_LAT", center.getLatitude());
+            intent.putExtra("POI_LON", center.getLongitude());
             intent.putExtra("ZOOM_LEVEL", map.getZoomLevelDouble());
-            startActivity(intent);
+            launchEditPoi(intent);
         });
 
         viewModel.getLocation().observe(this, this::updateCurrentLocation);
@@ -433,6 +452,14 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
+    }
+
+    public void launchEditPoi(Intent intent) {
+        if (editPoiLauncher != null) {
+            editPoiLauncher.launch(intent);
+        } else {
+            startActivity(intent);
+        }
     }
 
     private void scheduleUpdatePois() {

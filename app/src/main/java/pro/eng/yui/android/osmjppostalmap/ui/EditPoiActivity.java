@@ -33,6 +33,8 @@ import org.osmdroid.util.GeoPoint;
 import org.osmdroid.tileprovider.tilesource.XYTileSource;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.graphics.Insets;
@@ -73,6 +75,10 @@ public class EditPoiActivity extends AppCompatActivity {
     private OsmPoi targetPoi;
     private Button btnSave;
     private TextView addressValue;
+    private TextView textLocationStatus;
+    private TextView topBanner;
+    private MyLocationNewOverlay myLocationOverlay;
+    private boolean isNew;
     private int lastCheckedShapeId = -1;
     private final ScheduleParser scheduleParser = new SimpleScheduleParser();
     private androidx.appcompat.app.AlertDialog progressDialog;
@@ -148,12 +154,28 @@ public class EditPoiActivity extends AppCompatActivity {
         ((PoiRepositoryImpl)repository).setAccessToken(authRepository.getAccessToken());
 
         viewModel = new androidx.lifecycle.ViewModelProvider(this).get(MainViewModel.class);
+        textLocationStatus = findViewById(R.id.text_location_status);
+        topBanner = findViewById(R.id.top_banner);
         viewModel.getLocation().observe(this, location -> {
             lastLocation = location;
+            if (location != null) {
+                String status = getString(R.string.location_status_tracking, location.getAccuracy());
+                if (location.getAccuracy() > 50) {
+                    status += getString(R.string.location_status_low_accuracy);
+                    textLocationStatus.setTextColor(0xFFFF0000);
+                } else {
+                    textLocationStatus.setTextColor(0xFF008800);
+                }
+                textLocationStatus.setText(status);
+            } else {
+                textLocationStatus.setText(R.string.location_status_fetching);
+                textLocationStatus.setTextColor(0xFFFF0000);
+            }
         });
 
         // IntentからPOI情報を受け取る
         long id = getIntent().getLongExtra("POI_ID", 0);
+        isNew = id <= 0;
         String type = getIntent().getStringExtra("POI_TYPE");
         long ver = getIntent().getLongExtra("POI_VER", 0L);
         
@@ -178,6 +200,16 @@ public class EditPoiActivity extends AppCompatActivity {
         targetPoi = new OsmPoi(id, initialLat, initialLon, type != null ? type : "node", tags, ver);
 
         TextView title = findViewById(R.id.edit_title);
+        if (isNew) {
+            title.setText(R.string.title_add_postbox);
+        } else {
+            if ("post_office".equals(targetPoi.getTag("amenity"))) {
+                title.setText(R.string.title_edit_postoffice);
+            } else {
+                title.setText(R.string.title_edit_postbox);
+            }
+        }
+
         tagInput = findViewById(R.id.edit_tag_value);
         View tagLayout = findViewById(R.id.edit_tag_layout);
         View collectionLayout = findViewById(R.id.layout_collection_edit);
@@ -200,8 +232,27 @@ public class EditPoiActivity extends AppCompatActivity {
             return false;
         });
         btnSave = findViewById(R.id.btn_save);
+        if (isNew) {
+            btnSave.setText(R.string.add);
+        } else {
+            btnSave.setText(R.string.save);
+        }
         addressValue = findViewById(R.id.edit_address_value);
         View btnAddressEdit = findViewById(R.id.btn_address_edit);
+
+        View noteLayout = findViewById(R.id.edit_note_layout);
+        TextInputEditText noteInput = findViewById(R.id.edit_note_value);
+        if (isNew || authRepository.getAccessToken() == null) {
+            noteLayout.setVisibility(View.VISIBLE);
+        }
+
+        findViewById(R.id.btn_my_location).setOnClickListener(v -> {
+            if (lastLocation != null) {
+                map.getController().animateTo(new GeoPoint(lastLocation));
+            } else {
+                Toast.makeText(this, R.string.error_location_not_found, Toast.LENGTH_SHORT).show();
+            }
+        });
 
         // Opening Hours UI
         View ohLayout = findViewById(R.id.layout_opening_hours_edit);
@@ -469,6 +520,16 @@ public class EditPoiActivity extends AppCompatActivity {
         marker.setOnMarkerClickListener((m, mv) -> true);
         map.getOverlays().add(marker);
 
+        myLocationOverlay = new MyLocationNewOverlay(new GpsMyLocationProvider(this), map);
+        myLocationOverlay.enableMyLocation();
+        map.getOverlays().add(myLocationOverlay);
+
+        if (isNew && lastLocation != null) {
+            GeoPoint currentPoint = new GeoPoint(lastLocation);
+            marker.setPosition(currentPoint);
+            map.getController().setCenter(currentPoint);
+        }
+
         map.addMapListener(new MapListener() {
             @Override
             public boolean onScroll(ScrollEvent event) {
@@ -485,7 +546,11 @@ public class EditPoiActivity extends AppCompatActivity {
 
         btnSave.setOnClickListener(v -> {
             if (lastLocation == null || lastLocation.getAccuracy() > 50) {
-                Toast.makeText(this, "現地入力が必須です", Toast.LENGTH_LONG).show();
+                String msg = getString(R.string.error_location_required);
+                if (lastLocation != null) {
+                    msg += String.format("\n(現在の精度: %.1fm)", lastLocation.getAccuracy());
+                }
+                showErrorBanner(msg);
                 return;
             }
 
@@ -494,7 +559,7 @@ public class EditPoiActivity extends AppCompatActivity {
                 String collection;
                 String ref;
                 String aTag = targetPoi.getTag("amenity");
-                boolean isPostBoxLocal = "post_box".equals(aTag);
+                boolean isPostBoxLocal = isNew || "post_box".equals(aTag);
 
                 if (isPostBoxLocal) {
                     if (layoutFallback.getVisibility() == View.VISIBLE) {
@@ -513,12 +578,12 @@ public class EditPoiActivity extends AppCompatActivity {
                                     String val = timeRows.get(r)[col].getText().toString().trim();
                                     if (val.isEmpty()) continue;
                                     if (!TIME_PATTERN.matcher(val).matches()) {
-                                        Toast.makeText(this, "無効な時刻形式です: " + val, Toast.LENGTH_SHORT).show();
+                                        showErrorBanner(String.format(getString(R.string.error_time_format), val));
                                         return;
                                     }
                                     int minutes = SimpleScheduleParser.parseMinutes(val);
                                     if (minutes <= lastMinutes) {
-                                        Toast.makeText(this, "時刻は昇順で入力してください", Toast.LENGTH_SHORT).show();
+                                        showErrorBanner(getString(R.string.error_time_order));
                                         return;
                                     }
                                     if (targetList == null) targetList = new ArrayList<>();
@@ -552,39 +617,42 @@ public class EditPoiActivity extends AppCompatActivity {
                     GeoPoint pos = marker.getPosition();
                     String addr = JpPostalUtil.getAddressText(targetPoi.getTags());
                     
-                    String memo = String.format("ポストの情報（現地確認）\n収集時刻 = %s\n住所 = %s\n収集局名 = %s\n参照番号 = %s",
-                            collection, addr, branch, ref);
-                    JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name),memo, pos.getLatitude(), pos.getLongitude());
+                    String memo = getString(R.string.memo_postbox, collection, addr, branch, ref);
+                    JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name), memo, pos.getLatitude(), pos.getLongitude());
                 } else {
                     // 郵便局の場合は営業時間
-                    collection = targetPoi.getTag("opening_hours"); // とりあえず現状維持か、編集値をパースするか
-                    // 編集値をパースするのは大変なので、とりあえず既存値を出すか、メッセージを調整する
+                    collection = targetPoi.getTag("opening_hours");
                     ref = "";
                     
                     GeoPoint pos = marker.getPosition();
                     String addr = JpPostalUtil.getAddressText(targetPoi.getTags());
                     
-                    String memo = String.format("郵便局の情報（現地確認）\n営業時間 = %s\n住所 = %s",
-                            collection, addr);
-                    JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name),memo, pos.getLatitude(), pos.getLongitude());
+                    String memo = getString(R.string.memo_postoffice, collection, addr);
+                    JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name), memo, pos.getLatitude(), pos.getLongitude());
                 }
 
-                Toast.makeText(this, "地図メモを保存しました", Toast.LENGTH_SHORT).show();
+                Intent resultIntent = new Intent();
+                resultIntent.putExtra("is_note", true);
+                setResult(RESULT_OK, resultIntent);
                 finish();
                 return;
             }
 
+            int titleRes = isNew ? R.string.confirm_add : R.string.confirm_save;
+            int msgRes = isNew ? R.string.confirm_add_message : R.string.confirm_save_message;
+            int btnRes = isNew ? R.string.add : R.string.save;
+
             new MaterialAlertDialogBuilder(this)
-                .setTitle("保存の確認")
-                .setMessage("OSMにこの内容を保存しますか？")
-                .setPositiveButton("保存", (dialog, which) -> {
+                .setTitle(titleRes)
+                .setMessage(msgRes)
+                .setPositiveButton(btnRes, (dialog, which) -> {
                     if (btnSave != null) {
                         btnSave.setEnabled(false);
                     }
-                    showProgress("処理を開始中…");
+                    showProgress(getString(R.string.progress_starting));
                     saveChanges();
                 })
-                .setNegativeButton("キャンセル", null)
+                .setNegativeButton(R.string.cancel, null)
                 .show();
         });
     }
@@ -592,7 +660,7 @@ public class EditPoiActivity extends AppCompatActivity {
     /** 住所欄に現在の addr:* タグ由来の表示テキストを反映する。 */
     private void showAddress() {
         String text = JpPostalUtil.getAddressText(targetPoi.getTags());
-        addressValue.setText(text.isEmpty() ? "データなし" : text);
+        addressValue.setText(text.isEmpty() ? getString(R.string.data_none) : text);
     }
 
     private void saveChanges() {
@@ -601,9 +669,14 @@ public class EditPoiActivity extends AppCompatActivity {
         }
         // タグの更新と位置の更新をリポジトリ経由で行う
         Map<String, String> currentTags = new HashMap<>(targetPoi.getTags());
-        String amenityTag = currentTags.get("amenity");
+        String amenityTag = isNew ? "post_box" : currentTags.get("amenity");
         boolean isPostBox = "post_box".equals(amenityTag);
         
+        String shape = "";
+        String collection = "";
+        String branch = "";
+        String ref = "";
+
         if (isPostBox) {
             // 不要なタグを削除
             currentTags.remove("opening_hours");
@@ -611,34 +684,37 @@ public class EditPoiActivity extends AppCompatActivity {
             RadioGroup radioShape = findViewById(R.id.edit_radio_shape);
             int selectedShapeId = radioShape.getCheckedRadioButtonId();
             if (selectedShapeId == R.id.edit_shape_box) {
+                shape = "柱上箱型";
                 currentTags.put("support", "pole");
                 currentTags.put("post_box:type", "lamp");
             } else if (selectedShapeId == R.id.edit_shape_pillar) {
+                shape = "円柱";
                 currentTags.put("support", "ground");
                 currentTags.put("post_box:type", "pillar");
             } else {
+                shape = "その他";
                 currentTags.remove("support");
                 currentTags.remove("post_box:type");
             }
 
             TextInputEditText branchInput = findViewById(R.id.edit_branch_value);
-            String newBranch = branchInput.getText() != null ? branchInput.getText().toString().trim() : "";
-            if (!newBranch.isEmpty()) {
-                currentTags.put("operator:branch", newBranch);
+            branch = branchInput.getText() != null ? branchInput.getText().toString().trim() : "";
+            if (!branch.isEmpty()) {
+                currentTags.put("operator:branch", branch);
             } else {
                 currentTags.remove("operator:branch");
             }
 
             TextInputEditText refInput = findViewById(R.id.edit_ref_value);
-            String newRef = refInput.getText() != null ? refInput.getText().toString().trim() : "";
-            if (!newRef.isEmpty()) {
-                currentTags.put("ref", newRef);
+            ref = refInput.getText() != null ? refInput.getText().toString().trim() : "";
+            if (!ref.isEmpty()) {
+                currentTags.put("ref", ref);
             } else {
                 currentTags.remove("ref");
             }
 
             if (layoutFallback.getVisibility() == View.VISIBLE) {
-                // パース失敗時（フォールバック表示中）は時刻タグを更新しない（位置のみ更新）
+                collection = currentTags.get("collection_times");
             } else {
                 Map<Days, List<? extends ITagPart>> weeklyTable = new HashMap<>();
                 for (int col = 0; col < 3; col++) {
@@ -654,13 +730,17 @@ public class EditPoiActivity extends AppCompatActivity {
                             if (val.isEmpty()) continue;
 
                             if (!TIME_PATTERN.matcher(val).matches()) {
-                                Toast.makeText(this, "無効な時刻形式です: " + val, Toast.LENGTH_SHORT).show();
+                                showErrorBanner(String.format(getString(R.string.error_time_format), val));
+                                if (btnSave != null) btnSave.setEnabled(true);
+                                dismissProgress();
                                 return;
                             }
 
                             int minutes = SimpleScheduleParser.parseMinutes(val);
                             if (minutes <= lastMinutes) {
-                                Toast.makeText(this, "時刻は昇順で入力してください", Toast.LENGTH_SHORT).show();
+                                showErrorBanner(getString(R.string.error_time_order));
+                                if (btnSave != null) btnSave.setEnabled(true);
+                                dismissProgress();
                                 return;
                             }
                             if (targetList == null) targetList = new ArrayList<>();
@@ -685,7 +765,7 @@ public class EditPoiActivity extends AppCompatActivity {
                     }
                 }
 
-                String collection = scheduleParser.format(weeklyTable, ScheduleParser.TimeType.COLLECTION_TIMES);
+                collection = scheduleParser.format(weeklyTable, ScheduleParser.TimeType.COLLECTION_TIMES);
                 if (collection != null && !collection.isEmpty()) {
                     currentTags.put("collection_times", collection);
                 } else {
@@ -749,40 +829,52 @@ public class EditPoiActivity extends AppCompatActivity {
         
         // 移動後の位置を取得
         GeoPoint pos = marker.getPosition();
-        OsmPoi updatedPoi = new OsmPoi(
-                targetPoi.getId(),
-                pos.getLatitude(),
-                pos.getLongitude(),
-                targetPoi.getType(),
-                currentTags,
-                targetPoi.getVer()
-        );
+        TextInputEditText noteInput = findViewById(R.id.edit_note_value);
+        String note = noteInput.getText() != null ? noteInput.getText().toString().trim() : "";
 
-        repository.savePoi(updatedPoi, "update " + (updatedPoi.getTag("name") != null ? updatedPoi.getTag("name") : updatedPoi.getType()), new PoiRepository.PoiSaveCallback() {
+        PoiRepository.PoiSaveCallback callback = new PoiRepository.PoiSaveCallback() {
             @Override
             public void onSuccess() {
                 dismissProgress();
-                if (btnSave != null) {
-                    btnSave.setEnabled(true);
-                }
-                Toast.makeText(EditPoiActivity.this, "保存しました", Toast.LENGTH_SHORT).show();
+                if (btnSave != null) btnSave.setEnabled(true);
+                Intent resultIntent = new Intent();
+                resultIntent.putExtra("is_new", isNew);
+                setResult(RESULT_OK, resultIntent);
                 finish();
             }
 
             @Override
             public void onError(String message) {
                 dismissProgress();
-                if (btnSave != null) {
-                    btnSave.setEnabled(true);
-                }
-                Toast.makeText(EditPoiActivity.this, "保存エラー: " + message, Toast.LENGTH_SHORT).show();
+                if (btnSave != null) btnSave.setEnabled(true);
+                showErrorBanner("エラー: " + message);
             }
 
             @Override
             public void onProgress(String message) {
                 showProgress(message);
             }
-        });
+        };
+
+        if (isNew) {
+            Map<String, String> addressTags = new HashMap<>();
+            for (Map.Entry<String, String> entry : currentTags.entrySet()) {
+                if (entry.getKey().startsWith("addr:")) {
+                    addressTags.put(entry.getKey(), entry.getValue());
+                }
+            }
+            repository.addPostBox(pos.getLatitude(), pos.getLongitude(), shape, branch, ref, collection, note, addressTags, callback);
+        } else {
+            OsmPoi updatedPoi = new OsmPoi(
+                    targetPoi.getId(),
+                    pos.getLatitude(),
+                    pos.getLongitude(),
+                    targetPoi.getType(),
+                    currentTags,
+                    targetPoi.getVer()
+            );
+            repository.savePoi(updatedPoi, "update " + (updatedPoi.getTag("name") != null ? updatedPoi.getTag("name") : updatedPoi.getType()), callback);
+        }
     }
 
     private void showProgress(String message) {
@@ -813,6 +905,18 @@ public class EditPoiActivity extends AppCompatActivity {
             progressDialog.dismiss();
             progressDialog = null;
         }
+    }
+
+    private void showErrorBanner(String message) {
+        if (topBanner == null) return;
+        topBanner.setBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.jp_post_red));
+        topBanner.setText(message);
+        topBanner.setVisibility(View.VISIBLE);
+        findViewById(R.id.edit_scroll_view).scrollTo(0, 0);
+
+        topBanner.postDelayed(() -> {
+            topBanner.setVisibility(View.GONE);
+        }, 5000);
     }
 
     private void addNewRow(String initialValue1, String initialValue2, String initialValue3) {
@@ -1034,6 +1138,9 @@ public class EditPoiActivity extends AppCompatActivity {
         super.onResume();
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             viewModel.startLocationUpdates();
+            if (myLocationOverlay != null) {
+                myLocationOverlay.enableMyLocation();
+            }
         }
     }
 
@@ -1041,5 +1148,8 @@ public class EditPoiActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         viewModel.stopLocationUpdates();
+        if (myLocationOverlay != null) {
+            myLocationOverlay.disableMyLocation();
+        }
     }
 }

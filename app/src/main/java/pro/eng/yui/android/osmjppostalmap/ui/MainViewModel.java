@@ -209,11 +209,21 @@ public class MainViewModel extends ViewModel {
     }
 
     public void clearError() {
+        errorMessage.setValue(null);
         repository.clearError();
     }
 
     public void clearSuccessMessage() {
+        successMessage.setValue(null);
         repository.clearSuccessMessage();
+    }
+
+    public void setSuccessMessage(String msg) {
+        successMessage.setValue(msg);
+    }
+
+    public void setErrorMessage(String msg) {
+        errorMessage.setValue(msg);
     }
 
     public LiveData<Long> getCooldownRemaining() {

@@ -16,4 +16,28 @@
     <string name="pref_cache_delete_confirm">%1$sのキャッシュデータを削除します。よろしいですか？</string>
     <string name="delete">削除</string>
     <string name="cancel">キャンセル</string>
+    <string name="save">保存</string>
+    <string name="add">追加</string>
+    <string name="title_add_postbox">郵便ポストの追加</string>
+    <string name="title_edit_postbox">郵便ポストの編集</string>
+    <string name="title_edit_postoffice">郵便局の編集</string>
+    <string name="confirm_save">保存の確認</string>
+    <string name="confirm_save_message">OSMにこの内容を保存しますか？</string>
+    <string name="confirm_add">ポストの追加</string>
+    <string name="confirm_add_message">OSMに新しいポストを追加しますか？</string>
+    <string name="error_location_required">現地入力が必須です（精度不足または取得不可）</string>
+    <string name="error_time_format">無効な時刻形式です: %1$s</string>
+    <string name="error_time_order">時刻は昇順で入力してください</string>
+    <string name="progress_starting">処理を開始中…</string>
+    <string name="progress_sending">入力内容を送信中…</string>
+    <string name="msg_save_success">保存しました</string>
+    <string name="msg_add_success">追加しました</string>
+    <string name="msg_note_success">地図メモを保存しました</string>
+    <string name="location_status_tracking">現在地: 精度 %1$.1fm</string>
+    <string name="location_status_low_accuracy"> (精度不足: 50m以内が必要)</string>
+    <string name="location_status_fetching">位置情報を取得中...</string>
+    <string name="error_location_not_found">現在地を取得できていません</string>
+    <string name="data_none">データなし</string>
+    <string name="memo_postbox">ポストの情報（現地確認）\n収集時刻 = %1$s\n住所 = %2$s\n収集局名 = %3$s\n参照番号 = %4$s</string>
+    <string name="memo_postoffice">郵便局の情報（現地確認）\n営業時間 = %1$s\n住所 = %2$s</string>
 </resources>

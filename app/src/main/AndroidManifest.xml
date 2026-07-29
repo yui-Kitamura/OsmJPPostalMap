@@ -45,10 +45,6 @@
             android:label="要素の編集"
             android:windowSoftInputMode="adjustResize" />
 
-        <activity
-            android:name=".ui.AddPostBoxActivity"
-            android:label="ポストの追加"
-            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>

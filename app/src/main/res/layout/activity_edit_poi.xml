@@ -3,6 +3,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
+    
+    <TextView
+        android:id="@+id/top_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#FFFFFF"
+        android:padding="8dp"
+        android:visibility="gone"
+        android:elevation="8dp" />
 
     <androidx.appcompat.widget.AppCompatImageButton
         android:id="@+id/btn_back"
@@ -30,12 +39,36 @@
             android:layout_height="wrap_content"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="8dp" />
 
-        <org.osmdroid.views.MapView
-            android:id="@+id/edit_map"
+        <TextView
+            android:id="@+id/text_location_status"
             android:layout_width="match_parent"
-            android:layout_height="200dp" />
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="#FF0000"
+            android:text="位置情報を取得中..."
+            android:layout_marginBottom="8dp" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="200dp">
+
+            <org.osmdroid.views.MapView
+                android:id="@+id/edit_map"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <ImageButton
+                android:id="@+id/btn_my_location"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_gravity="bottom|end"
+                android:layout_margin="8dp"
+                android:background="@drawable/bg_menu_button"
+                android:src="@drawable/ic_my_location"
+                android:contentDescription="現在地" />
+        </FrameLayout>
 
         <TextView
             android:layout_width="wrap_content"
@@ -367,11 +400,26 @@
                 android:src="@android:drawable/ic_menu_edit" />
         </LinearLayout>
 
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/edit_note_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="備考 (note) / 地図メモ"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edit_note_value"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textMultiLine" />
+        </com.google.android.material.textfield.TextInputLayout>
+
         <Button
             android:id="@+id/btn_save"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="保存" />
+            android:text="@string/save" />
 
     </LinearLayout>
     </ScrollView>

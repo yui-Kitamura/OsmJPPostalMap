@@ -258,8 +258,10 @@ public class PoiDetailsDialog {
                 if (map != null) {
                     intent.putExtra("ZOOM_LEVEL", map.getZoomLevelDouble());
                 }
+                activity.launchEditPoi(intent);
+            } else {
+                context.startActivity(intent);
             }
-            context.startActivity(intent);
         });
         
         builder.show();
