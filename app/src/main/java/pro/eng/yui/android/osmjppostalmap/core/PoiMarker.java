@@ -127,19 +127,6 @@ public class PoiMarker extends Marker {
             float ringSize = size + ringPaint.getStrokeWidth() + 1f;
             RectF ringRect = new RectF(screenPos.x - ringSize, screenPos.y - ringSize, screenPos.x + ringSize, screenPos.y + ringSize);
 
-            // ゆうゆう窓口が営業中で通常窓口が閉まっている場合、内側に淡い赤のリング
-            if (limitedServiceSchedule == effectiveSchedule && schedule != null &&
-                    schedule.getCurrentState() != ScheduleResult.CurrentState.OPENING &&
-                    schedule.getCurrentState() != ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
-                float innerRingSize = size + (innerRingPaint.getStrokeWidth() / 2);
-                RectF innerRingRect = new RectF(screenPos.x - innerRingSize, screenPos.y - innerRingSize, screenPos.x + innerRingSize, screenPos.y + innerRingSize);
-                if (poiType == PoiType.POST_OFFICE) {
-                    canvas.drawRoundRect(innerRingRect, 10f, 10f, innerRingPaint);
-                } else {
-                    canvas.drawArc(innerRingRect, -90f, 360f, false, innerRingPaint);
-                }
-            }
-
             if (effectiveSchedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON && effectiveSchedule.getNextEvent() != null) {
                 long remainingMillis = effectiveSchedule.getNextEvent().getTimestamp().toInstant().toEpochMilli() - now;
                 float remainingMinutes = remainingMillis / 60000f;
@@ -192,6 +179,19 @@ public class PoiMarker extends Marker {
                     }
                 } else {
                     canvas.drawArc(ringRect, -90f, sweepAngle, false, ringPaint);
+                }
+            }
+
+            // ゆうゆう窓口が営業中で通常窓口が閉まっている場合、メインリングの上に淡い赤のリングを重ねる
+            if (limitedServiceSchedule == effectiveSchedule && schedule != null &&
+                    schedule.getCurrentState() != ScheduleResult.CurrentState.OPENING &&
+                    schedule.getCurrentState() != ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
+                float innerRingSize = ringSize;
+                RectF innerRingRect = new RectF(screenPos.x - innerRingSize, screenPos.y - innerRingSize, screenPos.x + innerRingSize, screenPos.y + innerRingSize);
+                if (poiType == PoiType.POST_OFFICE) {
+                    canvas.drawRoundRect(innerRingRect, 10f, 10f, innerRingPaint);
+                } else {
+                    canvas.drawArc(innerRingRect, -90f, 360f, false, innerRingPaint);
                 }
             }
         }
