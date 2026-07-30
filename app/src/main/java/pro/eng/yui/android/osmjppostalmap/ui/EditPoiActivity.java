@@ -1038,7 +1038,11 @@ public class EditPoiActivity extends AppCompatActivity {
         // 移動後の位置を取得
         GeoPoint pos = marker.getPosition();
         String note = editSpecialNote.getText() != null ? Util.normalizeNumber(editSpecialNote.getText().toString().trim()) : "";
-        currentTags.put("note", note);
+        if (!note.isEmpty()) {
+            currentTags.put("note", note);
+        } else {
+            currentTags.remove("note");
+        }
 
         PoiRepository.PoiSaveCallback callback = new PoiRepository.PoiSaveCallback() {
             @Override
