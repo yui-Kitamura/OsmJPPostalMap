@@ -615,7 +615,10 @@ public class EditPoiActivity extends AppCompatActivity {
             EditText[] ohEditors = {
                 editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd,
                 editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd,
-                editOhPhOpen, editOhPhClose, editOhPhBreakStart, editOhPhBreakEnd
+                editOhPhOpen, editOhPhClose, editOhPhBreakStart, editOhPhBreakEnd,
+                editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd,
+                editLsSaOpen, editLsSaClose, editLsSaBreakStart, editLsSaBreakEnd,
+                editLsPhOpen, editLsPhClose, editLsPhBreakStart, editLsPhBreakEnd
             };
             for (EditText et : ohEditors) {
                 if (et != null) {
