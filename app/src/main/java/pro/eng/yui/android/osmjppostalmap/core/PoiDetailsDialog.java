@@ -11,6 +11,7 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 
+import androidx.core.content.ContextCompat;
 import androidx.appcompat.app.AlertDialog;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -255,9 +256,19 @@ public class PoiDetailsDialog {
                 lsLayout.setVisibility(View.VISIBLE);
                 if (limitedServiceSchedule != null) {
                     lsStatus.setText(limitedServiceSchedule.getTodayStatus());
+                    if (limitedServiceSchedule.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
+                            limitedServiceSchedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
+                        lsStatus.setTextColor(ContextCompat.getColor(context, R.color.jp_post_red));
+                        lsStatus.setTypeface(null, android.graphics.Typeface.BOLD);
+                    } else {
+                        lsStatus.setTextColor(ContextCompat.getColor(context, R.color.black));
+                        lsStatus.setTypeface(null, android.graphics.Typeface.NORMAL);
+                    }
                     populateWeeklyTable(context, lsTable, limitedServiceSchedule, false);
                 } else {
                     lsStatus.setText("あり (詳細時間不明)");
+                    lsStatus.setTextColor(ContextCompat.getColor(context, R.color.black));
+                    lsStatus.setTypeface(null, android.graphics.Typeface.NORMAL);
                     lsTable.removeAllViews();
                 }
                 
@@ -270,11 +281,15 @@ public class PoiDetailsDialog {
             } else if ("no".equals(lsMail)) {
                 lsLayout.setVisibility(View.VISIBLE);
                 lsStatus.setText("なし");
+                lsStatus.setTextColor(ContextCompat.getColor(context, R.color.black));
+                lsStatus.setTypeface(null, android.graphics.Typeface.NORMAL);
                 lsTable.removeAllViews();
             } else {
                 // 不明
                 lsLayout.setVisibility(View.VISIBLE);
                 lsStatus.setText("不明");
+                lsStatus.setTextColor(ContextCompat.getColor(context, R.color.black));
+                lsStatus.setTypeface(null, android.graphics.Typeface.NORMAL);
                 lsTable.removeAllViews();
             }
         }

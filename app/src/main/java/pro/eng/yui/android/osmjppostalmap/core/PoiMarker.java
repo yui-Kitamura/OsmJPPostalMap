@@ -43,7 +43,7 @@ public class PoiMarker extends Marker {
 
         innerRingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         innerRingPaint.setStyle(Paint.Style.STROKE);
-        innerRingPaint.setStrokeWidth(4f);
+        innerRingPaint.setStrokeWidth(8f);
         innerRingPaint.setColor(0xFFFF8888); // 淡い赤
         
         bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -131,7 +131,7 @@ public class PoiMarker extends Marker {
             if (limitedServiceSchedule == effectiveSchedule && schedule != null &&
                     schedule.getCurrentState() != ScheduleResult.CurrentState.OPENING &&
                     schedule.getCurrentState() != ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
-                float innerRingSize = size + (innerRingPaint.getStrokeWidth() / 2) + 0.5f;
+                float innerRingSize = size + (innerRingPaint.getStrokeWidth() / 2);
                 RectF innerRingRect = new RectF(screenPos.x - innerRingSize, screenPos.y - innerRingSize, screenPos.x + innerRingSize, screenPos.y + innerRingSize);
                 if (poiType == PoiType.POST_OFFICE) {
                     canvas.drawRoundRect(innerRingRect, 10f, 10f, innerRingPaint);
