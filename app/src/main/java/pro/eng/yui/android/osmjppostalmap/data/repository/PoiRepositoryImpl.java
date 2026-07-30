@@ -507,7 +507,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                 sb.append(type).append("(").append(p.getId()).append(");");
             }
         }
-        sb.append(");out;");
+        sb.append(");out center;");
 
         try {
             retrofit2.Response<String> response = getOverpassApi().query(sb.toString()).execute();
@@ -515,14 +515,35 @@ public class PoiRepositoryImpl implements PoiRepository {
                 JSONObject root = new JSONObject(response.body());
                 JSONArray elements = root.optJSONArray("elements");
                 if (elements != null) {
-                    Set<String> existingKeys = new HashSet<>();
+                    Map<String, JSONObject> elementMap = new HashMap<>();
                     for (int i = 0; i < elements.length(); i++) {
                         JSONObject el = elements.getJSONObject(i);
-                        existingKeys.add(el.getString("type") + ":" + el.getLong("id"));
+                        elementMap.put(el.getString("type") + ":" + el.getLong("id"), el);
                     }
                     for (OsmPoi p : toCheck) {
-                        if (existingKeys.contains(p.getType() + ":" + p.getId())) {
-                            stillExists.add(p);
+                        String key = p.getType() + ":" + p.getId();
+                        if (elementMap.containsKey(key)) {
+                            JSONObject el = elementMap.get(key);
+                            double lat = el.optDouble("lat", p.getLat());
+                            double lon = el.optDouble("lon", p.getLon());
+                            // Way/Relation の場合は center があればそれを使う
+                            if (el.has("center")) {
+                                JSONObject center = el.getJSONObject("center");
+                                lat = center.optDouble("lat", lat);
+                                lon = center.optDouble("lon", lon);
+                            }
+                            long ver = el.optLong("version", p.getVer());
+                            Map<String, String> tags = new HashMap<>();
+                            JSONObject tagsJson = el.optJSONObject("tags");
+                            if (tagsJson != null) {
+                                for (java.util.Iterator<String> it = tagsJson.keys(); it.hasNext(); ) {
+                                    String k = it.next();
+                                    tags.put(k, tagsJson.optString(k));
+                                }
+                            } else {
+                                tags = p.getTags();
+                            }
+                            stillExists.add(new OsmPoi(p.getId(), lat, lon, p.getType(), tags, ver));
                         }
                     }
                 }
