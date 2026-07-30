@@ -63,16 +63,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />
 
-            <Button
+            <ImageButton
                 android:id="@+id/btn_lock_map"
                 android:layout_width="44dp"
                 android:layout_height="44dp"
                 android:layout_margin="8dp"
                 android:background="@drawable/bg_menu_button"
-                android:text="🔒"
-                android:textSize="20sp"
-                android:padding="0dp"
-                android:gravity="center"
+                android:src="@drawable/ic_lock_locked"
+                android:scaleType="centerInside"
+                android:padding="8dp"
                 android:contentDescription="地図のロック"
                 android:layout_gravity="top|start" />
 

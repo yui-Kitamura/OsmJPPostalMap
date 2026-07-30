@@ -17,6 +17,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TableLayout;
@@ -237,10 +238,11 @@ public class EditPoiActivity extends AppCompatActivity {
         Button btnAddRow = findViewById(R.id.btn_add_row);
         Button btnCopyToSat = findViewById(R.id.btn_copy_to_sat);
         Button btnCopyToSun = findViewById(R.id.btn_copy_to_sun);
-        Button btnLockMap = findViewById(R.id.btn_lock_map);
+        ImageButton btnLockMap = findViewById(R.id.btn_lock_map);
+        updateLockButtonStyle(btnLockMap);
         btnLockMap.setOnClickListener(v -> {
             isMapUnlocked = !isMapUnlocked;
-            btnLockMap.setText(isMapUnlocked ? "🔓" : "🔒");
+            updateLockButtonStyle(btnLockMap);
             if (isMapUnlocked) {
                 Toast.makeText(this, "地図の移動を許可しました", Toast.LENGTH_SHORT).show();
             } else {
@@ -927,6 +929,28 @@ public class EditPoiActivity extends AppCompatActivity {
             }
             String comment = getString(R.string.changeset_comment_update, poiName);
             repository.savePoi(updatedPoi, comment, callback);
+        }
+    }
+
+    private void updateLockButtonStyle(ImageButton btn) {
+        if (btn == null) return;
+        android.graphics.drawable.Drawable bg = btn.getBackground();
+        if (bg != null) {
+            bg = bg.mutate();
+            if (isMapUnlocked) {
+                androidx.core.graphics.drawable.DrawableCompat.setTint(bg, ContextCompat.getColor(this, R.color.white));
+            } else {
+                androidx.core.graphics.drawable.DrawableCompat.setTint(bg, ContextCompat.getColor(this, R.color.jp_post_red));
+            }
+            btn.setBackground(bg);
+        }
+
+        if (isMapUnlocked) {
+            btn.setImageResource(R.drawable.ic_lock_unlocked);
+            btn.setColorFilter(ContextCompat.getColor(this, R.color.jp_post_red));
+        } else {
+            btn.setImageResource(R.drawable.ic_lock_locked);
+            btn.setColorFilter(ContextCompat.getColor(this, R.color.white));
         }
     }
 
