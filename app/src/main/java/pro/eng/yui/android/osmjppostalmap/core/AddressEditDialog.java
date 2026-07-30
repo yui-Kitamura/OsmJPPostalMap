@@ -91,17 +91,17 @@ public class AddressEditDialog {
                 JpAddress::getCity, JpAddress::setCity,
                 (form, v) -> form.isCityAvail(v)),
         SUBURB("addr:suburb", "行政区",
-                "「区」で終わり、かつ 市区町村 が「市」で終わること（東京都の特別区は 市区町村 へ）",
+                "「区」で終わり、かつ 市区町村 が「市」で終わること（東京23区は 市区町村 へ）",
                 JpAddress::getSuburb, JpAddress::setSuburb,
                 AddressEditDialog::suburbAvail),
         QUARTER("addr:quarter", "大字",
-                "任意の文字列",
+                "任意の文字列（入力した場合は 小字が必須）",
                 JpAddress::getQuarter, JpAddress::setQuarter,
-                (form, v) -> form.isAvail(v)),
+                AddressEditDialog::quarterAvail),
         NEIGHBOURHOOD("addr:neighbourhood", "丁目・町名・小字",
-                "任意の文字列",
+                "任意の文字列（大字が入っている場合は小字が必須）",
                 JpAddress::getNeighbourhood, JpAddress::setNeighbourhood,
-                (form, v) -> form.isAvail(v)),
+                AddressEditDialog::neighbourhoodAvail),
         BLOCK_NUMBER("addr:block_number", "番地・街区符号",
                 "任意の文字列",
                 JpAddress::getBlockNumber, JpAddress::setBlockNumber,
@@ -171,6 +171,35 @@ public class AddressEditDialog {
         }
         String city = form.getCity();
         return (city != null && city.endsWith("市")) ? JpAddress.Avail.YES : JpAddress.Avail.NO;
+    }
+
+    /**
+     * 大字の複合検証。
+     * 大字が入力されている場合、丁目・町名・小字（neighbourhood）が必須。
+     */
+    private static JpAddress.Avail quarterAvail(JpAddress form, String value) {
+        JpAddress.Avail base = form.isAvail(value);
+        if (base != JpAddress.Avail.YES) {
+            return base;
+        }
+        String neighbourhood = form.getNeighbourhood();
+        return (neighbourhood != null && !neighbourhood.trim().isEmpty())
+                ? JpAddress.Avail.YES : JpAddress.Avail.NO;
+    }
+
+    /**
+     * 丁目・町名・小字の複合検証。
+     * 大字（quarter）が入力されている場合は必須。
+     */
+    private static JpAddress.Avail neighbourhoodAvail(JpAddress form, String value) {
+        JpAddress.Avail base = form.isAvail(value);
+        String quarter = form.getQuarter();
+        if (quarter != null && !quarter.trim().isEmpty()) {
+            if (base != JpAddress.Avail.YES) {
+                return JpAddress.Avail.NO;
+            }
+        }
+        return base;
     }
 
     /**
