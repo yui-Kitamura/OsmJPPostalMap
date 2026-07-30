@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.net.Uri;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.HorizontalScrollView;
@@ -336,11 +337,15 @@ public class PoiDetailsDialog {
         table.removeAllViews();
         for (int i = 0; i < groupNames.length; i++) {
             TableRow row = new TableRow(context);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            
             TextView dayView = new TextView(context);
             dayView.setText(groupNames[i]);
             dayView.setPadding(8, 4, 16, 4);
+            dayView.setTextColor(ContextCompat.getColor(context, R.color.black));
             
             TextView timeView = new TextView(context);
+            timeView.setTextColor(ContextCompat.getColor(context, R.color.black));
             IDaySchedule daySchedule = null;
             boolean foundDay = false;
             for (String day : groupDays[i]) {
@@ -377,12 +382,27 @@ public class PoiDetailsDialog {
                 displayTime = String.join(", ", timeStrings);
             }
             timeView.setText(displayTime);
-            timeView.setPadding(8, 4, 8, 4);
+            timeView.setPadding(0, 4, 8, 4);
             timeView.setSingleLine(true);
 
             HorizontalScrollView scrollView = new HorizontalScrollView(context);
             scrollView.setHorizontalScrollBarEnabled(false);
+            scrollView.setFillViewport(true);
             scrollView.addView(timeView);
+
+            TableRow.LayoutParams dayParams = new TableRow.LayoutParams(
+                    TableRow.LayoutParams.WRAP_CONTENT,
+                    TableRow.LayoutParams.WRAP_CONTENT
+            );
+            dayParams.gravity = Gravity.CENTER_VERTICAL;
+            dayView.setLayoutParams(dayParams);
+
+            TableRow.LayoutParams scrollParams = new TableRow.LayoutParams(
+                    0,
+                    TableRow.LayoutParams.WRAP_CONTENT
+            );
+            scrollParams.gravity = Gravity.CENTER_VERTICAL;
+            scrollView.setLayoutParams(scrollParams);
 
             row.addView(dayView);
             row.addView(scrollView);
