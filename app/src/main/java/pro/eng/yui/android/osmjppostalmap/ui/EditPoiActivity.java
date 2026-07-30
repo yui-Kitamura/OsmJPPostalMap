@@ -311,11 +311,15 @@ public class EditPoiActivity extends AppCompatActivity {
             if (lastLocation != null) {
                 float[] results = new float[1];
                 Location.distanceBetween(originalLat, originalLon, lastLocation.getLatitude(), lastLocation.getLongitude(), results);
-                if (results[0] > 50) {
+                if (!isNew && results[0] > 50) {
                     Toast.makeText(this, "現在地が初期位置から50m以上離れているため移動できません", Toast.LENGTH_SHORT).show();
                     return;
                 }
                 GeoPoint gp = new GeoPoint(lastLocation);
+                if (isNew) {
+                    originalLat = gp.getLatitude();
+                    originalLon = gp.getLongitude();
+                }
                 map.getController().animateTo(gp);
                 marker.setPosition(gp);
                 updateLocationStatus(lastLocation);
@@ -661,6 +665,8 @@ public class EditPoiActivity extends AppCompatActivity {
 
         if (isNew && lastLocation != null) {
             GeoPoint currentPoint = new GeoPoint(lastLocation);
+            originalLat = currentPoint.getLatitude();
+            originalLon = currentPoint.getLongitude();
             marker.setPosition(currentPoint);
             map.getController().setCenter(currentPoint);
         }
