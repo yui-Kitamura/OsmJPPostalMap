@@ -181,6 +181,9 @@ public class EditPoiActivity extends AppCompatActivity {
         if (poiType == null) {
             poiType = "node";
         }
+        if (isNew && !"way".equals(poiType)) {
+            isMapUnlocked = true;
+        }
         long ver = getIntent().getLongExtra("POI_VER", 0L);
         
         // 既存の座標があればそれを使用、なければデフォルト
