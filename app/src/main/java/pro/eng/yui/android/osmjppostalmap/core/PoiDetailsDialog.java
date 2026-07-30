@@ -6,6 +6,7 @@ import android.location.Location;
 import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.TableLayout;
 import android.widget.TableRow;
@@ -377,9 +378,14 @@ public class PoiDetailsDialog {
             }
             timeView.setText(displayTime);
             timeView.setPadding(8, 4, 8, 4);
-            
+            timeView.setSingleLine(true);
+
+            HorizontalScrollView scrollView = new HorizontalScrollView(context);
+            scrollView.setHorizontalScrollBarEnabled(false);
+            scrollView.addView(timeView);
+
             row.addView(dayView);
-            row.addView(timeView);
+            row.addView(scrollView);
             table.addView(row);
         }
     }
