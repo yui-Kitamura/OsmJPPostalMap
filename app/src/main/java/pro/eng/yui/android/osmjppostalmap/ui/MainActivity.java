@@ -581,11 +581,15 @@ public class MainActivity extends AppCompatActivity {
             lonMin = centerLon - rangeLon;
             lonMax = centerLon + rangeLon;
         } else {
-            // 通常表示・全画面取得: 画面内に映っている範囲全て
-            latMin = bb.getLatSouth();
-            latMax = bb.getLatNorth();
-            lonMin = bb.getLonWest();
-            lonMax = bb.getLonEast();
+            // 通常表示・全画面取得: 画面内に映っている範囲 + 周辺 (Zoom-2相当の広域を事前ロード)
+            double latSpan = bb.getLatNorth() - bb.getLatSouth();
+            double lonSpan = bb.getLonEast() - bb.getLonWest();
+            // Zoomレベルが2下がると表示範囲は縦横4倍になる。
+            // 中心を維持して4倍に広げるには、中心から端までの距離を2倍にする。
+            latMin = centerLat - latSpan * 2.0;
+            latMax = centerLat + latSpan * 2.0;
+            lonMin = centerLon - lonSpan * 2.0;
+            lonMax = centerLon + lonSpan * 2.0;
         }
 
         // 固定グリッド（1海里＝1/60度）へのアライメント
