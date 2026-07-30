@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.InputFilter;
 import android.text.InputType;
 import android.text.TextWatcher;
 import android.view.Gravity;
@@ -13,6 +14,7 @@ import android.view.View;
 import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.GradientDrawable;
 import androidx.annotation.NonNull;
+import pro.eng.yui.android.osmjppostalmap.domain.Util;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.widget.Button;
@@ -238,12 +240,15 @@ public class EditPoiActivity extends AppCompatActivity {
         title.setText(isNew ? R.string.title_add_postbox : R.string.title_edit_postbox);
 
         tagInput = findViewById(R.id.edit_tag_value);
+        Util.addNumberFilter(tagInput);
         View tagLayout = findViewById(R.id.edit_tag_layout);
         View collectionLayout = findViewById(R.id.layout_collection_edit);
         View branchLayout = findViewById(R.id.edit_branch_layout);
         TextInputEditText branchInput = findViewById(R.id.edit_branch_value);
+        Util.addNumberFilter(branchInput);
         View refLayout = findViewById(R.id.edit_ref_layout);
         TextInputEditText refInput = findViewById(R.id.edit_ref_value);
+        Util.addNumberFilter(refInput);
         View shapeLayout = findViewById(R.id.layout_shape_edit);
         RadioGroup radioShape = findViewById(R.id.edit_radio_shape);
         tableCollection = findViewById(R.id.table_collection);
@@ -286,6 +291,7 @@ public class EditPoiActivity extends AppCompatActivity {
         View btnAddressEdit = findViewById(R.id.btn_address_edit);
 
         editSpecialNote = findViewById(R.id.edit_special_note_value);
+        Util.addNumberFilter(editSpecialNote);
         TextInputLayout specialNoteLayout = findViewById(R.id.edit_special_note_layout);
         if ("post_office".equals(targetPoi.getTag("amenity"))) {
             specialNoteLayout.setHint(getString(R.string.label_special_note_postoffice));
@@ -294,7 +300,7 @@ public class EditPoiActivity extends AppCompatActivity {
         }
         String currentNote = targetPoi.getTag("note");
         if (currentNote != null) {
-            editSpecialNote.setText(currentNote);
+            editSpecialNote.setText(Util.normalizeNumber(currentNote));
         }
 
         findViewById(R.id.btn_my_location).setOnClickListener(v -> {
@@ -471,13 +477,13 @@ public class EditPoiActivity extends AppCompatActivity {
             branchLayout.setVisibility(View.VISIBLE);
             String currentBranch = targetPoi.getTag("operator:branch");
             if (currentBranch != null) {
-                branchInput.setText(currentBranch);
+                branchInput.setText(Util.normalizeNumber(currentBranch));
             }
 
             refLayout.setVisibility(View.VISIBLE);
             String currentRef = targetPoi.getTag("ref");
             if (currentRef != null) {
-                refInput.setText(currentRef);
+                refInput.setText(Util.normalizeNumber(currentRef));
             }
 
             String currentTimes = targetPoi.getTag("collection_times");
@@ -622,6 +628,7 @@ public class EditPoiActivity extends AppCompatActivity {
             };
             for (EditText et : ohEditors) {
                 if (et != null) {
+                    Util.addNumberFilter(et);
                     et.addTextChangedListener(new OhTextWatcher(et));
                     applyCellStyles(et, et.getText().toString(), false);
                 }
@@ -708,7 +715,7 @@ public class EditPoiActivity extends AppCompatActivity {
                             } else {
                                 int lastMinutes = -1;
                                 for (int r = 0; r < timeRows.size(); r++) {
-                                    String val = timeRows.get(r)[col].getText().toString().trim();
+                                    String val = Util.normalizeNumber(timeRows.get(r)[col].getText().toString().trim());
                                     if (val.isEmpty()) continue;
                                     if (!TIME_PATTERN.matcher(val).matches()) {
                                         showErrorBanner(String.format(getString(R.string.error_time_format), val));
@@ -839,7 +846,7 @@ public class EditPoiActivity extends AppCompatActivity {
             }
 
             TextInputEditText branchInput = findViewById(R.id.edit_branch_value);
-            branch = branchInput.getText() != null ? branchInput.getText().toString().trim() : "";
+            branch = branchInput.getText() != null ? Util.normalizeNumber(branchInput.getText().toString().trim()) : "";
             if (!branch.isEmpty()) {
                 currentTags.put("operator:branch", branch);
             } else {
@@ -847,7 +854,7 @@ public class EditPoiActivity extends AppCompatActivity {
             }
 
             TextInputEditText refInput = findViewById(R.id.edit_ref_value);
-            ref = refInput.getText() != null ? refInput.getText().toString().trim() : "";
+            ref = refInput.getText() != null ? Util.normalizeNumber(refInput.getText().toString().trim()) : "";
             if (!ref.isEmpty()) {
                 currentTags.put("ref", ref);
             } else {
@@ -867,7 +874,7 @@ public class EditPoiActivity extends AppCompatActivity {
                     } else {
                         int lastMinutes = -1;
                         for (int r = 0; r < timeRows.size(); r++) {
-                            String val = timeRows.get(r)[col].getText().toString().trim();
+                            String val = Util.normalizeNumber(timeRows.get(r)[col].getText().toString().trim());
                             if (val.isEmpty()) continue;
 
                             if (!TIME_PATTERN.matcher(val).matches()) {
@@ -930,10 +937,10 @@ public class EditPoiActivity extends AppCompatActivity {
                 // 平日
                 List<ITagPart> wdTimes = new ArrayList<>();
                 if (!checkOhWdOff.isChecked()) {
-                    String wdOpen = editOhWdOpen.getText().toString().trim();
-                    String wdClose = editOhWdClose.getText().toString().trim();
-                    String wdBreakStart = editOhWdBreakStart.getText().toString().trim();
-                    String wdBreakEnd = editOhWdBreakEnd.getText().toString().trim();
+                    String wdOpen = Util.normalizeNumber(editOhWdOpen.getText().toString().trim());
+                    String wdClose = Util.normalizeNumber(editOhWdClose.getText().toString().trim());
+                    String wdBreakStart = Util.normalizeNumber(editOhWdBreakStart.getText().toString().trim());
+                    String wdBreakEnd = Util.normalizeNumber(editOhWdBreakEnd.getText().toString().trim());
                     wdTimes.addAll(formatOpeningTimeRange(wdOpen, wdClose, wdBreakStart, wdBreakEnd));
                 }
                 for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
@@ -943,10 +950,10 @@ public class EditPoiActivity extends AppCompatActivity {
                 // 土曜
                 List<ITagPart> saTimes = new ArrayList<>();
                 if (!checkOhSaOff.isChecked()) {
-                    String saOpen = editOhSaOpen.getText().toString().trim();
-                    String saClose = editOhSaClose.getText().toString().trim();
-                    String saBreakStart = editOhSaBreakStart.getText().toString().trim();
-                    String saBreakEnd = editOhSaBreakEnd.getText().toString().trim();
+                    String saOpen = Util.normalizeNumber(editOhSaOpen.getText().toString().trim());
+                    String saClose = Util.normalizeNumber(editOhSaClose.getText().toString().trim());
+                    String saBreakStart = Util.normalizeNumber(editOhSaBreakStart.getText().toString().trim());
+                    String saBreakEnd = Util.normalizeNumber(editOhSaBreakEnd.getText().toString().trim());
                     saTimes.addAll(formatOpeningTimeRange(saOpen, saClose, saBreakStart, saBreakEnd));
                 }
                 weeklyTable.put(Days.SATURDAY, saTimes);
@@ -954,10 +961,10 @@ public class EditPoiActivity extends AppCompatActivity {
                 // 日祝
                 List<ITagPart> phTimes = new ArrayList<>();
                 if (!checkOhPhOff.isChecked()) {
-                    String phOpen = editOhPhOpen.getText().toString().trim();
-                    String phClose = editOhPhClose.getText().toString().trim();
-                    String phBreakStart = editOhPhBreakStart.getText().toString().trim();
-                    String phBreakEnd = editOhPhBreakEnd.getText().toString().trim();
+                    String phOpen = Util.normalizeNumber(editOhPhOpen.getText().toString().trim());
+                    String phClose = Util.normalizeNumber(editOhPhClose.getText().toString().trim());
+                    String phBreakStart = Util.normalizeNumber(editOhPhBreakStart.getText().toString().trim());
+                    String phBreakEnd = Util.normalizeNumber(editOhPhBreakEnd.getText().toString().trim());
                     phTimes.addAll(formatOpeningTimeRange(phOpen, phClose, phBreakStart, phBreakEnd));
                 }
                 weeklyTable.put(Days.SUNDAY, phTimes);
@@ -977,10 +984,10 @@ public class EditPoiActivity extends AppCompatActivity {
                 List<ITagPart> wdTimes = new ArrayList<>();
                 if (!checkLsWdOff.isChecked()) {
                     wdTimes.addAll(formatOpeningTimeRange(
-                        editLsWdOpen.getText().toString().trim(),
-                        editLsWdClose.getText().toString().trim(),
-                        editLsWdBreakStart.getText().toString().trim(),
-                        editLsWdBreakEnd.getText().toString().trim()
+                        Util.normalizeNumber(editLsWdOpen.getText().toString().trim()),
+                        Util.normalizeNumber(editLsWdClose.getText().toString().trim()),
+                        Util.normalizeNumber(editLsWdBreakStart.getText().toString().trim()),
+                        Util.normalizeNumber(editLsWdBreakEnd.getText().toString().trim())
                     ));
                 }
                 for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
@@ -991,10 +998,10 @@ public class EditPoiActivity extends AppCompatActivity {
                 List<ITagPart> saTimes = new ArrayList<>();
                 if (!checkLsSaOff.isChecked()) {
                     saTimes.addAll(formatOpeningTimeRange(
-                        editLsSaOpen.getText().toString().trim(),
-                        editLsSaClose.getText().toString().trim(),
-                        editLsSaBreakStart.getText().toString().trim(),
-                        editLsSaBreakEnd.getText().toString().trim()
+                        Util.normalizeNumber(editLsSaOpen.getText().toString().trim()),
+                        Util.normalizeNumber(editLsSaClose.getText().toString().trim()),
+                        Util.normalizeNumber(editLsSaBreakStart.getText().toString().trim()),
+                        Util.normalizeNumber(editLsSaBreakEnd.getText().toString().trim())
                     ));
                 }
                 lsWeeklyTable.put(Days.SATURDAY, saTimes);
@@ -1003,10 +1010,10 @@ public class EditPoiActivity extends AppCompatActivity {
                 List<ITagPart> phTimes = new ArrayList<>();
                 if (!checkLsPhOff.isChecked()) {
                     phTimes.addAll(formatOpeningTimeRange(
-                        editLsPhOpen.getText().toString().trim(),
-                        editLsPhClose.getText().toString().trim(),
-                        editLsPhBreakStart.getText().toString().trim(),
-                        editLsPhBreakEnd.getText().toString().trim()
+                        Util.normalizeNumber(editLsPhOpen.getText().toString().trim()),
+                        Util.normalizeNumber(editLsPhClose.getText().toString().trim()),
+                        Util.normalizeNumber(editLsPhBreakStart.getText().toString().trim()),
+                        Util.normalizeNumber(editLsPhBreakEnd.getText().toString().trim())
                     ));
                 }
                 lsWeeklyTable.put(Days.SUNDAY, phTimes);
@@ -1030,7 +1037,7 @@ public class EditPoiActivity extends AppCompatActivity {
         
         // 移動後の位置を取得
         GeoPoint pos = marker.getPosition();
-        String note = editSpecialNote.getText() != null ? editSpecialNote.getText().toString().trim() : "";
+        String note = editSpecialNote.getText() != null ? Util.normalizeNumber(editSpecialNote.getText().toString().trim()) : "";
         currentTags.put("note", note);
 
         PoiRepository.PoiSaveCallback callback = new PoiRepository.PoiSaveCallback() {
@@ -1193,8 +1200,9 @@ public class EditPoiActivity extends AppCompatActivity {
             EditText et = new EditText(this);
             et.setHint("--:--");
             et.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
+            Util.addNumberFilter(et);
             et.setGravity(Gravity.CENTER);
-            et.setText(initialValues[i]);
+            et.setText(Util.normalizeNumber(initialValues[i]));
             
             // 初期の見た目設定
             applyCellStyles(et, initialValues[i], false);
@@ -1317,10 +1325,10 @@ public class EditPoiActivity extends AppCompatActivity {
                             close = oct2.closeAt.value;
                         }
                     }
-                    editors[i][0].setText(open);
-                    editors[i][1].setText(close);
-                    editors[i][2].setText(bStart);
-                    editors[i][3].setText(bEnd);
+                    editors[i][0].setText(Util.normalizeNumber(open));
+                    editors[i][1].setText(Util.normalizeNumber(close));
+                    editors[i][2].setText(Util.normalizeNumber(bStart));
+                    editors[i][3].setText(Util.normalizeNumber(bEnd));
                 }
                 for (EditText et : editors[i]) applyCellStyles(et, et.getText().toString(), false);
             }
@@ -1375,10 +1383,10 @@ public class EditPoiActivity extends AppCompatActivity {
                             close = oct2.closeAt.value;
                         }
                     }
-                    editors[i][0].setText(open);
-                    editors[i][1].setText(close);
-                    editors[i][2].setText(bStart);
-                    editors[i][3].setText(bEnd);
+                    editors[i][0].setText(Util.normalizeNumber(open));
+                    editors[i][1].setText(Util.normalizeNumber(close));
+                    editors[i][2].setText(Util.normalizeNumber(bStart));
+                    editors[i][3].setText(Util.normalizeNumber(bEnd));
                 }
                 for (EditText et : editors[i]) applyCellStyles(et, et.getText().toString(), false);
             }

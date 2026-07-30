@@ -5,6 +5,7 @@ import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.text.Editable;
+import android.text.InputFilter;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.TextWatcher;
@@ -33,6 +34,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import pro.eng.yui.android.osmjppostalmap.R;
+import pro.eng.yui.android.osmjppostalmap.domain.Util;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.JpAddress;
 
 /**
@@ -186,7 +188,7 @@ public class AddressEditDialog {
         if (value == null || value.trim().isEmpty()) {
             tags.remove(key);
         } else {
-            tags.put(key, value.trim());
+            tags.put(key, Util.normalizeNumber(value.trim()));
         }
     }
 
@@ -204,6 +206,7 @@ public class AddressEditDialog {
         Button expandButton = view.findViewById(R.id.address_expand_hierarchy);
         Button collapseButton = view.findViewById(R.id.address_collapse_hierarchy);
         LinearLayout hierarchy = view.findViewById(R.id.address_hierarchy);
+        Util.addNumberFilter(fullInput);
         applyPlaceholderStyle(context, fullInput);
 
         String currentLabel = current.toString();
@@ -211,7 +214,7 @@ public class AddressEditDialog {
 
         boolean hasFull = current.isFullAvail() != JpAddress.Avail.UNSET;
         if (hasFull) {
-            fullInput.setText(current.getFull());
+            fullInput.setText(Util.normalizeNumber(current.getFull()));
         }
         // full が無いPOIは階層入力しか選べないため、full行と展開ボタンごと隠す
         fullRow.setVisibility(hasFull ? View.VISIBLE : View.GONE);
@@ -342,10 +345,11 @@ public class AddressEditDialog {
 
         EditText input = new EditText(context);
         input.setHint(field.tagKey);
+        Util.addNumberFilter(input);
         applyPlaceholderStyle(context, input);
         input.setTextSize(14f);
         input.setSingleLine(true);
-        input.setText(field.getter.apply(current));
+        input.setText(Util.normalizeNumber(field.getter.apply(current)));
         input.setLayoutParams(new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 2f));
 
