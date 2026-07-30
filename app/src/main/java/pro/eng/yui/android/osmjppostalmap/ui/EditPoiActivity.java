@@ -96,6 +96,7 @@ public class EditPoiActivity extends AppCompatActivity {
     private Location lastLocation;
     private double originalLat;
     private double originalLon;
+    private String poiType;
     private boolean isMapUnlocked = false;
     private boolean isResettingCenter = false;
     private static final double MIN_ZOOM = 15.0;
@@ -176,7 +177,10 @@ public class EditPoiActivity extends AppCompatActivity {
         // IntentからPOI情報を受け取る
         long id = getIntent().getLongExtra("POI_ID", 0);
         isNew = id <= 0;
-        String type = getIntent().getStringExtra("POI_TYPE");
+        poiType = getIntent().getStringExtra("POI_TYPE");
+        if (poiType == null) {
+            poiType = "node";
+        }
         long ver = getIntent().getLongExtra("POI_VER", 0L);
         
         // 既存の座標があればそれを使用、なければデフォルト
@@ -224,7 +228,7 @@ public class EditPoiActivity extends AppCompatActivity {
             if (getIntent().hasExtra("TAG_REF")) tags.put("ref", getIntent().getStringExtra("TAG_REF"));
         }
 
-        targetPoi = new OsmPoi(id, initialLat, initialLon, type != null ? type : "node", tags, ver);
+        targetPoi = new OsmPoi(id, initialLat, initialLon, poiType, tags, ver);
 
         TextView title = findViewById(R.id.edit_title);
         // タイトル設定は amenity タグなどが判明してから再度行うため、ここでは初期設定のみ
@@ -249,6 +253,10 @@ public class EditPoiActivity extends AppCompatActivity {
         ImageButton btnLockMap = findViewById(R.id.btn_lock_map);
         updateLockButtonStyle(btnLockMap);
         btnLockMap.setOnClickListener(v -> {
+            if ("way".equals(poiType)) {
+                Toast.makeText(this, "移動できません", Toast.LENGTH_SHORT).show();
+                return;
+            }
             isMapUnlocked = !isMapUnlocked;
             updateLockButtonStyle(btnLockMap);
             if (isMapUnlocked) {
@@ -287,6 +295,10 @@ public class EditPoiActivity extends AppCompatActivity {
         }
 
         findViewById(R.id.btn_my_location).setOnClickListener(v -> {
+            if ("way".equals(poiType)) {
+                Toast.makeText(this, "移動できません", Toast.LENGTH_SHORT).show();
+                return;
+            }
             if (lastLocation != null) {
                 float[] results = new float[1];
                 Location.distanceBetween(originalLat, originalLon, lastLocation.getLatitude(), lastLocation.getLongitude(), results);
