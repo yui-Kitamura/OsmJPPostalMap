@@ -32,7 +32,7 @@ import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
 
 public class PoiDetailsDialog {
 
-    public static void show(Context context, OsmPoi poi, ScheduleResult schedule, Location currentLocation) {
+    public static void show(Context context, OsmPoi poi, ScheduleResult schedule, ScheduleResult limitedServiceSchedule, Location currentLocation) {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
 
         ScheduleParser.Amenity amenity =
@@ -144,69 +144,30 @@ public class PoiDetailsDialog {
                 }
             }
 
-            // スケジュール表の作成 (平日/土曜/日祝の形式)
-            String[][] groupDays = {
-                {"Mo", "Tu", "We", "Th", "Fr"},
-                {"Sa"},
-                {"Su", "PH"}
-            };
-            String[] groupNames = {"平日", "土曜", "日祝"};
-            
-            for (int i = 0; i < groupNames.length; i++) {
-                TableRow row = new TableRow(context);
-                TextView dayView = new TextView(context);
-                dayView.setText(groupNames[i]);
-                dayView.setPadding(8, 4, 16, 4);
-                
-                TextView timeView = new TextView(context);
-                // そのグループの時間を取得（代表する曜日またはPHから）
-                IDaySchedule daySchedule = null;
-                boolean foundDay = false;
-                for (String day : groupDays[i]) {
-                    Days d = Days.getFromLabel(day);
-                    if (schedule.getWeeklyTable().containsKey(d)) {
-                        daySchedule = schedule.getWeeklyTable().get(d);
-                        foundDay = true;
-                        break;
-                    }
-                }
-                
-                String displayTime;
-                if (!foundDay || daySchedule == null) {
-                    displayTime = "不明";
-                } else if (daySchedule.schedule().isEmpty()) {
-                    if (isPostBox) {
-                        if (daySchedule.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY) {
-                            displayTime = "収集なし";
-                        } else {
-                            displayTime = "不明";
-                        }
-                    } else {
-                        if (daySchedule.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.OpeningHoursParser.DayStatus.CLOSED_DAY) {
-                            displayTime = "休業";
-                        } else {
-                            displayTime = "不明";
-                        }
-                    }
-                } else {
-                    java.util.List<String> timeStrings = new java.util.ArrayList<>();
-                    for (Object part : daySchedule.schedule()) {
-                        timeStrings.add(part.toString());
-                    }
-                    displayTime = String.join(", ", timeStrings);
-                }
-                timeView.setText(displayTime);
-                timeView.setPadding(8, 4, 8, 4);
-                
-                row.addView(dayView);
-                row.addView(timeView);
-                table.addView(row);
-            }
+            // スケジュール表の作成
+            populateWeeklyTable(context, table, schedule, isPostBox);
             
             rawTagText.setText("Raw: " + schedule.getRawTagValue().getOrigin());
         } else {
             statusText.setText("解析不可");
             rawTagText.setText("Raw: " + poi.getTag(isPostBox ? "collection_times" : "opening_hours"));
+        }
+
+        // ゆうゆう窓口の表示
+        if (!isPostBox) {
+            View lsLayout = view.findViewById(R.id.dialog_limited_service_layout);
+            if (limitedServiceSchedule != null) {
+                lsLayout.setVisibility(View.VISIBLE);
+                TextView lsStatus = view.findViewById(R.id.dialog_limited_service_status);
+                lsStatus.setText(limitedServiceSchedule.getTodayStatus());
+                TableLayout lsTable = view.findViewById(R.id.dialog_limited_service_weekly_table);
+                populateWeeklyTable(context, lsTable, limitedServiceSchedule, false);
+                
+                String raw = rawTagText.getText().toString();
+                rawTagText.setText(raw + "\nLS: " + limitedServiceSchedule.getRawTagValue().getOrigin());
+            } else {
+                lsLayout.setVisibility(View.GONE);
+            }
         }
 
         String checkDate = poi.getTag("check_date");
@@ -267,4 +228,63 @@ public class PoiDetailsDialog {
         builder.show();
     }
 
+    private static void populateWeeklyTable(Context context, TableLayout table, ScheduleResult schedule, boolean isPostBox) {
+        String[][] groupDays = {
+            {"Mo", "Tu", "We", "Th", "Fr"},
+            {"Sa"},
+            {"Su", "PH"}
+        };
+        String[] groupNames = {"平日", "土曜", "日祝"};
+        
+        table.removeAllViews();
+        for (int i = 0; i < groupNames.length; i++) {
+            TableRow row = new TableRow(context);
+            TextView dayView = new TextView(context);
+            dayView.setText(groupNames[i]);
+            dayView.setPadding(8, 4, 16, 4);
+            
+            TextView timeView = new TextView(context);
+            IDaySchedule daySchedule = null;
+            boolean foundDay = false;
+            for (String day : groupDays[i]) {
+                Days d = Days.getFromLabel(day);
+                if (schedule.getWeeklyTable().containsKey(d)) {
+                    daySchedule = schedule.getWeeklyTable().get(d);
+                    foundDay = true;
+                    break;
+                }
+            }
+            
+            String displayTime;
+            if (!foundDay || daySchedule == null) {
+                displayTime = "不明";
+            } else if (daySchedule.schedule().isEmpty()) {
+                if (isPostBox) {
+                    if (daySchedule.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY) {
+                        displayTime = "収集なし";
+                    } else {
+                        displayTime = "不明";
+                    }
+                } else {
+                    if (daySchedule.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.OpeningHoursParser.DayStatus.CLOSED_DAY) {
+                        displayTime = "休業";
+                    } else {
+                        displayTime = "不明";
+                    }
+                }
+            } else {
+                java.util.List<String> timeStrings = new java.util.ArrayList<>();
+                for (Object part : daySchedule.schedule()) {
+                    timeStrings.add(part.toString());
+                }
+                displayTime = String.join(", ", timeStrings);
+            }
+            timeView.setText(displayTime);
+            timeView.setPadding(8, 4, 8, 4);
+            
+            row.addView(dayView);
+            row.addView(timeView);
+            table.addView(row);
+        }
+    }
 }

@@ -330,7 +330,8 @@ public class MainActivity extends AppCompatActivity {
                             entry = new MarkerEntry(new PoiMarker(map, type), postOffice);
                             final MarkerEntry clickEntry = entry;
                             entry.marker.setOnMarkerClickListener((m, mapView) -> {
-                                PoiDetailsDialog.show(this, clickEntry.poi, ((PoiMarker) m).getSchedule(), lastLocation);
+                                PoiMarker pm = (PoiMarker) m;
+                                PoiDetailsDialog.show(this, clickEntry.poi, pm.getSchedule(), pm.getLimitedServiceSchedule(), lastLocation);
                                 return true;
                             });
                             markerCache.put(key, entry);
@@ -769,7 +770,7 @@ public class MainActivity extends AppCompatActivity {
                 if (markerRenderGeneration.get() != renderGeneration) return;
 
                 int end = Math.min(start + batchSize, pois.size());
-                ArrayList<ScheduleResult> results = new ArrayList<>(end - start);
+                ArrayList<ScheduleResult[]> results = new ArrayList<>(end - start);
                 for (int i = start; i < end; i++) {
                     OsmPoi poi = pois.get(i);
                     boolean postOffice = "post_office".equals(poi.getTag("amenity"));
@@ -779,8 +780,19 @@ public class MainActivity extends AppCompatActivity {
                     ScheduleParser.TimeType timeType = postOffice
                             ? ScheduleParser.TimeType.OPENING_HOURS
                             : ScheduleParser.TimeType.COLLECTION_TIMES;
-                    results.add(new SimpleScheduleParser().parse(
-                            tagValue, System.currentTimeMillis(), timeType));
+                    
+                    ScheduleResult main = new SimpleScheduleParser().parse(
+                            tagValue, System.currentTimeMillis(), timeType);
+                    
+                    ScheduleResult ls = null;
+                    if (postOffice) {
+                        String lsTag = poi.getTag("opening_hours:limited_service");
+                        if (lsTag != null && !lsTag.isEmpty()) {
+                            ls = new SimpleScheduleParser().parse(
+                                    new OpeningHours(lsTag), System.currentTimeMillis(), ScheduleParser.TimeType.OPENING_HOURS);
+                        }
+                    }
+                    results.add(new ScheduleResult[]{main, ls});
                 }
 
                 int batchStart = start;
@@ -790,7 +802,8 @@ public class MainActivity extends AppCompatActivity {
                         int resultIndex = batchStart + i;
                         OsmPoi poi = pois.get(resultIndex);
                         PoiMarker marker = markers.get(resultIndex);
-                        marker.setSchedule(results.get(i));
+                        marker.setSchedule(results.get(i)[0]);
+                        marker.setLimitedServiceSchedule(results.get(i)[1]);
                         MarkerEntry entry = markerCache.get(markerKey(poi));
                         if (entry != null && entry.marker == marker) {
                             entry.stateSource = markerStateSource(poi);
@@ -822,6 +835,7 @@ public class MainActivity extends AppCompatActivity {
     private String markerStateSource(OsmPoi poi) {
         return String.valueOf(poi.getTag("amenity")) + '\u0000'
                 + String.valueOf(poi.getTag("opening_hours")) + '\u0000'
+                + String.valueOf(poi.getTag("opening_hours:limited_service")) + '\u0000'
                 + String.valueOf(poi.getTag("collection_times"));
     }
 
@@ -838,12 +852,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private int compareMarkerPriority(PoiMarker a, PoiMarker b) {
+        ScheduleResult sa = getEffectiveSchedule(a);
+        ScheduleResult sb = getEffectiveSchedule(b);
         int priority = Integer.compare(
-                getPriorityForSorting(a.getSchedule()), getPriorityForSorting(b.getSchedule()));
+                getPriorityForSorting(sa), getPriorityForSorting(sb));
         if (priority != 0) return priority;
 
-        ScheduleResult.Event ea = a.getSchedule() != null ? a.getSchedule().getNextEvent() : null;
-        ScheduleResult.Event eb = b.getSchedule() != null ? b.getSchedule().getNextEvent() : null;
+        ScheduleResult.Event ea = sa != null ? sa.getNextEvent() : null;
+        ScheduleResult.Event eb = sb != null ? sb.getNextEvent() : null;
 
         if (ea != null && eb != null) {
             return eb.getTimestamp().compareTo(ea.getTimestamp());
@@ -853,6 +869,16 @@ public class MainActivity extends AppCompatActivity {
             return -1;
         }
         return 0;
+    }
+
+    private ScheduleResult getEffectiveSchedule(PoiMarker marker) {
+        ScheduleResult main = marker.getSchedule();
+        ScheduleResult ls = marker.getLimitedServiceSchedule();
+        if (ls != null && (ls.getCurrentState() == ScheduleResult.CurrentState.OPENING || 
+                          ls.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON)) {
+            return ls;
+        }
+        return main;
     }
 
     private int getPriorityForSorting(ScheduleResult schedule) {

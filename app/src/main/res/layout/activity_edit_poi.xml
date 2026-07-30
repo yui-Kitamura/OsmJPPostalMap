@@ -194,6 +194,88 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/layout_limited_service_edit_root"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#DDDDDD"
+                android:layout_marginVertical="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="ゆうゆう窓口"
+                    android:textStyle="bold"
+                    android:textSize="16sp"/>
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switch_limited_service"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <TableLayout
+                android:id="@+id/table_limited_service"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:stretchColumns="1,2,3"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone">
+                <TableRow>
+                    <TextView android:text="" android:padding="4dp"/>
+                    <TextView android:text="開店" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="閉店" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="休憩 (開始-終了)" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="休" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                </TableRow>
+                <TableRow>
+                    <TextView android:text="平日" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
+                    <EditText android:id="@+id/edit_ls_wd_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
+                    <EditText android:id="@+id/edit_ls_wd_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <EditText android:id="@+id/edit_ls_wd_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="12sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="2dp"/>
+                        <EditText android:id="@+id/edit_ls_wd_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="12sp" android:gravity="center"/>
+                    </LinearLayout>
+                    <CheckBox android:id="@+id/check_ls_wd_off" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center"/>
+                </TableRow>
+                <TableRow android:layout_marginTop="4dp">
+                    <TextView android:text="土曜" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
+                    <EditText android:id="@+id/edit_ls_sa_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
+                    <EditText android:id="@+id/edit_ls_sa_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <EditText android:id="@+id/edit_ls_sa_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="12sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="2dp"/>
+                        <EditText android:id="@+id/edit_ls_sa_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="12sp" android:gravity="center"/>
+                    </LinearLayout>
+                    <CheckBox android:id="@+id/check_ls_sa_off" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center"/>
+                </TableRow>
+                <TableRow android:layout_marginTop="4dp">
+                    <TextView android:text="日祝" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
+                    <EditText android:id="@+id/edit_ls_ph_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
+                    <EditText android:id="@+id/edit_ls_ph_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <EditText android:id="@+id/edit_ls_ph_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="12sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="2dp"/>
+                        <EditText android:id="@+id/edit_ls_ph_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="12sp" android:gravity="center"/>
+                    </LinearLayout>
+                    <CheckBox android:id="@+id/check_ls_ph_off" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center"/>
+                </TableRow>
+            </TableLayout>
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/layout_collection_edit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

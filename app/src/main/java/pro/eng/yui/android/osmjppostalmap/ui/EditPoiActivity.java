@@ -68,8 +68,15 @@ public class EditPoiActivity extends AppCompatActivity {
     private EditText editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd;
     private EditText editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd;
     private EditText editOhPhOpen, editOhPhClose, editOhPhBreakStart, editOhPhBreakEnd;
+    private EditText editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd;
+    private EditText editLsSaOpen, editLsSaClose, editLsSaBreakStart, editLsSaBreakEnd;
+    private EditText editLsPhOpen, editLsPhClose, editLsPhBreakStart, editLsPhBreakEnd;
     private android.widget.CheckBox checkOhWdOff, checkOhSaOff, checkOhPhOff;
+    private android.widget.CheckBox checkLsWdOff, checkLsSaOff, checkLsPhOff;
     private android.widget.CheckBox checkColWdOff, checkColSaOff, checkColPhOff;
+    private com.google.android.material.switchmaterial.SwitchMaterial switchLimitedService;
+    private View layoutLimitedServiceEditRoot;
+    private TableLayout tableLimitedService;
     private static final Pattern TIME_PATTERN = Pattern.compile("^([01]?[0-9]|2[0-3]):[0-5][0-9]$");
     private PoiRepository repository;
     private MainViewModel viewModel;
@@ -310,14 +317,43 @@ public class EditPoiActivity extends AppCompatActivity {
         checkColSaOff = findViewById(R.id.check_col_sa_off);
         checkColPhOff = findViewById(R.id.check_col_ph_off);
 
+        layoutLimitedServiceEditRoot = findViewById(R.id.layout_limited_service_edit_root);
+        switchLimitedService = findViewById(R.id.switch_limited_service);
+        tableLimitedService = findViewById(R.id.table_limited_service);
+        editLsWdOpen = findViewById(R.id.edit_ls_wd_open);
+        editLsWdClose = findViewById(R.id.edit_ls_wd_close);
+        editLsWdBreakStart = findViewById(R.id.edit_ls_wd_break_start);
+        editLsWdBreakEnd = findViewById(R.id.edit_ls_wd_break_end);
+        editLsSaOpen = findViewById(R.id.edit_ls_sa_open);
+        editLsSaClose = findViewById(R.id.edit_ls_sa_close);
+        editLsSaBreakStart = findViewById(R.id.edit_ls_sa_break_start);
+        editLsSaBreakEnd = findViewById(R.id.edit_ls_sa_break_end);
+        editLsPhOpen = findViewById(R.id.edit_ls_ph_open);
+        editLsPhClose = findViewById(R.id.edit_ls_ph_close);
+        editLsPhBreakStart = findViewById(R.id.edit_ls_ph_break_start);
+        editLsPhBreakEnd = findViewById(R.id.edit_ls_ph_break_end);
+        checkLsWdOff = findViewById(R.id.check_ls_wd_off);
+        checkLsSaOff = findViewById(R.id.check_ls_sa_off);
+        checkLsPhOff = findViewById(R.id.check_ls_ph_off);
+
+        switchLimitedService.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            tableLimitedService.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+        });
+
         android.widget.CompoundButton.OnCheckedChangeListener ohOffListener = (buttonView, isChecked) -> {
             EditText[] rowEditors;
             if (buttonView == checkOhWdOff) {
                 rowEditors = new EditText[]{editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd};
             } else if (buttonView == checkOhSaOff) {
                 rowEditors = new EditText[]{editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd};
-            } else {
+            } else if (buttonView == checkOhPhOff) {
                 rowEditors = new EditText[]{editOhPhOpen, editOhPhClose, editOhPhBreakStart, editOhPhBreakEnd};
+            } else if (buttonView == checkLsWdOff) {
+                rowEditors = new EditText[]{editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd};
+            } else if (buttonView == checkLsSaOff) {
+                rowEditors = new EditText[]{editLsSaOpen, editLsSaClose, editLsSaBreakStart, editLsSaBreakEnd};
+            } else {
+                rowEditors = new EditText[]{editLsPhOpen, editLsPhClose, editLsPhBreakStart, editLsPhBreakEnd};
             }
             for (EditText et : rowEditors) {
                 et.setEnabled(!isChecked);
@@ -327,6 +363,9 @@ public class EditPoiActivity extends AppCompatActivity {
         checkOhWdOff.setOnCheckedChangeListener(ohOffListener);
         checkOhSaOff.setOnCheckedChangeListener(ohOffListener);
         checkOhPhOff.setOnCheckedChangeListener(ohOffListener);
+        checkLsWdOff.setOnCheckedChangeListener(ohOffListener);
+        checkLsSaOff.setOnCheckedChangeListener(ohOffListener);
+        checkLsPhOff.setOnCheckedChangeListener(ohOffListener);
 
         android.widget.CompoundButton.OnCheckedChangeListener colOffListener = (buttonView, isChecked) -> {
             int col;
@@ -483,6 +522,17 @@ public class EditPoiActivity extends AppCompatActivity {
                 layoutFallback.setVisibility(View.GONE);
             }
 
+            layoutLimitedServiceEditRoot.setVisibility(View.VISIBLE);
+            String lsHours = targetPoi.getTag("opening_hours:limited_service");
+            if (lsHours != null && !lsHours.isEmpty()) {
+                switchLimitedService.setChecked(true);
+                tableLimitedService.setVisibility(View.VISIBLE);
+                parseAndFillLimitedService(lsHours);
+            } else {
+                switchLimitedService.setChecked(false);
+                tableLimitedService.setVisibility(View.GONE);
+            }
+
             btnForceEdit.setOnClickListener(v -> {
                 layoutFallback.setVisibility(View.GONE);
                 ohLayout.setVisibility(View.VISIBLE);
@@ -494,12 +544,14 @@ public class EditPoiActivity extends AppCompatActivity {
                 editOhSaClose.setText(editOhWdClose.getText());
                 editOhSaBreakStart.setText(editOhWdBreakStart.getText());
                 editOhSaBreakEnd.setText(editOhWdBreakEnd.getText());
+                checkOhSaOff.setChecked(checkOhWdOff.isChecked());
             });
             btnOhCopyToPh.setOnClickListener(v -> {
                 editOhPhOpen.setText(editOhSaOpen.getText());
                 editOhPhClose.setText(editOhSaClose.getText());
                 editOhPhBreakStart.setText(editOhSaBreakStart.getText());
                 editOhPhBreakEnd.setText(editOhSaBreakEnd.getText());
+                checkOhPhOff.setChecked(checkOhSaOff.isChecked());
             });
 
             // 変更監視用
@@ -875,6 +927,59 @@ public class EditPoiActivity extends AppCompatActivity {
                 String openingHours = scheduleParser.format(weeklyTable, ScheduleParser.TimeType.OPENING_HOURS);
                 currentTags.put("opening_hours", openingHours);
             }
+
+            // Limited Service (Yu-Yu Window)
+            if (switchLimitedService.isChecked()) {
+                Map<Days, List<? extends ITagPart>> lsWeeklyTable = new HashMap<>();
+                
+                // 平日
+                List<ITagPart> wdTimes = new ArrayList<>();
+                if (!checkLsWdOff.isChecked()) {
+                    wdTimes.addAll(formatOpeningTimeRange(
+                        editLsWdOpen.getText().toString().trim(),
+                        editLsWdClose.getText().toString().trim(),
+                        editLsWdBreakStart.getText().toString().trim(),
+                        editLsWdBreakEnd.getText().toString().trim()
+                    ));
+                }
+                for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
+                    lsWeeklyTable.put(Days.valueOf(d), wdTimes);
+                }
+                
+                // 土曜
+                List<ITagPart> saTimes = new ArrayList<>();
+                if (!checkLsSaOff.isChecked()) {
+                    saTimes.addAll(formatOpeningTimeRange(
+                        editLsSaOpen.getText().toString().trim(),
+                        editLsSaClose.getText().toString().trim(),
+                        editLsSaBreakStart.getText().toString().trim(),
+                        editLsSaBreakEnd.getText().toString().trim()
+                    ));
+                }
+                lsWeeklyTable.put(Days.SATURDAY, saTimes);
+                
+                // 日祝
+                List<ITagPart> phTimes = new ArrayList<>();
+                if (!checkLsPhOff.isChecked()) {
+                    phTimes.addAll(formatOpeningTimeRange(
+                        editLsPhOpen.getText().toString().trim(),
+                        editLsPhClose.getText().toString().trim(),
+                        editLsPhBreakStart.getText().toString().trim(),
+                        editLsPhBreakEnd.getText().toString().trim()
+                    ));
+                }
+                lsWeeklyTable.put(Days.SUNDAY, phTimes);
+                lsWeeklyTable.put(Days.PUBLIC_HOLIDAY, phTimes);
+
+                String lsHours = scheduleParser.format(lsWeeklyTable, ScheduleParser.TimeType.OPENING_HOURS);
+                if (lsHours != null && !lsHours.isEmpty()) {
+                    currentTags.put("opening_hours:limited_service", lsHours);
+                } else {
+                    currentTags.remove("opening_hours:limited_service");
+                }
+            } else {
+                currentTags.remove("opening_hours:limited_service");
+            }
         }
         
         // 移動後の位置を取得
@@ -1141,6 +1246,64 @@ public class EditPoiActivity extends AppCompatActivity {
             for (int i = 0; i < dayGroups.length; i++) {
                 IDaySchedule daySchedule = weeklyTable.get(dayGroups[i]);
                 android.widget.CheckBox checkOff = (i == 0) ? checkOhWdOff : (i == 1 ? checkOhSaOff : checkOhPhOff);
+                
+                if ((daySchedule == null || daySchedule.schedule().isEmpty()) && !tag.isEmpty()) {
+                    checkOff.setChecked(true);
+                    editors[i][0].setText("");
+                    editors[i][1].setText("");
+                    editors[i][2].setText("");
+                    editors[i][3].setText("");
+                } else {
+                    checkOff.setChecked(false);
+                    String open = "", close = "", bStart = "", bEnd = "";
+                    if (daySchedule != null) {
+                        List<? extends ITagPart> times = daySchedule.schedule();
+                        if (times.size() == 1) {
+                            OpenCloseTime oct = (OpenCloseTime) times.get(0);
+                            open = oct.openAt.value;
+                            close = oct.closeAt.value;
+                        } else if (times.size() >= 2) {
+                            OpenCloseTime oct1 = (OpenCloseTime) times.get(0);
+                            OpenCloseTime oct2 = (OpenCloseTime) times.get(1);
+                            open = oct1.openAt.value;
+                            bStart = oct1.closeAt.value;
+                            bEnd = oct2.openAt.value;
+                            close = oct2.closeAt.value;
+                        }
+                    }
+                    editors[i][0].setText(open);
+                    editors[i][1].setText(close);
+                    editors[i][2].setText(bStart);
+                    editors[i][3].setText(bEnd);
+                }
+                for (EditText et : editors[i]) applyCellStyles(et, et.getText().toString(), false);
+            }
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean parseAndFillLimitedService(String tag) {
+        try {
+            pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult result = scheduleParser.parse(new OpeningHours(tag), System.currentTimeMillis(), ScheduleParser.TimeType.OPENING_HOURS);
+            Map<Days, ? extends IDaySchedule> weeklyTable = result.getWeeklyTable();
+            if (weeklyTable.isEmpty() && !tag.isEmpty()) return false;
+
+            Days[] dayGroups = {
+                Days.MONDAY,
+                Days.SATURDAY,
+                Days.SUNDAY
+            };
+            EditText[][] editors = {
+                {editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd},
+                {editLsSaOpen, editLsSaClose, editLsSaBreakStart, editLsSaBreakEnd},
+                {editLsPhOpen, editLsPhClose, editLsPhBreakStart, editLsPhBreakEnd}
+            };
+
+            for (int i = 0; i < dayGroups.length; i++) {
+                IDaySchedule daySchedule = weeklyTable.get(dayGroups[i]);
+                android.widget.CheckBox checkOff = (i == 0) ? checkLsWdOff : (i == 1 ? checkLsSaOff : checkLsPhOff);
                 
                 if ((daySchedule == null || daySchedule.schedule().isEmpty()) && !tag.isEmpty()) {
                     checkOff.setChecked(true);

@@ -39,6 +39,36 @@
             <!-- 曜日と時間がここに追加される -->
         </TableLayout>
 
+        <LinearLayout
+            android:id="@+id/dialog_limited_service_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginTop="16dp">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ゆうゆう窓口"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/dialog_limited_service_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:layout_marginBottom="4dp" />
+
+            <TableLayout
+                android:id="@+id/dialog_limited_service_weekly_table"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:stretchColumns="1">
+            </TableLayout>
+        </LinearLayout>
+
         <TextView
             android:id="@+id/dialog_raw_tag"
             android:layout_width="wrap_content"

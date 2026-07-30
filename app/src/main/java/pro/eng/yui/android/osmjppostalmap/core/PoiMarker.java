@@ -22,7 +22,9 @@ public class PoiMarker extends Marker {
 
     private final PoiType poiType;
     private ScheduleResult schedule;
+    private ScheduleResult limitedServiceSchedule;
     private final Paint ringPaint;
+    private final Paint innerRingPaint;
     private final Paint bgPaint;
     private final Paint symbolPaint;
     private static final float SIZE = 30f;
@@ -37,7 +39,12 @@ public class PoiMarker extends Marker {
         
         ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         ringPaint.setStyle(Paint.Style.STROKE);
-        ringPaint.setStrokeWidth(8f);
+        ringPaint.setStrokeWidth(6f);
+
+        innerRingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        innerRingPaint.setStyle(Paint.Style.STROKE);
+        innerRingPaint.setStrokeWidth(4f);
+        innerRingPaint.setColor(0xFFFF8888); // 淡い赤
         
         bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         int logoRed = ContextCompat.getColor(mapView.getContext(), R.color.jp_post_red);
@@ -58,6 +65,14 @@ public class PoiMarker extends Marker {
 
     public void setSchedule(ScheduleResult schedule) {
         this.schedule = schedule;
+    }
+
+    public ScheduleResult getLimitedServiceSchedule() {
+        return limitedServiceSchedule;
+    }
+
+    public void setLimitedServiceSchedule(ScheduleResult limitedServiceSchedule) {
+        this.limitedServiceSchedule = limitedServiceSchedule;
     }
 
     @Override
@@ -96,17 +111,37 @@ public class PoiMarker extends Marker {
         }
 
         // 外周リング
-        if (schedule != null && schedule.getCurrentState() != ScheduleResult.CurrentState.UNKNOWN) {
-            updateRingPaint(schedule);
+        ScheduleResult effectiveSchedule = schedule;
+        if (limitedServiceSchedule != null && 
+            (limitedServiceSchedule.getCurrentState() == ScheduleResult.CurrentState.OPENING || 
+             limitedServiceSchedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON)) {
+            effectiveSchedule = limitedServiceSchedule;
+        }
+
+        if (effectiveSchedule != null && effectiveSchedule.getCurrentState() != ScheduleResult.CurrentState.UNKNOWN) {
+            updateRingPaint(effectiveSchedule);
             float sweepAngle = 360f;
             long now = System.currentTimeMillis();
             
             // リングを少し外側に描画
-            float ringSize = size + (ringPaint.getStrokeWidth() / 2) - 1f;
+            float ringSize = size + ringPaint.getStrokeWidth() + 1f;
             RectF ringRect = new RectF(screenPos.x - ringSize, screenPos.y - ringSize, screenPos.x + ringSize, screenPos.y + ringSize);
 
-            if (schedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON && schedule.getNextEvent() != null) {
-                long remainingMillis = schedule.getNextEvent().getTimestamp().toInstant().toEpochMilli() - now;
+            // ゆうゆう窓口が営業中で通常窓口が閉まっている場合、内側に淡い赤のリング
+            if (limitedServiceSchedule == effectiveSchedule && schedule != null &&
+                    schedule.getCurrentState() != ScheduleResult.CurrentState.OPENING &&
+                    schedule.getCurrentState() != ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
+                float innerRingSize = size + (innerRingPaint.getStrokeWidth() / 2) + 0.5f;
+                RectF innerRingRect = new RectF(screenPos.x - innerRingSize, screenPos.y - innerRingSize, screenPos.x + innerRingSize, screenPos.y + innerRingSize);
+                if (poiType == PoiType.POST_OFFICE) {
+                    canvas.drawRoundRect(innerRingRect, 10f, 10f, innerRingPaint);
+                } else {
+                    canvas.drawArc(innerRingRect, -90f, 360f, false, innerRingPaint);
+                }
+            }
+
+            if (effectiveSchedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON && effectiveSchedule.getNextEvent() != null) {
+                long remainingMillis = effectiveSchedule.getNextEvent().getTimestamp().toInstant().toEpochMilli() - now;
                 float remainingMinutes = remainingMillis / 60000f;
                 if (remainingMinutes < 0) remainingMinutes = 0;
                 if (remainingMinutes > 60) remainingMinutes = 60;
@@ -114,7 +149,7 @@ public class PoiMarker extends Marker {
             }
             
             boolean showDot = false;
-            if (schedule.getCurrentState() == ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON && schedule.getNextEvent() != null) {
+            if (effectiveSchedule.getCurrentState() == ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON && effectiveSchedule.getNextEvent() != null) {
                 showDot = true;
             }
 
@@ -126,8 +161,8 @@ public class PoiMarker extends Marker {
                     canvas.drawArc(ringRect, -90f, 360f, false, ringPaint);
                 }
                 
-                int hour = schedule.getNextEvent().getTimestamp().getHour();
-                int minute = schedule.getNextEvent().getTimestamp().getMinute();
+                int hour = effectiveSchedule.getNextEvent().getTimestamp().getHour();
+                int minute = effectiveSchedule.getNextEvent().getTimestamp().getMinute();
                 float angle = (hour + minute / 60f) * 30f - 90f;
                 
                 Paint dotPaint = new Paint(ringPaint);
@@ -138,7 +173,7 @@ public class PoiMarker extends Marker {
                 float dotY = (float) (screenPos.y + ringSize * Math.sin(Math.toRadians(angle)));
                 canvas.drawCircle(dotX, dotY, 6f, dotPaint);
             } else {
-                if (schedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
+                if (effectiveSchedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
                     // 背景としてグレーのリングを描画
                     Paint bgRingPaint = new Paint(ringPaint);
                     bgRingPaint.setColor(0xFF808080);
@@ -163,10 +198,10 @@ public class PoiMarker extends Marker {
 
         // 〒 記号
         String symbol = "〒";
-        if (schedule != null) {
-            if (schedule.getCurrentState() == ScheduleResult.CurrentState.UNKNOWN) {
+        if (effectiveSchedule != null) {
+            if (effectiveSchedule.getCurrentState() == ScheduleResult.CurrentState.UNKNOWN) {
                 symbol = "？";
-            } else if (schedule.getCurrentState() == ScheduleResult.CurrentState.PARSE_ERROR) {
+            } else if (effectiveSchedule.getCurrentState() == ScheduleResult.CurrentState.PARSE_ERROR) {
                 symbol = "△";
             }
         }
