@@ -156,17 +156,34 @@ public class PoiDetailsDialog {
         // ゆうゆう窓口の表示
         if (!isPostBox) {
             View lsLayout = view.findViewById(R.id.dialog_limited_service_layout);
-            if (limitedServiceSchedule != null) {
+            TextView lsStatus = view.findViewById(R.id.dialog_limited_service_status);
+            TableLayout lsTable = view.findViewById(R.id.dialog_limited_service_weekly_table);
+            
+            String lsMail = poi.getTag("limited_service:mail");
+            
+            if ("yes".equals(lsMail) || limitedServiceSchedule != null) {
                 lsLayout.setVisibility(View.VISIBLE);
-                TextView lsStatus = view.findViewById(R.id.dialog_limited_service_status);
-                lsStatus.setText(limitedServiceSchedule.getTodayStatus());
-                TableLayout lsTable = view.findViewById(R.id.dialog_limited_service_weekly_table);
-                populateWeeklyTable(context, lsTable, limitedServiceSchedule, false);
+                if (limitedServiceSchedule != null) {
+                    lsStatus.setText(limitedServiceSchedule.getTodayStatus());
+                    populateWeeklyTable(context, lsTable, limitedServiceSchedule, false);
+                } else {
+                    lsStatus.setText("あり (詳細時間不明)");
+                    lsTable.removeAllViews();
+                }
                 
-                String raw = rawTagText.getText().toString();
-                rawTagText.setText(raw + "\nLS: " + limitedServiceSchedule.getRawTagValue().getOrigin());
+                if (limitedServiceSchedule != null) {
+                    String raw = rawTagText.getText().toString();
+                    rawTagText.setText(raw + "\nLS: " + limitedServiceSchedule.getRawTagValue().getOrigin());
+                }
+            } else if ("no".equals(lsMail)) {
+                lsLayout.setVisibility(View.VISIBLE);
+                lsStatus.setText("なし");
+                lsTable.removeAllViews();
             } else {
-                lsLayout.setVisibility(View.GONE);
+                // 不明
+                lsLayout.setVisibility(View.VISIBLE);
+                lsStatus.setText("不明");
+                lsTable.removeAllViews();
             }
         }
 

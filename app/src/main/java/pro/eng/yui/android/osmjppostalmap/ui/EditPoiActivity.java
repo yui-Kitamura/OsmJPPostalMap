@@ -28,6 +28,7 @@ import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import org.osmdroid.events.MapListener;
 import org.osmdroid.events.ScrollEvent;
 import org.osmdroid.events.ZoomEvent;
@@ -74,7 +75,7 @@ public class EditPoiActivity extends AppCompatActivity {
     private android.widget.CheckBox checkOhWdOff, checkOhSaOff, checkOhPhOff;
     private android.widget.CheckBox checkLsWdOff, checkLsSaOff, checkLsPhOff;
     private android.widget.CheckBox checkColWdOff, checkColSaOff, checkColPhOff;
-    private com.google.android.material.switchmaterial.SwitchMaterial switchLimitedService;
+    private RadioGroup radioLimitedService;
     private View layoutLimitedServiceEditRoot;
     private TableLayout tableLimitedService;
     private static final Pattern TIME_PATTERN = Pattern.compile("^([01]?[0-9]|2[0-3]):[0-5][0-9]$");
@@ -274,6 +275,12 @@ public class EditPoiActivity extends AppCompatActivity {
         View btnAddressEdit = findViewById(R.id.btn_address_edit);
 
         editSpecialNote = findViewById(R.id.edit_special_note_value);
+        TextInputLayout specialNoteLayout = findViewById(R.id.edit_special_note_layout);
+        if ("post_office".equals(targetPoi.getTag("amenity"))) {
+            specialNoteLayout.setHint(getString(R.string.label_special_note_postoffice));
+        } else {
+            specialNoteLayout.setHint(getString(R.string.label_special_note_postbox));
+        }
         String currentNote = targetPoi.getTag("note");
         if (currentNote != null) {
             editSpecialNote.setText(currentNote);
@@ -318,7 +325,7 @@ public class EditPoiActivity extends AppCompatActivity {
         checkColPhOff = findViewById(R.id.check_col_ph_off);
 
         layoutLimitedServiceEditRoot = findViewById(R.id.layout_limited_service_edit_root);
-        switchLimitedService = findViewById(R.id.switch_limited_service);
+        radioLimitedService = findViewById(R.id.radio_limited_service);
         tableLimitedService = findViewById(R.id.table_limited_service);
         editLsWdOpen = findViewById(R.id.edit_ls_wd_open);
         editLsWdClose = findViewById(R.id.edit_ls_wd_close);
@@ -336,8 +343,8 @@ public class EditPoiActivity extends AppCompatActivity {
         checkLsSaOff = findViewById(R.id.check_ls_sa_off);
         checkLsPhOff = findViewById(R.id.check_ls_ph_off);
 
-        switchLimitedService.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            tableLimitedService.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+        radioLimitedService.setOnCheckedChangeListener((group, checkedId) -> {
+            tableLimitedService.setVisibility(checkedId == R.id.radio_ls_yes ? View.VISIBLE : View.GONE);
         });
 
         android.widget.CompoundButton.OnCheckedChangeListener ohOffListener = (buttonView, isChecked) -> {
@@ -523,14 +530,28 @@ public class EditPoiActivity extends AppCompatActivity {
             }
 
             layoutLimitedServiceEditRoot.setVisibility(View.VISIBLE);
+            String lsMail = targetPoi.getTag("limited_service:mail");
             String lsHours = targetPoi.getTag("opening_hours:limited_service");
-            if (lsHours != null && !lsHours.isEmpty()) {
-                switchLimitedService.setChecked(true);
+            
+            if ("yes".equals(lsMail)) {
+                radioLimitedService.check(R.id.radio_ls_yes);
                 tableLimitedService.setVisibility(View.VISIBLE);
-                parseAndFillLimitedService(lsHours);
-            } else {
-                switchLimitedService.setChecked(false);
+            } else if ("no".equals(lsMail)) {
+                radioLimitedService.check(R.id.radio_ls_no);
                 tableLimitedService.setVisibility(View.GONE);
+            } else {
+                // 不明
+                if (lsHours != null && !lsHours.isEmpty()) {
+                    radioLimitedService.check(R.id.radio_ls_yes);
+                    tableLimitedService.setVisibility(View.VISIBLE);
+                } else {
+                    radioLimitedService.check(R.id.radio_ls_unknown);
+                    tableLimitedService.setVisibility(View.GONE);
+                }
+            }
+
+            if (lsHours != null && !lsHours.isEmpty()) {
+                parseAndFillLimitedService(lsHours);
             }
 
             btnForceEdit.setOnClickListener(v -> {
@@ -929,7 +950,9 @@ public class EditPoiActivity extends AppCompatActivity {
             }
 
             // Limited Service (Yu-Yu Window)
-            if (switchLimitedService.isChecked()) {
+            int selectedLsId = radioLimitedService.getCheckedRadioButtonId();
+            if (selectedLsId == R.id.radio_ls_yes) {
+                currentTags.put("limited_service:mail", "yes");
                 Map<Days, List<? extends ITagPart>> lsWeeklyTable = new HashMap<>();
                 
                 // 平日
@@ -977,7 +1000,12 @@ public class EditPoiActivity extends AppCompatActivity {
                 } else {
                     currentTags.remove("opening_hours:limited_service");
                 }
+            } else if (selectedLsId == R.id.radio_ls_no) {
+                currentTags.put("limited_service:mail", "no");
+                currentTags.remove("opening_hours:limited_service");
             } else {
+                // 不明
+                currentTags.remove("limited_service:mail");
                 currentTags.remove("opening_hours:limited_service");
             }
         }
