@@ -11,6 +11,8 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
+
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.text.SimpleDateFormat;
@@ -32,7 +34,39 @@ import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
 
 public class PoiDetailsDialog {
 
-    public static void show(Context context, OsmPoi poi, ScheduleResult schedule, ScheduleResult limitedServiceSchedule, Location currentLocation) {
+    private final Context context;
+    private final OsmPoi poi;
+    private ScheduleResult schedule;
+    private ScheduleResult limitedServiceSchedule;
+    private Location currentLocation;
+
+    private AlertDialog dialog;
+    private TextView statusText;
+    private TextView nextEventText;
+    private TableLayout table;
+    private TextView rawTagText;
+    private TextView checkDateText;
+    private TextView addressText;
+
+    private View lsLayout;
+    private TextView lsStatus;
+    private TableLayout lsTable;
+
+    public PoiDetailsDialog(Context context, OsmPoi poi, ScheduleResult schedule, ScheduleResult limitedServiceSchedule, Location currentLocation) {
+        this.context = context;
+        this.poi = poi;
+        this.schedule = schedule;
+        this.limitedServiceSchedule = limitedServiceSchedule;
+        this.currentLocation = currentLocation;
+    }
+
+    public static PoiDetailsDialog show(Context context, OsmPoi poi, ScheduleResult schedule, ScheduleResult limitedServiceSchedule, Location currentLocation) {
+        PoiDetailsDialog detailsDialog = new PoiDetailsDialog(context, poi, schedule, limitedServiceSchedule, currentLocation);
+        detailsDialog.show();
+        return detailsDialog;
+    }
+
+    public void show() {
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
 
         ScheduleParser.Amenity amenity =
@@ -57,12 +91,72 @@ public class PoiDetailsDialog {
         builder.setCustomTitle(titleView);
         
         View view = LayoutInflater.from(context).inflate(R.layout.dialog_poi_details, null);
-        TextView statusText = view.findViewById(R.id.dialog_status);
-        TextView nextEventText = view.findViewById(R.id.dialog_next_event);
-        TableLayout table = view.findViewById(R.id.dialog_weekly_table);
-        TextView rawTagText = view.findViewById(R.id.dialog_raw_tag);
-        TextView checkDateText = view.findViewById(R.id.dialog_check_date);
-        TextView addressText = view.findViewById(R.id.dialog_address);
+        statusText = view.findViewById(R.id.dialog_status);
+        nextEventText = view.findViewById(R.id.dialog_next_event);
+        table = view.findViewById(R.id.dialog_weekly_table);
+        rawTagText = view.findViewById(R.id.dialog_raw_tag);
+        checkDateText = view.findViewById(R.id.dialog_check_date);
+        addressText = view.findViewById(R.id.dialog_address);
+        
+        lsLayout = view.findViewById(R.id.dialog_limited_service_layout);
+        lsStatus = view.findViewById(R.id.dialog_limited_service_status);
+        lsTable = view.findViewById(R.id.dialog_limited_service_weekly_table);
+
+        updateUI();
+
+        builder.setView(view);
+        builder.setPositiveButton("閉じる", null);
+        builder.setNeutralButton("編集", (dialog, which) -> {
+            android.content.Intent intent = new android.content.Intent(context, pro.eng.yui.android.osmjppostalmap.ui.EditPoiActivity.class);
+            intent.putExtra("POI_ID", poi.getId());
+            intent.putExtra("POI_TYPE", poi.getType());
+            intent.putExtra("POI_LAT", poi.getLat());
+            intent.putExtra("POI_LON", poi.getLon());
+            intent.putExtra("POI_VER", poi.getVer());
+            
+            // すべてのタグを渡す（住所は編集画面側の住所編集ダイアログで編集する）
+            intent.putExtra("POI_TAGS",
+                    poi.getTags() != null ? new HashMap<>(poi.getTags()) : new HashMap<String, String>());
+
+            if (context instanceof MainActivity) {
+                MainActivity activity = (MainActivity) context;
+                org.osmdroid.views.MapView map = activity.findViewById(R.id.map);
+                if (map != null) {
+                    intent.putExtra("ZOOM_LEVEL", map.getZoomLevelDouble());
+                }
+                activity.launchEditPoi(intent);
+            } else {
+                context.startActivity(intent);
+            }
+        });
+        
+        dialog = builder.create();
+        dialog.show();
+    }
+
+    public void update(ScheduleResult schedule, ScheduleResult limitedServiceSchedule, Location currentLocation) {
+        this.schedule = schedule;
+        this.limitedServiceSchedule = limitedServiceSchedule;
+        this.currentLocation = currentLocation;
+        if (dialog != null && dialog.isShowing()) {
+            updateUI();
+        }
+    }
+
+    public boolean isShowing() {
+        return dialog != null && dialog.isShowing();
+    }
+
+    public OsmPoi getPoi() {
+        return poi;
+    }
+
+    private void updateUI() {
+        ScheduleParser.Amenity amenity =
+                "post_office".equals(poi.getTag("amenity")) ? 
+                ScheduleParser.Amenity.POST_OFFICE : 
+                ScheduleParser.Amenity.POST_BOX;
+        boolean isPostBox = (amenity == ScheduleParser.Amenity.POST_BOX);
 
         if (schedule != null) {
             statusText.setText(schedule.getTodayStatus());
@@ -155,10 +249,6 @@ public class PoiDetailsDialog {
 
         // ゆうゆう窓口の表示
         if (!isPostBox) {
-            View lsLayout = view.findViewById(R.id.dialog_limited_service_layout);
-            TextView lsStatus = view.findViewById(R.id.dialog_limited_service_status);
-            TableLayout lsTable = view.findViewById(R.id.dialog_limited_service_weekly_table);
-            
             String lsMail = poi.getTag("limited_service:mail");
             
             if ("yes".equals(lsMail) || limitedServiceSchedule != null) {
@@ -173,7 +263,9 @@ public class PoiDetailsDialog {
                 
                 if (limitedServiceSchedule != null) {
                     String raw = rawTagText.getText().toString();
-                    rawTagText.setText(raw + "\nLS: " + limitedServiceSchedule.getRawTagValue().getOrigin());
+                    if (!raw.contains("LS: ")) {
+                        rawTagText.setText(raw + "\nLS: " + limitedServiceSchedule.getRawTagValue().getOrigin());
+                    }
                 }
             } else if ("no".equals(lsMail)) {
                 lsLayout.setVisibility(View.VISIBLE);
@@ -215,34 +307,6 @@ public class PoiDetailsDialog {
             }
         }
         addressText.setText(displayAddress);
-
-        builder.setView(view);
-        builder.setPositiveButton("閉じる", null);
-        builder.setNeutralButton("編集", (dialog, which) -> {
-            android.content.Intent intent = new android.content.Intent(context, pro.eng.yui.android.osmjppostalmap.ui.EditPoiActivity.class);
-            intent.putExtra("POI_ID", poi.getId());
-            intent.putExtra("POI_TYPE", poi.getType());
-            intent.putExtra("POI_LAT", poi.getLat());
-            intent.putExtra("POI_LON", poi.getLon());
-            intent.putExtra("POI_VER", poi.getVer());
-            
-            // すべてのタグを渡す（住所は編集画面側の住所編集ダイアログで編集する）
-            intent.putExtra("POI_TAGS",
-                    poi.getTags() != null ? new HashMap<>(poi.getTags()) : new HashMap<String, String>());
-
-            if (context instanceof MainActivity) {
-                MainActivity activity = (MainActivity) context;
-                org.osmdroid.views.MapView map = activity.findViewById(R.id.map);
-                if (map != null) {
-                    intent.putExtra("ZOOM_LEVEL", map.getZoomLevelDouble());
-                }
-                activity.launchEditPoi(intent);
-            } else {
-                context.startActivity(intent);
-            }
-        });
-        
-        builder.show();
     }
 
     private static void populateWeeklyTable(Context context, TableLayout table, ScheduleResult schedule, boolean isPostBox) {

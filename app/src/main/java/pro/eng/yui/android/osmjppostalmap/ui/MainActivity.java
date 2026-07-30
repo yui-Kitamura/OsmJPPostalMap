@@ -90,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
     );
     private final AtomicInteger markerRenderGeneration = new AtomicInteger();
     private ActivityResultLauncher<Intent> editPoiLauncher;
+    private PoiDetailsDialog currentPoiDetailsDialog;
 
     private enum UpdateMode {
         NORMAL,           // 11海里制限あり
@@ -331,7 +332,7 @@ public class MainActivity extends AppCompatActivity {
                             final MarkerEntry clickEntry = entry;
                             entry.marker.setOnMarkerClickListener((m, mapView) -> {
                                 PoiMarker pm = (PoiMarker) m;
-                                PoiDetailsDialog.show(this, clickEntry.poi, pm.getSchedule(), pm.getLimitedServiceSchedule(), lastLocation);
+                                currentPoiDetailsDialog = PoiDetailsDialog.show(this, clickEntry.poi, pm.getSchedule(), pm.getLimitedServiceSchedule(), lastLocation);
                                 return true;
                             });
                             markerCache.put(key, entry);
@@ -710,7 +711,37 @@ public class MainActivity extends AppCompatActivity {
         }
         if (authRepository != null && viewModel != null) {
             viewModel.updateAccessToken(authRepository.getAccessToken());
+
+            // マーカーの状態を強制的に再解析させる
+            for (MarkerEntry entry : markerCache.values()) {
+                entry.stateSource = null;
+            }
             viewModel.forceRefresh(); // リングの状態などを最新時刻で再評価
+        }
+
+        // ダイアログが表示中なら、スケジュールを再計算して更新する
+        if (currentPoiDetailsDialog != null && currentPoiDetailsDialog.isShowing()) {
+            OsmPoi poi = currentPoiDetailsDialog.getPoi();
+            boolean postOffice = "post_office".equals(poi.getTag("amenity"));
+            TextValue tagValue = postOffice
+                    ? new OpeningHours(poi.getTag("opening_hours"))
+                    : new CollectionTimes(poi.getTag("collection_times"));
+            ScheduleParser.TimeType timeType = postOffice
+                    ? ScheduleParser.TimeType.OPENING_HOURS
+                    : ScheduleParser.TimeType.COLLECTION_TIMES;
+
+            ScheduleResult main = new SimpleScheduleParser().parse(
+                    tagValue, System.currentTimeMillis(), timeType);
+
+            ScheduleResult ls = null;
+            if (postOffice) {
+                String lsTag = poi.getTag("opening_hours:limited_service");
+                if (lsTag != null && !lsTag.isEmpty()) {
+                    ls = new SimpleScheduleParser().parse(
+                            new OpeningHours(lsTag), System.currentTimeMillis(), ScheduleParser.TimeType.OPENING_HOURS);
+                }
+            }
+            currentPoiDetailsDialog.update(main, ls, lastLocation);
         }
 
         // 時計ボタンなどの描画を更新
