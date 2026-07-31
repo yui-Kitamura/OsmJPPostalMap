@@ -160,5 +160,14 @@
         android:textAllCaps="false"
         android:gravity="start|center_vertical" />
 
+    <Button
+        android:id="@+id/btn_github_issues"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/settings_github_issues_link"
+        android:textAllCaps="false"
+        android:gravity="start|center_vertical" />
+
     </LinearLayout>
 </RelativeLayout>

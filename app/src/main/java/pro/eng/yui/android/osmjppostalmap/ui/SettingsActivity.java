@@ -105,6 +105,11 @@ public class SettingsActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
+        findViewById(R.id.btn_github_issues).setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.url_github_issues)));
+            startActivity(intent);
+        });
+
         findViewById(R.id.btn_delete_cache).setOnClickListener(v -> {
             new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.settings_map_cache_title)

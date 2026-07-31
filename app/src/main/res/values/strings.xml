@@ -4,8 +4,10 @@
     <string name="settings_license_title">ライセンス</string>
     <string name="settings_osm_copyright_link">OpenStreetMapの著作権とライセンス</string>
     <string name="settings_github_link">GitHubリポジトリ (ソースコード)</string>
+    <string name="settings_github_issues_link">不具合報告</string>
     <string name="url_osm_copyright">https://www.openstreetmap.org/copyright</string>
     <string name="url_github_repo">https://github.com/yui-Kitamura/OsmJPPostalMap</string>
+    <string name="url_github_issues">https://github.com/yui-Kitamura/OsmJPPostalMap/issues</string>
     <string name="settings_map_cache_title">地図キャッシュ</string>
     <string name="settings_delete_map_cache">地図キャッシュを削除</string>
     <string name="settings_delete_map_cache_confirm">地図キャッシュを削除しますか？\n削除すると再度ダウンロードが必要になります。</string>
