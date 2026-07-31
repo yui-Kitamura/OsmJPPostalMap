@@ -633,6 +633,7 @@ public class EditPoiActivity extends AppCompatActivity {
             for (EditText et : ohEditors) {
                 if (et != null) {
                     Util.addNumberFilter(et);
+                    Util.addTimeParseHandler(et);
                     et.addTextChangedListener(new OhTextWatcher(et));
                     applyCellStyles(et, et.getText().toString(), false);
                 }
@@ -1211,6 +1212,7 @@ public class EditPoiActivity extends AppCompatActivity {
             et.setHint("--:--");
             et.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
             Util.addNumberFilter(et);
+            Util.addTimeParseHandler(et);
             et.setGravity(Gravity.CENTER);
             et.setText(Util.normalizeNumber(initialValues[i]));
             
