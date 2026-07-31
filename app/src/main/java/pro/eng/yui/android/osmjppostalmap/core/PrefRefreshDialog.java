@@ -518,8 +518,6 @@ public class PrefRefreshDialog {
                 + "\nデータ源更新日:\t" + sourceDate);
         dateView.setTextSize(12f);
 
-        final TextView finalDateView = dateView;
-
         row.addView(dateView);
         return row;
     }
