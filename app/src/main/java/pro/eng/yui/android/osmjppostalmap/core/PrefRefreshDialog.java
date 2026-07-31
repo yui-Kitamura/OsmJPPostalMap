@@ -245,7 +245,7 @@ public class PrefRefreshDialog {
 
                 if (context instanceof AppCompatActivity) {
                     ((AppCompatActivity) context).runOnUiThread(() -> {
-                        container.removeView(progressBar);
+                        container.removeAllViews();
                         if (allItems.isEmpty()) {
                             emptyText.setVisibility(View.VISIBLE);
                         } else {
