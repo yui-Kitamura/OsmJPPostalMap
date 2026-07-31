@@ -1090,7 +1090,7 @@ public class EditPoiActivity extends AppCompatActivity {
                     pos.getLongitude(),
                     targetPoi.getType(),
                     currentTags,
-                    targetPoi.getVer()
+                    targetPoi.getVer() + 1
             );
             String poiName = updatedPoi.getTag("name");
             if (poiName == null) {

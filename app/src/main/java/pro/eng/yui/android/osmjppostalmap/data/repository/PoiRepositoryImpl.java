@@ -15,7 +15,6 @@ import androidx.core.app.ActivityCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
@@ -466,23 +465,40 @@ public class PoiRepositoryImpl implements PoiRepository {
             fetchedMap.put(p.getType() + ":" + p.getId(), p);
         }
 
+        List<OsmPoi> result = new ArrayList<>();
         List<OsmPoi> missing = new ArrayList<>();
-        for (OsmPoi p : cached) {
-            String key = p.getType() + ":" + p.getId();
-            if (!fetchedMap.containsKey(key)) {
-                missing.add(p);
+
+        // 1. キャッシュされているデータを走査し、フェッチしたデータと比較
+        for (OsmPoi c : cached) {
+            String key = c.getType() + ":" + c.getId();
+            if (fetchedMap.containsKey(key)) {
+                OsmPoi f = fetchedMap.get(key);
+                if (c.getVer() > f.getVer()) {
+                    // キャッシュの方が新しい（ユーザーが編集済み）
+                    result.add(c);
+                } else {
+                    // フェッチしたデータの方が新しいか同じ
+                    result.add(f);
+                }
+                // 処理済みとしてフェッチマップから削除
+                fetchedMap.remove(key);
+            } else {
+                // フェッチしたデータに含まれていない場合、削除された可能性がある
+                missing.add(c);
             }
         }
 
+        // 2. フェッチしたデータのうち、キャッシュになかったものを追加
+        result.addAll(fetchedMap.values());
+
         if (missing.isEmpty()) {
-            return fetched;
+            return result;
         }
 
-        // Overpassで存在確認
+        // 3. フェッチに含まれなかったキャッシュデータの存在確認（Overpass）
         List<OsmPoi> stillExists = verifyMissingPois(missing);
-
-        List<OsmPoi> result = new ArrayList<>(fetched);
         result.addAll(stillExists);
+
         return result;
     }
 
@@ -789,17 +805,25 @@ public class PoiRepositoryImpl implements PoiRepository {
                 OsmPoi newPoi = new OsmPoi(lat, lon, "node", poiTags);
                 // OSM API call
                 postProgress(callback, "入力内容を送信中…");
-                JpPostalUtil.callOsmCreateOrModifyElement(accessToken, csIdInfo, newPoi).join();
+                String osmResult = JpPostalUtil.callOsmCreateOrModifyElement(accessToken, csIdInfo, newPoi).join();
                 postProgress(callback, "Changesetを確定中…");
                 JpPostalUtil.callOsmCloseChangeset(accessToken, csIdInfo).join();
 
                 postSuccess(callback);
 
                 // ローカルSQLiteへ即時反映。
-                // 注: callOsmCreateOrModifyElement が採番IDを返さないため、
-                //     暫定的に一意な負のidで保存する（次回の県フル更新で正規データに置換される）。
-                long tempId = -System.currentTimeMillis();
-                OsmPoi cachePoi = new OsmPoi(tempId, lat, lon, "node", poiTags, 0);
+                long finalId = -System.currentTimeMillis();
+                String finalType = "node";
+                if (osmResult != null && osmResult.contains("#")) {
+                    try {
+                        String[] parts = osmResult.split("#");
+                        finalType = parts[0];
+                        finalId = Long.parseLong(parts[1]);
+                    } catch (Exception e) {
+                        Log.e("PoiRepository", "Failed to parse OSM result: " + osmResult, e);
+                    }
+                }
+                OsmPoi cachePoi = new OsmPoi(finalId, lat, lon, finalType, poiTags, 1);
                 executor.execute(() -> cacheEditedPoi(cachePoi));
             } catch (Exception e) {
                 Log.e("PoiRepository", "Failed to add post box", e);
