@@ -3,6 +3,7 @@ package pro.eng.yui.android.osmjppostalmap.search;
 import java.util.ArrayList;
 import java.util.List;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
+import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
 public class PostOfficeSearchEngine implements SearchEngine {
@@ -27,7 +28,8 @@ public class PostOfficeSearchEngine implements SearchEngine {
             if (name == null) continue;
 
             SearchResult.Type type = "post_box".equals(amenity) ? SearchResult.Type.POST_BOX : SearchResult.Type.POST_OFFICE;
-            String subTitle = "post_box".equals(amenity) ? "郵便ポスト" : "郵便局";
+            String address = JpPostalUtil.getAddressText(poi.getTags());
+            String subTitle = !address.isEmpty() ? address : ("post_box".equals(amenity) ? "郵便ポスト" : "郵便局");
 
             if (name.equals(q)) {
                 results.add(new SearchResult(type, name, subTitle, poi.getLat(), poi.getLon(), 1.0, poi));

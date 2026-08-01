@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
+import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
 public class AddressSearchEngine implements SearchEngine {
@@ -71,20 +72,7 @@ public class AddressSearchEngine implements SearchEngine {
     }
 
     private String getFullAddress(OsmPoi poi) {
-        String pref = poi.getTag("addr:province");
-        if (pref == null) pref = poi.getTag("addr:prefecture");
-        String city = poi.getTag("addr:city");
-        String suburb = poi.getTag("addr:suburb");
-        String street = poi.getTag("addr:street");
-        String housenumber = poi.getTag("addr:housenumber");
-        
-        StringBuilder sb = new StringBuilder();
-        if (pref != null) sb.append(pref);
-        if (city != null) sb.append(city);
-        if (suburb != null) sb.append(suburb);
-        if (street != null) sb.append(street);
-        if (housenumber != null) sb.append(housenumber);
-        
-        return sb.toString();
+        String address = JpPostalUtil.getAddressText(poi.getTags());
+        return address.isEmpty() ? "" : address;
     }
 }
