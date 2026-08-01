@@ -262,6 +262,17 @@ public class PoiLocalDataSource {
         return result;
     }
 
+    public List<PlaceInfo> getAllPlaces() {
+        SQLiteDatabase db = helper.getReadableDatabase();
+        List<PlaceInfo> result = new ArrayList<>();
+        try (Cursor c = db.query(PoiDbHelper.TABLE_PLACE, null, null, null, null, null, null)) {
+            while (c.moveToNext()) {
+                result.add(fromPlaceCursor(c));
+            }
+        }
+        return result;
+    }
+
     private PlaceInfo fromPlaceCursor(Cursor c) {
         return new PlaceInfo(
                 c.getInt(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_PREF_CODE)),

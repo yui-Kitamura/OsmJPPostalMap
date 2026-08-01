@@ -110,6 +110,8 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final Map<String, BBox> prefBoundaryCache = new java.util.concurrent.ConcurrentHashMap<>();
     /** 都道府県コードから都道府県名へのマッピング */
     private final Map<Integer, String> prefCodeNameMap = new java.util.concurrent.ConcurrentHashMap<>();
+    /** 市区町村情報のキャッシュ（検索用） */
+    private final List<PlaceInfo> placeCache = Collections.synchronizedList(new ArrayList<>());
 
     private static PoiRepositoryImpl instance;
 
@@ -132,6 +134,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             repo.preloadBoundaries();
             repo.loadAllFromCache();
             repo.loadGridCacheFromDb();
+            repo.loadPlacesFromCache();
         }
         if (repo.locationManager == null) {
             repo.locationManager = (LocationManager) repo.context.getSystemService(Context.LOCATION_SERVICE);
@@ -464,6 +467,10 @@ public class PoiRepositoryImpl implements PoiRepository {
                 }
                 if (local != null) {
                     local.upsertPlaces(places);
+                    synchronized (placeCache) {
+                        placeCache.clear();
+                        placeCache.addAll(places);
+                    }
                 }
             } catch (Exception e) {
                 Log.e("PoiRepository", "Failed to fetch city data", e);
@@ -473,8 +480,37 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public List<PlaceInfo> searchPlaces(String query) {
-        if (local == null) return new ArrayList<>();
-        return local.searchPlaces(query);
+        if (query == null || query.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        String q = query.trim().toLowerCase();
+        List<PlaceInfo> results = new ArrayList<>();
+        synchronized (placeCache) {
+            for (PlaceInfo place : placeCache) {
+                if (place.getName().toLowerCase().contains(q)) {
+                    results.add(place);
+                }
+            }
+        }
+        // キャッシュが空の場合は念のためDBからも探す（初回起動時など）
+        if (results.isEmpty() && local != null) {
+            return local.searchPlaces(query);
+        }
+        return results;
+    }
+
+    /**
+     * SQLiteに保存されている市区町村データをメモリキャッシュへ読み込む。
+     */
+    private void loadPlacesFromCache() {
+        if (local == null) return;
+        executor.execute(() -> {
+            List<PlaceInfo> places = local.getAllPlaces();
+            synchronized (placeCache) {
+                placeCache.clear();
+                placeCache.addAll(places);
+            }
+        });
     }
 
     @Override
