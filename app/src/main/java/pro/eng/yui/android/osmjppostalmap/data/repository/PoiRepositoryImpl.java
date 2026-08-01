@@ -26,6 +26,7 @@ import com.google.gson.Gson;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.text.Normalizer;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -483,11 +484,12 @@ public class PoiRepositoryImpl implements PoiRepository {
         if (query == null || query.trim().isEmpty()) {
             return new ArrayList<>();
         }
-        String q = query.trim().toLowerCase();
+        String q = Normalizer.normalize(query.trim(), Normalizer.Form.NFKC).toLowerCase();
         List<PlaceInfo> results = new ArrayList<>();
         synchronized (placeCache) {
             for (PlaceInfo place : placeCache) {
-                if (place.getName().toLowerCase().contains(q)) {
+                String normalizedName = Normalizer.normalize(place.getName(), Normalizer.Form.NFKC).toLowerCase();
+                if (normalizedName.contains(q)) {
                     results.add(place);
                 }
             }

@@ -20,12 +20,13 @@ public class PlaceSearchEngine implements SearchEngine {
             return new ArrayList<>();
         }
 
-        List<PlaceInfo> places = repository.searchPlaces(query);
+        String trimmedQuery = query.trim();
+        List<PlaceInfo> places = repository.searchPlaces(trimmedQuery);
         List<SearchResult> results = new ArrayList<>();
 
         for (PlaceInfo place : places) {
             double weight = 40.0;
-            if (place.getName().equals(query)) {
+            if (place.getName().equals(trimmedQuery)) {
                 weight = 60.0;
             }
 
