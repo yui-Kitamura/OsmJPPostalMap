@@ -52,6 +52,8 @@ import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
 import pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.TextValue;
+import pro.eng.yui.android.osmjppostalmap.search.SearchDialog;
+import pro.eng.yui.android.osmjppostalmap.search.SearchResult;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -412,6 +414,33 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Search Button
+        findViewById(R.id.search_button).setOnClickListener(v -> {
+            SearchDialog dialog = new SearchDialog();
+            dialog.setOnResultSelectedListener(new SearchDialog.OnResultSelectedListener() {
+                @Override
+                public void onPostOfficeSelected(OsmPoi poi) {
+                    navigateToPoi(poi);
+                }
+
+                @Override
+                public void onPlaceCenterSelected(SearchResult result) {
+                    // TODO: 地名検索実装時に対応
+                }
+
+                @Override
+                public void onPlaceAreaSelected(SearchResult result) {
+                    // TODO: 地名検索実装時に対応
+                }
+
+                @Override
+                public void onAddressSelected(OsmPoi poi) {
+                    navigateToPoi(poi);
+                }
+            });
+            dialog.show(getSupportFragmentManager(), "search");
+        });
+
         // Add PostBox Button
         findViewById(R.id.add_postbox_button).setOnClickListener(v -> {
             Intent intent = new Intent(this, EditPoiActivity.class);
@@ -558,6 +587,25 @@ public class MainActivity extends AppCompatActivity {
             return new GeoPoint(latitude, longitude);
         }
         return TOKYO_CENTRAL_POST_OFFICE;
+    }
+
+    private void navigateToPoi(OsmPoi poi) {
+        GeoPoint point = new GeoPoint(poi.getLat(), poi.getLon());
+        map.getController().animateTo(point);
+        map.getController().setZoom(19.0);
+
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        boolean isPostOffice = "post_office".equals(poi.getTag("amenity"));
+        ScheduleResult sr;
+        ScheduleResult lsr = null;
+        if (isPostOffice) {
+            sr = parser.parseOpeningHours(poi.getTag("opening_hours"));
+            lsr = parser.parseOpeningHours(poi.getTag("opening_hours:limited"));
+        } else {
+            sr = parser.parseCollectionTimes(poi.getTag("collection_times"));
+        }
+
+        currentPoiDetailsDialog = PoiDetailsDialog.show(this, poi, sr, lsr, lastLocation);
     }
 
     private void updatePois(boolean forceNotify, UpdateMode mode) {

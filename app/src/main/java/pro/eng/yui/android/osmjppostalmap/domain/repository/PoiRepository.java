@@ -41,6 +41,11 @@ public interface PoiRepository {
      * ローカルに保存済みの都道府県メタ情報の一覧を返す（更新ダイアログ表示用）。
      */
     List<PrefMeta> getSavedPrefectures();
+    
+    /**
+     * ローカルに保存済みのすべてのPOIを返す。
+     */
+    List<OsmPoi> getAllCachedPois();
 
     /**
      * データ鮮度情報 (date.json) を取得する

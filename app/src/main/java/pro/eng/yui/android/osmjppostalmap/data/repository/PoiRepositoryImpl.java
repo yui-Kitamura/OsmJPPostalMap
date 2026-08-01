@@ -427,8 +427,12 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public List<PrefMeta> getSavedPrefectures() {
-        if (local == null) { return new ArrayList<>(); }
         return local.getAllPrefMeta();
+    }
+
+    @Override
+    public List<OsmPoi> getAllCachedPois() {
+        return local.getAllPois();
     }
 
     @Override
