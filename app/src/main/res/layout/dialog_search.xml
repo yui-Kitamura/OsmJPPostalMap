@@ -17,7 +17,7 @@
         android:id="@+id/search_input"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="甲府"
+        android:hint="例）甲府"
         android:inputType="text"
         android:maxLines="1"
         android:imeOptions="actionSearch" />
