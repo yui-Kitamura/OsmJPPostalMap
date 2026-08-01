@@ -202,18 +202,16 @@ public class SearchDialog extends DialogFragment {
                 subtitle.setText(result.getSubTitle());
 
                 // Set icon
-                switch (result.getType()) {
-                    case POST_OFFICE:
-                        icon.setImageResource(R.drawable.ic_search_post_office);
-                        break;
-                    case POST_BOX:
-                        icon.setImageResource(R.drawable.ic_search_post_box);
-                        break;
-                    case PLACE:
-                    case ADDRESS:
-                    default:
-                        icon.setImageResource(R.drawable.ic_search_pin_blue);
-                        break;
+                if (result.getType() == SearchResult.Type.POST_OFFICE || result.getType() == SearchResult.Type.POST_BOX) {
+                    icon.setImageDrawable(new SearchResultIconDrawable(itemView.getContext(), result.getType(), result.getSchedule(), result.getLimitedServiceSchedule()));
+                } else {
+                    switch (result.getType()) {
+                        case PLACE:
+                        case ADDRESS:
+                        default:
+                            icon.setImageResource(R.drawable.ic_search_pin_blue);
+                            break;
+                    }
                 }
 
                 btnShow.setVisibility(View.GONE);

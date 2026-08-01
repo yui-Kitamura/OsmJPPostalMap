@@ -2,6 +2,8 @@ package pro.eng.yui.android.osmjppostalmap.search;
 
 import androidx.annotation.NonNull;
 
+import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
+
 public class SearchResult implements Comparable<SearchResult> {
     public enum Type {
         POST_OFFICE,
@@ -17,6 +19,8 @@ public class SearchResult implements Comparable<SearchResult> {
     private final double lon;
     private final double weight;
     private final Object originalData;
+    private ScheduleResult schedule;
+    private ScheduleResult limitedServiceSchedule;
 
     public SearchResult(Type type, String title, String subTitle, double lat, double lon, double weight, Object originalData) {
         this.type = type;
@@ -35,6 +39,22 @@ public class SearchResult implements Comparable<SearchResult> {
     public double getLon() { return lon; }
     public double getWeight() { return weight; }
     public Object getOriginalData() { return originalData; }
+
+    public ScheduleResult getSchedule() {
+        return schedule;
+    }
+
+    public void setSchedule(ScheduleResult schedule) {
+        this.schedule = schedule;
+    }
+
+    public ScheduleResult getLimitedServiceSchedule() {
+        return limitedServiceSchedule;
+    }
+
+    public void setLimitedServiceSchedule(ScheduleResult limitedServiceSchedule) {
+        this.limitedServiceSchedule = limitedServiceSchedule;
+    }
 
     @Override
     public int compareTo(@NonNull SearchResult other) {

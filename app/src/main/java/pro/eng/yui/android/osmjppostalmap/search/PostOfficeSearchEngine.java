@@ -3,8 +3,13 @@ package pro.eng.yui.android.osmjppostalmap.search;
 import java.util.ArrayList;
 import java.util.List;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
+import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
+import pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser;
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.CollectionTimes;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.OpeningHours;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.TextValue;
 
 public class PostOfficeSearchEngine implements SearchEngine {
     private final PoiRepository repository;
@@ -56,7 +61,27 @@ public class PostOfficeSearchEngine implements SearchEngine {
             String displayTitle = (name != null) ? name : ("post_box".equals(amenity) ? "郵便ポスト" : "無名郵便局");
             String subTitle = !address.isEmpty() ? address : ("post_box".equals(amenity) ? "郵便ポスト" : "郵便局");
 
-            results.add(new SearchResult(type, displayTitle, subTitle, poi.getLat(), poi.getLon(), weight, poi));
+            SearchResult result = new SearchResult(type, displayTitle, subTitle, poi.getLat(), poi.getLon(), weight, poi);
+            
+            SimpleScheduleParser parser = new SimpleScheduleParser();
+            long now = System.currentTimeMillis();
+            boolean isPostOffice = (type == SearchResult.Type.POST_OFFICE);
+            
+            String tagName = isPostOffice ? "opening_hours" : "collection_times";
+            ScheduleParser.TimeType timeType = isPostOffice ? 
+                    ScheduleParser.TimeType.OPENING_HOURS : ScheduleParser.TimeType.COLLECTION_TIMES;
+            TextValue tagValue = isPostOffice ? 
+                    new OpeningHours(poi.getTag(tagName)) : new CollectionTimes(poi.getTag(tagName));
+            
+            result.setSchedule(parser.parse(tagValue, now, timeType));
+            
+            if (isPostOffice) {
+                String lsTag = poi.getTag("opening_hours:limited_service");
+                if (lsTag != null) {
+                    result.setLimitedServiceSchedule(parser.parse(new OpeningHours(lsTag), now, ScheduleParser.TimeType.OPENING_HOURS));
+                }
+            }
+            results.add(result);
         }
         return results;
     }
