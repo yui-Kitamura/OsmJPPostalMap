@@ -38,20 +38,20 @@ public class PostOfficeSearchEngine implements SearchEngine {
             if (name != null) {
                 if (name.equals(q)) {
                     match = true;
-                    weight = 1.0;
+                    weight = 100.0;
                 } else if (name.contains(q)) {
                     match = true;
-                    weight = 0.5;
+                    weight = 80.0;
                 }
             }
             
             if (!match && !address.isEmpty()) {
                 if (address.equals(q)) {
                     match = true;
-                    weight = 0.8;
+                    weight = 30.0;
                 } else if (address.contains(q)) {
                     match = true;
-                    weight = 0.4;
+                    weight = 20.0;
                 }
             }
 

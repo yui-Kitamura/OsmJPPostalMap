@@ -24,9 +24,9 @@ public class PlaceSearchEngine implements SearchEngine {
         List<SearchResult> results = new ArrayList<>();
 
         for (PlaceInfo place : places) {
-            double weight = 0.5;
+            double weight = 40.0;
             if (place.getName().equals(query) || place.getNameKana().equals(query)) {
-                weight = 1.0;
+                weight = 60.0;
             }
 
             double lat = place.getLat();

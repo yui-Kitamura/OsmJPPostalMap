@@ -33,13 +33,16 @@ public class AddressSearchEngine implements SearchEngine {
             Map<String, String> tags = poi.getTags();
             if (tags == null) continue;
 
+            String amenity = poi.getTag("amenity");
+            boolean isPO = "post_office".equals(amenity) || "post_box".equals(amenity);
+
             String fullAddress = getFullAddress(poi);
             if (fullAddress.equals(q)) {
                 match = true;
-                weight = 1.0;
+                weight = isPO ? 30.0 : 10.0;
             } else if (fullAddress.contains(q)) {
                 match = true;
-                weight = 0.8; // フルアドレス一致は個別のタグ一致より優先度高めにする
+                weight = isPO ? 20.0 : 5.0;
             }
 
             if (!match) {
@@ -49,10 +52,10 @@ public class AddressSearchEngine implements SearchEngine {
                         if (value == null) continue;
                         if (value.equals(q)) {
                             match = true;
-                            weight = Math.max(weight, 1.0);
+                            weight = Math.max(weight, isPO ? 30.0 : 10.0);
                         } else if (value.contains(q)) {
                             match = true;
-                            weight = Math.max(weight, 0.5);
+                            weight = Math.max(weight, isPO ? 20.0 : 5.0);
                         }
                     }
                 }
@@ -61,7 +64,7 @@ public class AddressSearchEngine implements SearchEngine {
             if (match) {
                 String title = poi.getTag("name");
                 SearchResult.Type resultType = SearchResult.Type.ADDRESS;
-                String amenity = poi.getTag("amenity");
+                // String amenity = poi.getTag("amenity"); // Moved up
 
                 if (title == null) {
                     if ("post_office".equals(amenity)) {

@@ -157,7 +157,7 @@ class SearchEngineTest {
         
         // Sort results
         java.util.Collections.sort(results);
-        assertEquals(1.0, results.get(0).getWeight());
+        assertEquals(100.0, results.get(0).getWeight());
         assertEquals("甲府", results.get(0).getTitle());
     }
 
@@ -174,18 +174,60 @@ class SearchEngineTest {
         // Exact match
         List<SearchResult> results = engine.search("甲府市");
         assertEquals(1, results.size());
-        assertEquals(1.0, results.get(0).getWeight());
+        assertEquals(60.0, results.get(0).getWeight());
         assertEquals("甲府市", results.get(0).getTitle());
         assertTrue(results.get(0).getOriginalData() instanceof pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo);
 
         // Partial match
         results = engine.search("甲府");
         assertEquals(1, results.size());
-        assertEquals(0.5, results.get(0).getWeight());
+        assertEquals(40.0, results.get(0).getWeight());
 
         // Kana match
         results = engine.search("コウフ");
         assertEquals(1, results.size());
-        assertEquals(0.5, results.get(0).getWeight());
+        assertEquals(40.0, results.get(0).getWeight());
+    }
+    
+    @Test
+    void testScoringStrategy() {
+        // 1. PO Name Match (Partial)
+        Map<String, String> tags1 = new HashMap<>();
+        tags1.put("amenity", "post_office");
+        tags1.put("name", "甲府中央郵便局");
+        mockPois.add(new OsmPoi(1L, 35.0, 138.0, "node", tags1, 1L));
+        
+        // 2. Place Name Match (Exact)
+        List<pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo> mockPlaces = new ArrayList<>();
+        mockPlaces.add(new pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo(
+                19, "山梨県", "甲府市", "コウフシ", 35.0, 138.0, 35.0, 35.0, 138.0, 138.0
+        ));
+        ((TestPoiRepository)repository).setMockPlaces(mockPlaces);
+        
+        // 3. Address Match (PO)
+        Map<String, String> tags3 = new HashMap<>();
+        tags3.put("amenity", "post_office");
+        tags3.put("name", "竜王郵便局");
+        tags3.put("addr:city", "甲府市");
+        mockPois.add(new OsmPoi(3L, 35.0, 138.0, "node", tags3, 1L));
+        
+        String query = "甲府市";
+        List<SearchResult> allResults = new ArrayList<>();
+        allResults.addAll(new PostOfficeSearchEngine(repository).search(query));
+        allResults.addAll(new PlaceSearchEngine(repository).search(query));
+        allResults.addAll(new AddressSearchEngine(repository).search(query));
+        
+        java.util.Collections.sort(allResults);
+        
+        // Hierarchy: PO Name (80.0) > Place Name (60.0) > PO Address (20.0)
+        assertEquals("甲府中央郵便局", allResults.get(0).getTitle());
+        assertEquals(80.0, allResults.get(0).getWeight());
+        
+        assertEquals("甲府市", allResults.get(1).getTitle());
+        assertEquals(SearchResult.Type.PLACE, allResults.get(1).getType());
+        assertEquals(60.0, allResults.get(1).getWeight());
+        
+        assertEquals("竜王郵便局", allResults.get(2).getTitle());
+        assertEquals(20.0, allResults.get(2).getWeight());
     }
 }
