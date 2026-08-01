@@ -598,11 +598,16 @@ public class MainActivity extends AppCompatActivity {
         boolean isPostOffice = "post_office".equals(poi.getTag("amenity"));
         ScheduleResult sr;
         ScheduleResult lsr = null;
+
+        long now = System.currentTimeMillis();
         if (isPostOffice) {
-            sr = parser.parseOpeningHours(poi.getTag("opening_hours"));
-            lsr = parser.parseOpeningHours(poi.getTag("opening_hours:limited"));
+            OpeningHours tagValue = new OpeningHours(poi.getTag("opening_hours"));
+            sr = parser.parse(tagValue, now, ScheduleParser.TimeType.OPENING_HOURS);
+            tagValue = new OpeningHours(poi.getTag("opening_hours:limited"));
+            lsr = parser.parse(tagValue, now, ScheduleParser.TimeType.OPENING_HOURS);
         } else {
-            sr = parser.parseCollectionTimes(poi.getTag("collection_times"));
+            CollectionTimes tagValue = new CollectionTimes(poi.getTag("collection_times"));
+            sr = parser.parse(tagValue, now, ScheduleParser.TimeType.COLLECTION_TIMES);
         }
 
         currentPoiDetailsDialog = PoiDetailsDialog.show(this, poi, sr, lsr, lastLocation);
