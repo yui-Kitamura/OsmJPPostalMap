@@ -30,12 +30,19 @@ public class PlaceSearchEngine implements SearchEngine {
                 weight = 1.0;
             }
 
+            double lat = place.getLat();
+            double lon = place.getLon();
+            if (lat == 0.0 && lon == 0.0) {
+                lat = (place.getMinLat() + place.getMaxLat()) / 2.0;
+                lon = (place.getMinLon() + place.getMaxLon()) / 2.0;
+            }
+
             results.add(new SearchResult(
                     SearchResult.Type.PLACE,
                     place.getName(),
                     place.getIsIn(),
-                    place.getLat(),
-                    place.getLon(),
+                    lat,
+                    lon,
                     weight,
                     place
             ));
