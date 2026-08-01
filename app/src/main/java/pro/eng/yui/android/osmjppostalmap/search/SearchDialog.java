@@ -10,6 +10,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.*;
+import android.widget.CompoundButton;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -44,9 +45,9 @@ public class SearchDialog extends DialogFragment {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private String currentQuery = "";
-    private CheckBox checkPostOffice;
-    private CheckBox checkAddress;
-    private CheckBox checkPlace;
+    private CompoundButton checkPostOffice;
+    private CompoundButton checkAddress;
+    private CompoundButton checkPlace;
 
     public void setOnResultSelectedListener(OnResultSelectedListener listener) {
         this.listener = listener;
