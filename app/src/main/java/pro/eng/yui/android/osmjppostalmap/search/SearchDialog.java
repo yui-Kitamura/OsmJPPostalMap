@@ -46,6 +46,7 @@ public class SearchDialog extends DialogFragment {
     private String currentQuery = "";
     private CheckBox checkPostOffice;
     private CheckBox checkAddress;
+    private CheckBox checkPlace;
 
     public void setOnResultSelectedListener(OnResultSelectedListener listener) {
         this.listener = listener;
@@ -67,7 +68,7 @@ public class SearchDialog extends DialogFragment {
         engines = new ArrayList<>();
         engines.add(new PostOfficeSearchEngine(repository));
         engines.add(new AddressSearchEngine(repository));
-        engines.add(new PlaceSearchEngine());
+        engines.add(new PlaceSearchEngine(repository));
     }
 
     @Nullable
@@ -78,6 +79,7 @@ public class SearchDialog extends DialogFragment {
         EditText input = view.findViewById(R.id.search_input);
         checkPostOffice = view.findViewById(R.id.check_post_office);
         checkAddress = view.findViewById(R.id.check_address);
+        checkPlace = view.findViewById(R.id.check_place);
         RecyclerView resultsList = view.findViewById(R.id.search_results);
 
         resultsList.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -98,6 +100,7 @@ public class SearchDialog extends DialogFragment {
 
         checkPostOffice.setOnCheckedChangeListener((buttonView, isChecked) -> performSearch(currentQuery));
         checkAddress.setOnCheckedChangeListener((buttonView, isChecked) -> performSearch(currentQuery));
+        checkPlace.setOnCheckedChangeListener((buttonView, isChecked) -> performSearch(currentQuery));
 
         return view;
     }
@@ -112,11 +115,12 @@ public class SearchDialog extends DialogFragment {
             List<SearchResult> allResults = new ArrayList<>();
             boolean searchPO = checkPostOffice.isChecked();
             boolean searchAddress = checkAddress.isChecked();
+            boolean searchPlace = checkPlace.isChecked();
 
             for (SearchEngine engine : engines) {
                 if (engine instanceof PostOfficeSearchEngine && !searchPO) continue;
                 if (engine instanceof AddressSearchEngine && !searchAddress) continue;
-                // PlaceSearchEngine is always active for now, or we could add a checkbox
+                if (engine instanceof PlaceSearchEngine && !searchPlace) continue;
                 
                 allResults.addAll(engine.search(query));
             }

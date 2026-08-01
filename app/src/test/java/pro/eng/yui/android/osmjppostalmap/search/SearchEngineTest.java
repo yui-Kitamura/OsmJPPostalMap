@@ -20,7 +20,20 @@ class SearchEngineTest {
     private List<OsmPoi> mockPois;
 
     class TestPoiRepository implements PoiRepository {
+        private List<pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo> mockPlaces = new ArrayList<>();
+        public void setMockPlaces(List<pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo> places) { this.mockPlaces = places; }
+
         @Override public List<OsmPoi> getAllCachedPois() { return mockPois; }
+        @Override public void fetchCityData() {}
+        @Override public List<pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo> searchPlaces(String query) {
+            List<pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo> results = new ArrayList<>();
+            for (pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo p : mockPlaces) {
+                if (p.getName().contains(query) || p.getNameKana().contains(query)) {
+                    results.add(p);
+                }
+            }
+            return results;
+        }
         @Override public LiveData<List<OsmPoi>> getPoisLiveData() { return null; }
         @Override public void loadPoisForArea(double[][] latLonPoints, boolean forceNotify) {}
         @Override public void refreshPrefecture(int prefCode, String prefName, String subName) {}
@@ -146,5 +159,33 @@ class SearchEngineTest {
         java.util.Collections.sort(results);
         assertEquals(1.0, results.get(0).getWeight());
         assertEquals("甲府", results.get(0).getTitle());
+    }
+
+    @Test
+    void testPlaceSearch() {
+        List<pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo> mockPlaces = new ArrayList<>();
+        mockPlaces.add(new pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo(
+                19, "山梨県", "甲府市", "コウフシ", 35.666, 138.568, 35.6, 35.7, 138.5, 138.6
+        ));
+        ((TestPoiRepository)repository).setMockPlaces(mockPlaces);
+
+        PlaceSearchEngine engine = new PlaceSearchEngine(repository);
+
+        // Exact match
+        List<SearchResult> results = engine.search("甲府市");
+        assertEquals(1, results.size());
+        assertEquals(1.0, results.get(0).getWeight());
+        assertEquals("甲府市", results.get(0).getTitle());
+        assertTrue(results.get(0).getOriginalData() instanceof pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo);
+
+        // Partial match
+        results = engine.search("甲府");
+        assertEquals(1, results.size());
+        assertEquals(0.5, results.get(0).getWeight());
+
+        // Kana match
+        results = engine.search("コウフ");
+        assertEquals(1, results.size());
+        assertEquals(0.5, results.get(0).getWeight());
     }
 }

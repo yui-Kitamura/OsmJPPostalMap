@@ -39,6 +39,7 @@ import pro.eng.yui.android.osmjppostalmap.data.local.PoiLocalDataSource;
 import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateApi;
 import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateResponse;
 import pro.eng.yui.android.osmjppostalmap.data.remote.OverpassApi;
+import pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo;
 import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import retrofit2.Call;
@@ -433,6 +434,46 @@ public class PoiRepositoryImpl implements PoiRepository {
     @Override
     public List<OsmPoi> getAllCachedPois() {
         return local.getAllPois();
+    }
+
+    @Override
+    public void fetchCityData() {
+        runOnExecutor("地名データを読み込み中", () -> {
+            try {
+                String cityJson = JpPostalUtil.getRawCityJson().join();
+                if (cityJson == null || cityJson.isEmpty()) {
+                    return;
+                }
+                JSONArray array = new JSONArray(cityJson);
+                List<PlaceInfo> places = new ArrayList<>();
+                for (int i = 0; i < array.length(); i++) {
+                    JSONObject obj = array.getJSONObject(i);
+                    places.add(new PlaceInfo(
+                            obj.getInt("prefCode"),
+                            obj.getString("isIn"),
+                            obj.getString("city"),
+                            obj.getString("cityKana"),
+                            obj.getDouble("lat"),
+                            obj.getDouble("lon"),
+                            obj.getDouble("minLat"),
+                            obj.getDouble("maxLat"),
+                            obj.getDouble("minLon"),
+                            obj.getDouble("maxLon")
+                    ));
+                }
+                if (local != null) {
+                    local.upsertPlaces(places);
+                }
+            } catch (Exception e) {
+                Log.e("PoiRepository", "Failed to fetch city data", e);
+            }
+        });
+    }
+
+    @Override
+    public List<PlaceInfo> searchPlaces(String query) {
+        if (local == null) return new ArrayList<>();
+        return local.searchPlaces(query);
     }
 
     @Override

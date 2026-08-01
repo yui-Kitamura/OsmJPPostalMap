@@ -210,6 +210,7 @@ public class MainActivity extends AppCompatActivity {
         viewModel.updateAccessToken(authRepository.getAccessToken());
         viewModel.setFilterOpenOnly(false); // 初期化トリガー
         viewModel.fetchDataDate(); // データ鮮度情報の取得を開始
+        viewModel.fetchCityData(); // 地名データの取得を開始
         
         editPoiLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -425,12 +426,12 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void onPlaceCenterSelected(SearchResult result) {
-                    // TODO: 地名検索実装時に対応
+                    navigateToPlaceCenter(result);
                 }
 
                 @Override
                 public void onPlaceAreaSelected(SearchResult result) {
-                    // TODO: 地名検索実装時に対応
+                    navigateToPlaceArea(result);
                 }
 
                 @Override
@@ -611,6 +612,22 @@ public class MainActivity extends AppCompatActivity {
         }
 
         currentPoiDetailsDialog = PoiDetailsDialog.show(this, poi, sr, lsr, lastLocation);
+    }
+
+    private void navigateToPlaceCenter(SearchResult result) {
+        GeoPoint point = new GeoPoint(result.getLat(), result.getLon());
+        map.getController().animateTo(point);
+        map.getController().setZoom(15.0);
+    }
+
+    private void navigateToPlaceArea(SearchResult result) {
+        if (result.getOriginalData() instanceof pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo) {
+            pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo info = (pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo) result.getOriginalData();
+            BoundingBox bb = new BoundingBox(info.getMaxLat(), info.getMaxLon(), info.getMinLat(), info.getMinLon());
+            map.zoomToBoundingBox(bb, true);
+        } else {
+            navigateToPlaceCenter(result);
+        }
     }
 
     private void updatePois(boolean forceNotify, UpdateMode mode) {

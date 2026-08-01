@@ -4,6 +4,7 @@ import android.location.Location;
 import androidx.lifecycle.LiveData;
 import java.util.List;
 import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateResponse;
+import pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo;
 import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
@@ -46,6 +47,16 @@ public interface PoiRepository {
      * ローカルに保存済みのすべてのPOIを返す。
      */
     List<OsmPoi> getAllCachedPois();
+
+    /**
+     * 市町村データをネットワークから取得して保存する。
+     */
+    void fetchCityData();
+
+    /**
+     * 市町村名を検索する。
+     */
+    List<PlaceInfo> searchPlaces(String query);
 
     /**
      * データ鮮度情報 (date.json) を取得する

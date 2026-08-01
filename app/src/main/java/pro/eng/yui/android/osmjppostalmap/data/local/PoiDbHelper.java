@@ -15,7 +15,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class PoiDbHelper extends SQLiteOpenHelper {
 
     public static final String DB_NAME = "poi_cache.db";
-    public static final int DB_VERSION = 4;
+    public static final int DB_VERSION = 5;
 
     /* poi table */
     public static final String TABLE_POI = "poi";
@@ -39,6 +39,19 @@ public class PoiDbHelper extends SQLiteOpenHelper {
     public static final String TABLE_GRID_PREF = "grid_pref_cache";
     public static final String COL_GRID_KEY = "grid_key";
     public static final String COL_PREF_NAME = "pref_name";
+
+    /* place table (city/town/village) */
+    public static final String TABLE_PLACE = "place";
+    public static final String COL_PLACE_PREF_CODE = "pref_code";
+    public static final String COL_PLACE_IS_IN = "is_in";
+    public static final String COL_PLACE_NAME = "name";
+    public static final String COL_PLACE_NAME_KANA = "name_kana";
+    public static final String COL_PLACE_LAT = "lat";
+    public static final String COL_PLACE_LON = "lon";
+    public static final String COL_PLACE_MIN_LAT = "min_lat";
+    public static final String COL_PLACE_MAX_LAT = "max_lat";
+    public static final String COL_PLACE_MIN_LON = "min_lon";
+    public static final String COL_PLACE_MAX_LON = "max_lon";
 
     public PoiDbHelper(Context context) {
         super(context.getApplicationContext(), DB_NAME, null, DB_VERSION);
@@ -73,6 +86,22 @@ public class PoiDbHelper extends SQLiteOpenHelper {
                 + COL_GRID_KEY + " INTEGER PRIMARY KEY, "
                 + COL_PREF_NAME + " TEXT"
                 + ")");
+
+        db.execSQL("CREATE TABLE " + TABLE_PLACE + " ("
+                + COL_PLACE_PREF_CODE + " INTEGER NOT NULL, "
+                + COL_PLACE_IS_IN + " TEXT NOT NULL, "
+                + COL_PLACE_NAME + " TEXT NOT NULL, "
+                + COL_PLACE_NAME_KANA + " TEXT NOT NULL, "
+                + COL_PLACE_LAT + " REAL NOT NULL, "
+                + COL_PLACE_LON + " REAL NOT NULL, "
+                + COL_PLACE_MIN_LAT + " REAL NOT NULL, "
+                + COL_PLACE_MAX_LAT + " REAL NOT NULL, "
+                + COL_PLACE_MIN_LON + " REAL NOT NULL, "
+                + COL_PLACE_MAX_LON + " REAL NOT NULL, "
+                + "PRIMARY KEY (" + COL_PLACE_PREF_CODE + ", " + COL_PLACE_NAME + ")"
+                + ")");
+        db.execSQL("CREATE INDEX idx_place_name ON " + TABLE_PLACE + "(" + COL_PLACE_NAME + ")");
+        db.execSQL("CREATE INDEX idx_place_kana ON " + TABLE_PLACE + "(" + COL_PLACE_NAME_KANA + ")");
     }
 
     @Override
@@ -103,6 +132,23 @@ public class PoiDbHelper extends SQLiteOpenHelper {
                     + "SELECT " + COL_META_PREF_CODE + ", '', " + COL_META_NAME + ", " + COL_META_LAST_UPDATED + " FROM " + TABLE_PREF_META);
             db.execSQL("DROP TABLE " + TABLE_PREF_META);
             db.execSQL("ALTER TABLE pref_meta_new RENAME TO " + TABLE_PREF_META);
+        }
+        if (oldVersion < 5) {
+            db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_PLACE + " ("
+                    + COL_PLACE_PREF_CODE + " INTEGER NOT NULL, "
+                    + COL_PLACE_IS_IN + " TEXT NOT NULL, "
+                    + COL_PLACE_NAME + " TEXT NOT NULL, "
+                    + COL_PLACE_NAME_KANA + " TEXT NOT NULL, "
+                    + COL_PLACE_LAT + " REAL NOT NULL, "
+                    + COL_PLACE_LON + " REAL NOT NULL, "
+                    + COL_PLACE_MIN_LAT + " REAL NOT NULL, "
+                    + COL_PLACE_MAX_LAT + " REAL NOT NULL, "
+                    + COL_PLACE_MIN_LON + " REAL NOT NULL, "
+                    + COL_PLACE_MAX_LON + " REAL NOT NULL, "
+                    + "PRIMARY KEY (" + COL_PLACE_PREF_CODE + ", " + COL_PLACE_NAME + ")"
+                    + ")");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_place_name ON " + TABLE_PLACE + "(" + COL_PLACE_NAME + ")");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_place_kana ON " + TABLE_PLACE + "(" + COL_PLACE_NAME_KANA + ")");
         }
     }
 }
