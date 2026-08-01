@@ -1,90 +1,106 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="4dp"
-        android:gravity="center_vertical">
+        android:minHeight="36dp"
+        android:padding="4dp">
 
         <ImageView
             android:id="@+id/result_icon"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:layout_marginEnd="8dp"
-            android:contentDescription="icon" />
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/result_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:ellipsize="end"
-                android:maxLines="1" />
-
-            <TextView
-                android:id="@+id/result_subtitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="11sp"
-                android:textColor="#666666"
-                android:ellipsize="end"
-                android:maxLines="1" />
-        </LinearLayout>
+            android:layout_marginStart="4dp"
+            android:contentDescription="icon"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <LinearLayout
             android:id="@+id/layout_buttons"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
             <Button
                 android:id="@+id/btn_show"
+                style="?attr/borderlessButtonStyle"
                 android:layout_width="wrap_content"
-                android:layout_height="32dp"
-                android:text="表示"
-                style="?android:attr/borderlessButtonStyle"
-                android:textSize="12sp"
-                android:paddingHorizontal="8dp"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
                 android:minHeight="0dp"
-                android:minWidth="0dp" />
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:text="表示"
+                android:textSize="12sp"
+                android:visibility="gone" />
 
             <Button
                 android:id="@+id/btn_show_center"
+                style="?attr/borderlessButtonStyle"
                 android:layout_width="wrap_content"
-                android:layout_height="32dp"
-                android:text="中心"
-                style="?android:attr/borderlessButtonStyle"
-                android:textSize="12sp"
-                android:visibility="gone"
-                android:paddingHorizontal="4dp"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
                 android:minHeight="0dp"
-                android:minWidth="0dp" />
+                android:paddingHorizontal="4dp"
+                android:paddingVertical="4dp"
+                android:text="中心"
+                android:textSize="12sp"
+                android:visibility="gone" />
 
             <Button
                 android:id="@+id/btn_show_all"
+                style="?attr/borderlessButtonStyle"
                 android:layout_width="wrap_content"
-                android:layout_height="32dp"
-                android:text="全域"
-                style="?android:attr/borderlessButtonStyle"
-                android:textSize="12sp"
-                android:visibility="gone"
-                android:paddingHorizontal="4dp"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
                 android:minHeight="0dp"
-                android:minWidth="0dp" />
+                android:paddingHorizontal="4dp"
+                android:paddingVertical="4dp"
+                android:text="全域"
+                android:textSize="12sp"
+                android:visibility="gone" />
         </LinearLayout>
-    </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/text_container"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/layout_buttons"
+            app:layout_constraintStart_toEndOf="@+id/result_icon"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <TextView
+                android:id="@+id/result_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/result_subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="#666666"
+                android:textSize="11sp" />
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <View
         android:layout_width="match_parent"
