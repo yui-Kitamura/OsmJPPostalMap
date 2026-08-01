@@ -25,7 +25,7 @@ public class PlaceSearchEngine implements SearchEngine {
 
         for (PlaceInfo place : places) {
             double weight = 40.0;
-            if (place.getName().equals(query) || place.getNameKana().equals(query)) {
+            if (place.getName().equals(query)) {
                 weight = 60.0;
             }
 
@@ -39,7 +39,7 @@ public class PlaceSearchEngine implements SearchEngine {
             results.add(new SearchResult(
                     SearchResult.Type.PLACE,
                     place.getName(),
-                    place.getIsIn(),
+                    repository.getPrefectureName(place.getPrefCode()),
                     lat,
                     lon,
                     weight,

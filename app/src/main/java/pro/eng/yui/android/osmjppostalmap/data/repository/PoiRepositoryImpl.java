@@ -108,6 +108,8 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final Map<Long, Set<String>> gridPrefCache = new java.util.concurrent.ConcurrentHashMap<>();
     /** 都道府県の境界ボックス（BBox）キャッシュ。 */
     private final Map<String, BBox> prefBoundaryCache = new java.util.concurrent.ConcurrentHashMap<>();
+    /** 都道府県コードから都道府県名へのマッピング */
+    private final Map<Integer, String> prefCodeNameMap = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static PoiRepositoryImpl instance;
 
@@ -152,6 +154,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                 for (Map.Entry<String, Integer> entry : prefNameAndCode.entrySet()) {
                     prefCodeAndName.put(entry.getValue(), entry.getKey());
                 }
+                prefCodeNameMap.putAll(prefCodeAndName);
 
                 String bboxJson = JpPostalUtil.getRawPrefecturesJson().join();
                 if (bboxJson == null || bboxJson.isEmpty()) {
@@ -450,9 +453,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                     JSONObject obj = array.getJSONObject(i);
                     places.add(new PlaceInfo(
                             obj.getInt("prefCode"),
-                            obj.getString("isIn"),
                             obj.getString("city"),
-                            obj.getString("cityKana"),
                             obj.getDouble("lat"),
                             obj.getDouble("lon"),
                             obj.getDouble("minLat"),
@@ -474,6 +475,12 @@ public class PoiRepositoryImpl implements PoiRepository {
     public List<PlaceInfo> searchPlaces(String query) {
         if (local == null) return new ArrayList<>();
         return local.searchPlaces(query);
+    }
+
+    @Override
+    public String getPrefectureName(int prefCode) {
+        String name = prefCodeNameMap.get(prefCode);
+        return name != null ? name : "Unknown(" + prefCode + ")";
     }
 
     @Override

@@ -234,9 +234,7 @@ public class PoiLocalDataSource {
             for (PlaceInfo place : places) {
                 ContentValues v = new ContentValues();
                 v.put(PoiDbHelper.COL_PLACE_PREF_CODE, place.getPrefCode());
-                v.put(PoiDbHelper.COL_PLACE_IS_IN, place.getIsIn());
                 v.put(PoiDbHelper.COL_PLACE_NAME, place.getName());
-                v.put(PoiDbHelper.COL_PLACE_NAME_KANA, place.getNameKana());
                 v.put(PoiDbHelper.COL_PLACE_LAT, place.getLat());
                 v.put(PoiDbHelper.COL_PLACE_LON, place.getLon());
                 v.put(PoiDbHelper.COL_PLACE_MIN_LAT, place.getMinLat());
@@ -254,8 +252,8 @@ public class PoiLocalDataSource {
     public List<PlaceInfo> searchPlaces(String query) {
         SQLiteDatabase db = helper.getReadableDatabase();
         List<PlaceInfo> result = new ArrayList<>();
-        String selection = PoiDbHelper.COL_PLACE_NAME + " LIKE ? OR " + PoiDbHelper.COL_PLACE_NAME_KANA + " LIKE ?";
-        String[] args = new String[]{"%" + query + "%", "%" + query + "%"};
+        String selection = PoiDbHelper.COL_PLACE_NAME + " LIKE ?";
+        String[] args = new String[]{"%" + query + "%"};
         try (Cursor c = db.query(PoiDbHelper.TABLE_PLACE, null, selection, args, null, null, null)) {
             while (c.moveToNext()) {
                 result.add(fromPlaceCursor(c));
@@ -267,9 +265,7 @@ public class PoiLocalDataSource {
     private PlaceInfo fromPlaceCursor(Cursor c) {
         return new PlaceInfo(
                 c.getInt(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_PREF_CODE)),
-                c.getString(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_IS_IN)),
                 c.getString(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_NAME)),
-                c.getString(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_NAME_KANA)),
                 c.getDouble(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_LAT)),
                 c.getDouble(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_LON)),
                 c.getDouble(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_MIN_LAT)),

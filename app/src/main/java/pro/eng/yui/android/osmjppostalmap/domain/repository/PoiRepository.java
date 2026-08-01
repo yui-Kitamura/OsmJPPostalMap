@@ -59,6 +59,11 @@ public interface PoiRepository {
     List<PlaceInfo> searchPlaces(String query);
 
     /**
+     * 都道府県コードから都道府県名を取得する。
+     */
+    String getPrefectureName(int prefCode);
+
+    /**
      * データ鮮度情報 (date.json) を取得する
      */
     void fetchDataDate(DataDateCallback callback);
