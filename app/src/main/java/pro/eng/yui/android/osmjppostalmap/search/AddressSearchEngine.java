@@ -43,18 +43,28 @@ public class AddressSearchEngine implements SearchEngine {
             
             if (match) {
                 String title = poi.getTag("name");
+                SearchResult.Type resultType = SearchResult.Type.ADDRESS;
+                String amenity = poi.getTag("amenity");
+
                 if (title == null) {
-                    String amenity = poi.getTag("amenity");
                     if ("post_office".equals(amenity)) {
                         title = "無名郵便局";
+                        resultType = SearchResult.Type.POST_OFFICE;
                     } else if ("post_box".equals(amenity)) {
                         title = "郵便ポスト";
+                        resultType = SearchResult.Type.POST_BOX;
                     } else {
                         title = "POI (" + poi.getId() + ")";
                     }
+                } else {
+                    if ("post_office".equals(amenity)) {
+                        resultType = SearchResult.Type.POST_OFFICE;
+                    } else if ("post_box".equals(amenity)) {
+                        resultType = SearchResult.Type.POST_BOX;
+                    }
                 }
                 String subTitle = getFullAddress(poi);
-                results.add(new SearchResult(SearchResult.Type.ADDRESS, title, subTitle, poi.getLat(), poi.getLon(), weight, poi));
+                results.add(new SearchResult(resultType, title, subTitle, poi.getLat(), poi.getLon(), weight, poi));
             }
         }
         return results;

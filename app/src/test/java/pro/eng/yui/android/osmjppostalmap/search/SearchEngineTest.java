@@ -100,6 +100,22 @@ class SearchEngineTest {
     }
 
     @Test
+    void testAddressSearchPostBoxType() {
+        AddressSearchEngine engine = new AddressSearchEngine(repository);
+        List<SearchResult> results = engine.search("山梨市");
+        assertEquals(1, results.size());
+        assertEquals(SearchResult.Type.POST_BOX, results.get(0).getType());
+    }
+
+    @Test
+    void testAddressSearchPostOfficeType() {
+        AddressSearchEngine engine = new AddressSearchEngine(repository);
+        List<SearchResult> results = engine.search("甲府市");
+        assertEquals(1, results.size());
+        assertEquals(SearchResult.Type.POST_OFFICE, results.get(0).getType());
+    }
+
+    @Test
     void testWeightSorting() {
         Map<String, String> tags3 = new HashMap<>();
         tags3.put("amenity", "post_office");

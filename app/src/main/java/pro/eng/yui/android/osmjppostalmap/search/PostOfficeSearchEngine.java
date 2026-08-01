@@ -21,15 +21,18 @@ public class PostOfficeSearchEngine implements SearchEngine {
         List<OsmPoi> allPois = repository.getAllCachedPois();
         for (OsmPoi poi : allPois) {
             String amenity = poi.getTag("amenity");
-            if (!"post_office".equals(amenity)) continue;
+            if (!"post_office".equals(amenity) && !"post_box".equals(amenity)) continue;
 
             String name = poi.getTag("name");
             if (name == null) continue;
 
+            SearchResult.Type type = "post_box".equals(amenity) ? SearchResult.Type.POST_BOX : SearchResult.Type.POST_OFFICE;
+            String subTitle = "post_box".equals(amenity) ? "郵便ポスト" : "郵便局";
+
             if (name.equals(q)) {
-                results.add(new SearchResult(SearchResult.Type.POST_OFFICE, name, "郵便局", poi.getLat(), poi.getLon(), 1.0, poi));
+                results.add(new SearchResult(type, name, subTitle, poi.getLat(), poi.getLon(), 1.0, poi));
             } else if (name.contains(q)) {
-                results.add(new SearchResult(SearchResult.Type.POST_OFFICE, name, "郵便局", poi.getLat(), poi.getLon(), 0.5, poi));
+                results.add(new SearchResult(type, name, subTitle, poi.getLat(), poi.getLon(), 0.5, poi));
             }
         }
         return results;

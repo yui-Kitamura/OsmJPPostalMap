@@ -47,6 +47,8 @@ public class SearchDialog extends DialogFragment {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private String currentQuery = "";
+    private CheckBox checkPostOffice;
+    private CheckBox checkAddress;
 
     public void setOnResultSelectedListener(OnResultSelectedListener listener) {
         this.listener = listener;
@@ -77,7 +79,8 @@ public class SearchDialog extends DialogFragment {
         View view = inflater.inflate(R.layout.dialog_search, container, false);
 
         EditText input = view.findViewById(R.id.search_input);
-        CheckBox checkPostOffice = view.findViewById(R.id.check_post_office);
+        checkPostOffice = view.findViewById(R.id.check_post_office);
+        checkAddress = view.findViewById(R.id.check_address);
         RecyclerView resultsList = view.findViewById(R.id.search_results);
 
         resultsList.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -97,6 +100,7 @@ public class SearchDialog extends DialogFragment {
         });
 
         checkPostOffice.setOnCheckedChangeListener((buttonView, isChecked) -> performSearch(currentQuery));
+        checkAddress.setOnCheckedChangeListener((buttonView, isChecked) -> performSearch(currentQuery));
 
         return view;
     }
@@ -109,7 +113,14 @@ public class SearchDialog extends DialogFragment {
 
         executor.execute(() -> {
             List<SearchResult> allResults = new ArrayList<>();
+            boolean searchPO = checkPostOffice.isChecked();
+            boolean searchAddress = checkAddress.isChecked();
+
             for (SearchEngine engine : engines) {
+                if (engine instanceof PostOfficeSearchEngine && !searchPO) continue;
+                if (engine instanceof AddressSearchEngine && !searchAddress) continue;
+                // PlaceSearchEngine is always active for now, or we could add a checkbox
+                
                 allResults.addAll(engine.search(query));
             }
             Collections.sort(allResults);
@@ -150,6 +161,7 @@ public class SearchDialog extends DialogFragment {
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {
+            ImageView icon;
             TextView title;
             TextView subtitle;
             Button btnShow;
@@ -158,6 +170,7 @@ public class SearchDialog extends DialogFragment {
 
             ViewHolder(View itemView) {
                 super(itemView);
+                icon = itemView.findViewById(R.id.result_icon);
                 title = itemView.findViewById(R.id.result_title);
                 subtitle = itemView.findViewById(R.id.result_subtitle);
                 btnShow = itemView.findViewById(R.id.btn_show);
@@ -169,11 +182,26 @@ public class SearchDialog extends DialogFragment {
                 title.setText(result.getTitle());
                 subtitle.setText(result.getSubTitle());
 
+                // Set icon
+                switch (result.getType()) {
+                    case POST_OFFICE:
+                        icon.setImageResource(R.drawable.ic_search_post_office);
+                        break;
+                    case POST_BOX:
+                        icon.setImageResource(R.drawable.ic_search_post_box);
+                        break;
+                    case PLACE:
+                    case ADDRESS:
+                    default:
+                        icon.setImageResource(R.drawable.ic_search_pin_blue);
+                        break;
+                }
+
                 btnShow.setVisibility(View.GONE);
                 btnShowCenter.setVisibility(View.GONE);
                 btnShowAll.setVisibility(View.GONE);
 
-                if (result.getType() == SearchResult.Type.POST_OFFICE) {
+                if (result.getType() == SearchResult.Type.POST_OFFICE || result.getType() == SearchResult.Type.POST_BOX) {
                     btnShow.setVisibility(View.VISIBLE);
                     btnShow.setOnClickListener(v -> {
                         if (listener != null) listener.onPostOfficeSelected((OsmPoi) result.getOriginalData());

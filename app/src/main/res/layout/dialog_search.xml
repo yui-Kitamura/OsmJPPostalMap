@@ -34,6 +34,14 @@
             android:layout_height="wrap_content"
             android:text="郵便局名"
             android:checked="true" />
+
+        <CheckBox
+            android:id="@+id/check_address"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="住所（キャッシュ済み）"
+            android:checked="true"
+            android:layout_marginStart="8dp" />
         
         <!-- 追加のチェックボックスはここに増設可能 -->
     </LinearLayout>

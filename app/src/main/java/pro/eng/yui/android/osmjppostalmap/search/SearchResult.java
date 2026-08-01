@@ -5,6 +5,7 @@ import androidx.annotation.NonNull;
 public class SearchResult implements Comparable<SearchResult> {
     public enum Type {
         POST_OFFICE,
+        POST_BOX,
         PLACE,
         ADDRESS
     }
