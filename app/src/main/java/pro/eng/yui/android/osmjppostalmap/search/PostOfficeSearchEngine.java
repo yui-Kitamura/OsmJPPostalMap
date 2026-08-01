@@ -25,17 +25,38 @@ public class PostOfficeSearchEngine implements SearchEngine {
             if (!"post_office".equals(amenity) && !"post_box".equals(amenity)) continue;
 
             String name = poi.getTag("name");
-            if (name == null) continue;
+            String address = JpPostalUtil.getAddressText(poi.getTags());
+            
+            boolean match = false;
+            double weight = 0.0;
+            
+            if (name != null) {
+                if (name.equals(q)) {
+                    match = true;
+                    weight = 1.0;
+                } else if (name.contains(q)) {
+                    match = true;
+                    weight = 0.5;
+                }
+            }
+            
+            if (!match && !address.isEmpty()) {
+                if (address.equals(q)) {
+                    match = true;
+                    weight = 0.8;
+                } else if (address.contains(q)) {
+                    match = true;
+                    weight = 0.4;
+                }
+            }
+
+            if (!match) continue;
 
             SearchResult.Type type = "post_box".equals(amenity) ? SearchResult.Type.POST_BOX : SearchResult.Type.POST_OFFICE;
-            String address = JpPostalUtil.getAddressText(poi.getTags());
+            String displayTitle = (name != null) ? name : ("post_box".equals(amenity) ? "郵便ポスト" : "無名郵便局");
             String subTitle = !address.isEmpty() ? address : ("post_box".equals(amenity) ? "郵便ポスト" : "郵便局");
 
-            if (name.equals(q)) {
-                results.add(new SearchResult(type, name, subTitle, poi.getLat(), poi.getLon(), 1.0, poi));
-            } else if (name.contains(q)) {
-                results.add(new SearchResult(type, name, subTitle, poi.getLat(), poi.getLon(), 0.5, poi));
-            }
+            results.add(new SearchResult(type, displayTitle, subTitle, poi.getLat(), poi.getLon(), weight, poi));
         }
         return results;
     }

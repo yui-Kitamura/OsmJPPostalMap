@@ -20,7 +20,9 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -113,7 +115,7 @@ public class SearchDialog extends DialogFragment {
         }
 
         executor.execute(() -> {
-            List<SearchResult> allResults = new ArrayList<>();
+            Map<String, SearchResult> resultMap = new HashMap<>();
             boolean searchPO = checkPostOffice.isChecked();
             boolean searchAddress = checkAddress.isChecked();
             boolean searchPlace = checkPlace.isChecked();
@@ -123,8 +125,23 @@ public class SearchDialog extends DialogFragment {
                 if (engine instanceof AddressSearchEngine && !searchAddress) continue;
                 if (engine instanceof PlaceSearchEngine && !searchPlace) continue;
                 
-                allResults.addAll(engine.search(query));
+                List<SearchResult> engineResults = engine.search(query);
+                for (SearchResult res : engineResults) {
+                    String key;
+                    if (res.getOriginalData() instanceof OsmPoi) {
+                        key = "POI_" + ((OsmPoi) res.getOriginalData()).getId();
+                    } else {
+                        // PlaceInfoなどの場合はタイトルと位置で簡易的なキーを作成
+                        key = res.getType() + "_" + res.getTitle() + "_" + res.getLat() + "_" + res.getLon();
+                    }
+                    
+                    if (!resultMap.containsKey(key) || resultMap.get(key).getWeight() < res.getWeight()) {
+                        resultMap.put(key, res);
+                    }
+                }
             }
+            
+            List<SearchResult> allResults = new ArrayList<>(resultMap.values());
             Collections.sort(allResults);
             
             mainHandler.post(() -> {

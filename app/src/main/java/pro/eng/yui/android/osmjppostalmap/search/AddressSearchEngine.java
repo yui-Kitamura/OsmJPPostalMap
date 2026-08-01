@@ -28,16 +28,27 @@ public class AddressSearchEngine implements SearchEngine {
             Map<String, String> tags = poi.getTags();
             if (tags == null) continue;
 
-            for (Map.Entry<String, String> entry : tags.entrySet()) {
-                if (entry.getKey().startsWith("addr:")) {
-                    String value = entry.getValue();
-                    if (value == null) continue;
-                    if (value.equals(q)) {
-                        match = true;
-                        weight = Math.max(weight, 1.0);
-                    } else if (value.contains(q)) {
-                        match = true;
-                        weight = Math.max(weight, 0.5);
+            String fullAddress = getFullAddress(poi);
+            if (fullAddress.equals(q)) {
+                match = true;
+                weight = 1.0;
+            } else if (fullAddress.contains(q)) {
+                match = true;
+                weight = 0.8; // フルアドレス一致は個別のタグ一致より優先度高めにする
+            }
+
+            if (!match) {
+                for (Map.Entry<String, String> entry : tags.entrySet()) {
+                    if (entry.getKey().startsWith("addr:")) {
+                        String value = entry.getValue();
+                        if (value == null) continue;
+                        if (value.equals(q)) {
+                            match = true;
+                            weight = Math.max(weight, 1.0);
+                        } else if (value.contains(q)) {
+                            match = true;
+                            weight = Math.max(weight, 0.5);
+                        }
                     }
                 }
             }
