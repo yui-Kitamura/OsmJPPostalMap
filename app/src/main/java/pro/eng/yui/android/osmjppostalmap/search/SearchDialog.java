@@ -51,6 +51,7 @@ public class SearchDialog extends DialogFragment {
     private CompoundButton checkPostOffice;
     private CompoundButton checkAddress;
     private CompoundButton checkPlace;
+    private ProgressBar searchProgress;
 
     public void setOnResultSelectedListener(OnResultSelectedListener listener) {
         this.listener = listener;
@@ -84,6 +85,7 @@ public class SearchDialog extends DialogFragment {
         checkPostOffice = view.findViewById(R.id.check_post_office);
         checkAddress = view.findViewById(R.id.check_address);
         checkPlace = view.findViewById(R.id.check_place);
+        searchProgress = view.findViewById(R.id.search_progress);
         RecyclerView resultsList = view.findViewById(R.id.search_results);
 
         resultsList.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -112,8 +114,11 @@ public class SearchDialog extends DialogFragment {
     private void performSearch(final String query) {
         if (query.trim().isEmpty()) {
             adapter.setResults(Collections.emptyList());
+            if (searchProgress != null) searchProgress.setVisibility(View.GONE);
             return;
         }
+
+        if (searchProgress != null) searchProgress.setVisibility(View.VISIBLE);
 
         executor.execute(() -> {
             Map<String, SearchResult> resultMap = new HashMap<>();
@@ -153,6 +158,7 @@ public class SearchDialog extends DialogFragment {
             mainHandler.post(() -> {
                 if (query.equals(currentQuery)) {
                     adapter.setResults(allResults);
+                    if (searchProgress != null) searchProgress.setVisibility(View.GONE);
                 }
             });
         });
