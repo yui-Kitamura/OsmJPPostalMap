@@ -15,7 +15,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class PoiDbHelper extends SQLiteOpenHelper {
 
     public static final String DB_NAME = "poi_cache.db";
-    public static final int DB_VERSION = 7;
+    public static final int DB_VERSION = 8;
 
     /* poi table */
     public static final String TABLE_POI = "poi";
@@ -27,6 +27,9 @@ public class PoiDbHelper extends SQLiteOpenHelper {
     public static final String COL_LAT = "lat";
     public static final String COL_LON = "lon";
     public static final String COL_VER = "ver";
+    public static final String COL_NAME = "name";
+    public static final String COL_AMENITY = "amenity";
+    public static final String COL_ADDR_TEXT = "addr_text";
 
     /* pref_meta table */
     public static final String TABLE_PREF_META = "pref_meta";
@@ -67,11 +70,17 @@ public class PoiDbHelper extends SQLiteOpenHelper {
                 + COL_LAT + " REAL NOT NULL, "
                 + COL_LON + " REAL NOT NULL, "
                 + COL_VER + " INTEGER NOT NULL, "
+                + COL_NAME + " TEXT, "
+                + COL_AMENITY + " TEXT, "
+                + COL_ADDR_TEXT + " TEXT, "
                 + "PRIMARY KEY (" + COL_TYPE + ", " + COL_ID + ")"
                 + ")");
         db.execSQL("CREATE INDEX idx_poi_pref ON " + TABLE_POI + "(" + COL_PREF_CODE + ")");
         db.execSQL("CREATE INDEX idx_poi_pref_sub ON " + TABLE_POI + "(" + COL_PREF_CODE + ", " + COL_SUB_NAME + ")");
         db.execSQL("CREATE INDEX idx_poi_coords ON " + TABLE_POI + "(" + COL_LAT + ", " + COL_LON + ")");
+        db.execSQL("CREATE INDEX idx_poi_name ON " + TABLE_POI + "(" + COL_NAME + ")");
+        db.execSQL("CREATE INDEX idx_poi_amenity ON " + TABLE_POI + "(" + COL_AMENITY + ")");
+        db.execSQL("CREATE INDEX idx_poi_addr ON " + TABLE_POI + "(" + COL_ADDR_TEXT + ")");
 
         db.execSQL("CREATE TABLE " + TABLE_PREF_META + " ("
                 + COL_META_PREF_CODE + " INTEGER NOT NULL, "
@@ -162,8 +171,13 @@ public class PoiDbHelper extends SQLiteOpenHelper {
                     + ")");
             db.execSQL("CREATE INDEX idx_place_name ON " + TABLE_PLACE + "(" + COL_PLACE_NAME + ")");
         }
-        if (oldVersion < 7) {
-            db.execSQL("ALTER TABLE " + TABLE_PLACE + " ADD COLUMN " + COL_PLACE_SUB_NAME + " TEXT");
+        if (oldVersion < 8) {
+            db.execSQL("ALTER TABLE " + TABLE_POI + " ADD COLUMN " + COL_NAME + " TEXT");
+            db.execSQL("ALTER TABLE " + TABLE_POI + " ADD COLUMN " + COL_AMENITY + " TEXT");
+            db.execSQL("ALTER TABLE " + TABLE_POI + " ADD COLUMN " + COL_ADDR_TEXT + " TEXT");
+            db.execSQL("CREATE INDEX idx_poi_name ON " + TABLE_POI + "(" + COL_NAME + ")");
+            db.execSQL("CREATE INDEX idx_poi_amenity ON " + TABLE_POI + "(" + COL_AMENITY + ")");
+            db.execSQL("CREATE INDEX idx_poi_addr ON " + TABLE_POI + "(" + COL_ADDR_TEXT + ")");
         }
     }
 }

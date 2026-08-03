@@ -264,7 +264,7 @@ public class SearchDialog extends DialogFragment {
             }
 
             void bind(final SearchResult result) {
-                String q = currentQuery;
+                String q = currentQuery != null ? currentQuery.trim() : "";
                 if (!q.isEmpty()) {
                     title.setText(highlightText(result.getTitle(), q));
                     subtitle.setText(highlightText(result.getSubTitle(), q));

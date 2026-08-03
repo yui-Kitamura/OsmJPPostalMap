@@ -486,6 +486,12 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     @Override
+    public List<OsmPoi> searchPois(String query, boolean postOnly, boolean searchAddress) {
+        if (local == null) return new ArrayList<>();
+        return local.searchPois(query, postOnly, searchAddress);
+    }
+
+    @Override
     public void fetchCityData() {
         runOnExecutor("地名データを読み込み中", () -> {
             try {
@@ -904,6 +910,10 @@ public class PoiRepositoryImpl implements PoiRepository {
     private void loadAllFromCache() {
         runOnExecutor("保存済みデータを読み込み中", () -> {
             if (local == null) return;
+            
+            // v8 移行処理
+            local.migrateToV8();
+            
             List<PrefMeta> saved = local.getAllPrefMeta();
             if (saved.isEmpty()) return;
 

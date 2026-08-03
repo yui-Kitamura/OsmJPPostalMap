@@ -57,6 +57,11 @@ public interface PoiRepository {
     List<OsmPoi> getAllCachedPois();
 
     /**
+     * 条件を指定してPOIを検索する。
+     */
+    List<OsmPoi> searchPois(String query, boolean postOnly, boolean searchAddress);
+
+    /**
      * 市町村データをネットワークから取得して保存する。
      */
     void fetchCityData();
