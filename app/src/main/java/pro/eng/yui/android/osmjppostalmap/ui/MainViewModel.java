@@ -114,8 +114,7 @@ public class MainViewModel extends ViewModel {
                     ScheduleResult res = parser.parse(tagValue, now, timeType);
 
                     boolean isOpen = (res.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
-                        res.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON ||
-                        res.getCurrentState() == ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON);
+                        res.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON);
 
                     // 郵便局の場合、ゆうゆう窓口もチェック
                     if (!isOpen && isPostOffice) {
@@ -123,8 +122,7 @@ public class MainViewModel extends ViewModel {
                         if (lsTag != null && !lsTag.isEmpty()) {
                             ScheduleResult lsRes = parser.parse(new OpeningHours(lsTag), now, ScheduleParser.TimeType.OPENING_HOURS);
                             if (lsRes.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
-                                    lsRes.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON ||
-                                    lsRes.getCurrentState() == ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON) {
+                                    lsRes.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
                                 isOpen = true;
                             }
                         }
