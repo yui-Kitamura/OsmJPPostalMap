@@ -623,6 +623,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void navigateToPoi(OsmPoi poi) {
+        boolean isPostOffice = "post_office".equals(poi.getTag("amenity"));
+        boolean isPostBox = "post_box".equals(poi.getTag("amenity"));
+
+        if (isPostOffice) {
+            viewModel.setFilterOpenOnly(false);
+        } else if (isPostBox) {
+            viewModel.setFilterOpenOnly(false);
+            viewModel.setFilterPostOfficeOnly(false);
+        }
+
         GeoPoint point = new GeoPoint(poi.getLat(), poi.getLon());
 
         if (gpsProgress != null) gpsProgress.setVisibility(View.VISIBLE);
