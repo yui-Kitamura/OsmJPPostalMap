@@ -593,8 +593,20 @@ public class MainActivity extends AppCompatActivity {
 
     private void navigateToPoi(OsmPoi poi) {
         GeoPoint point = new GeoPoint(poi.getLat(), poi.getLon());
-        map.getController().animateTo(point);
-        map.getController().setZoom(19.0);
+
+        if (gpsProgress != null) gpsProgress.setVisibility(View.VISIBLE);
+        gpsZoomCenter = point;
+        gpsZoomBase = GPS_MIN_ZOOM;
+        gpsZoomLimit = map.getZoomLevelDouble();
+        gpsZoomAdjustmentPending = true;
+        initialLocationSet = true;
+
+        map.getController().setZoom(gpsZoomBase);
+        map.getController().setCenter(gpsZoomCenter);
+
+        if (canLoadPois()) {
+            updatePois(true, UpdateMode.GPS_OR_INITIAL);
+        }
 
         SimpleScheduleParser parser = new SimpleScheduleParser();
         boolean isPostOffice = "post_office".equals(poi.getTag("amenity"));
@@ -617,8 +629,20 @@ public class MainActivity extends AppCompatActivity {
 
     private void navigateToPlaceCenter(SearchResult result) {
         GeoPoint point = new GeoPoint(result.getLat(), result.getLon());
-        map.getController().animateTo(point);
-        map.getController().setZoom(15.0);
+
+        if (gpsProgress != null) gpsProgress.setVisibility(View.VISIBLE);
+        gpsZoomCenter = point;
+        gpsZoomBase = 15.0;
+        gpsZoomLimit = map.getZoomLevelDouble();
+        gpsZoomAdjustmentPending = true;
+        initialLocationSet = true;
+
+        map.getController().setZoom(gpsZoomBase);
+        map.getController().setCenter(gpsZoomCenter);
+
+        if (canLoadPois()) {
+            updatePois(true, UpdateMode.GPS_OR_INITIAL);
+        }
     }
 
     private void navigateToPlaceArea(SearchResult result) {
