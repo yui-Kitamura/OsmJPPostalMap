@@ -11,7 +11,7 @@
         android:id="@+id/top_banner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/white"
         android:padding="8dp"
         android:visibility="gone"
         android:elevation="8dp" />
@@ -29,7 +29,7 @@
         android:id="@+id/edit_scroll_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@android:color/white">
+        android:background="?android:attr/colorBackground">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -50,7 +50,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="12sp"
-            android:textColor="#FF0000"
+            android:textColor="?attr/colorError"
             android:text="位置情報を取得中..."
             android:layout_marginBottom="8dp" />
 
@@ -92,11 +92,11 @@
             android:layout_marginStart="4dp"
             android:layout_marginTop="-16dp"
             android:layout_marginBottom="16dp"
-            android:background="#80FFFFFF"
+            android:background="@color/map_overlay_bg"
             android:paddingHorizontal="4dp"
             android:paddingVertical="2dp"
             android:text="@string/osm_copyright"
-            android:textColor="#000000"
+            android:textColor="@color/map_overlay_text"
             android:textSize="10sp" />
 
         <com.google.android.material.textfield.TextInputLayout
@@ -217,7 +217,7 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="#DDDDDD"
+                android:background="@color/gray_divider"
                 android:layout_marginVertical="8dp" />
 
             <TextView
@@ -373,7 +373,7 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:padding="4dp"
-                android:background="#FFF3E0"
+                android:background="@color/warning_bg"
                 android:visibility="gone"
                 android:layout_marginBottom="8dp">
                 <TextView
@@ -381,7 +381,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="祝日の時刻情報がありません"
-                    android:textColor="#E65100"
+                    android:textColor="@color/warning_text"
                     android:textSize="12sp" />
                 <Button
                     android:id="@+id/btn_apply_sun_to_ph"
@@ -407,7 +407,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:background="#EEEEEE"
+            android:background="?android:attr/colorBackground"
+            android:alpha="0.9"
             android:padding="8dp"
             android:visibility="gone"
             android:layout_marginBottom="16dp">
