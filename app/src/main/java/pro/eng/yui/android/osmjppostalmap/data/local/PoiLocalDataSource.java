@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteDatabase;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -232,6 +233,93 @@ public class PoiLocalDataSource {
         return result;
     }
 
+    /**
+     * 条件を指定してPOIを検索する。
+     * @param query 検索文字列
+     * @param postOnly 郵便局/ポストのみに絞り込むか
+     * @param searchAddress 住所カラムも検索対象に含めるか
+     */
+    public List<OsmPoi> searchPois(String query, boolean postOnly, boolean searchAddress) {
+        SQLiteDatabase db = helper.getReadableDatabase();
+        List<OsmPoi> result = new ArrayList<>();
+
+        StringBuilder selection = new StringBuilder();
+        List<String> args = new ArrayList<>();
+
+        if (postOnly) {
+            selection.append("(");
+            selection.append(PoiDbHelper.COL_AMENITY).append(" = ? OR ").append(PoiDbHelper.COL_AMENITY).append(" = ?");
+            // 移行期間用：カラムが未設定の場合のフォールバック
+            selection.append(" OR ").append(PoiDbHelper.COL_NODE).append(" LIKE ? OR ").append(PoiDbHelper.COL_NODE).append(" LIKE ?");
+            selection.append(")");
+            args.add("post_office");
+            args.add("post_box");
+            args.add("%\"amenity\":\"post_office\"%");
+            args.add("%\"amenity\":\"post_box\"%");
+        }
+
+        if (query != null && !query.trim().isEmpty()) {
+            String q = query.trim();
+            if (selection.length() > 0) selection.append(" AND ");
+            selection.append("(");
+            // 名前一致
+            selection.append(PoiDbHelper.COL_NAME).append(" LIKE ?");
+            args.add("%" + q + "%");
+
+            if (searchAddress) {
+                // 住所一致
+                selection.append(" OR ").append(PoiDbHelper.COL_ADDR_TEXT).append(" LIKE ?");
+                args.add("%" + q + "%");
+            }
+
+            // その他タグ（JSON）一致
+            selection.append(" OR ").append(PoiDbHelper.COL_NODE).append(" LIKE ?");
+            args.add("%" + q + "%");
+
+            selection.append(")");
+        }
+
+        try (Cursor c = db.query(PoiDbHelper.TABLE_POI, null,
+                selection.length() > 0 ? selection.toString() : null,
+                args.isEmpty() ? null : args.toArray(new String[0]),
+                null, null, null)) {
+            while (c.moveToNext()) {
+                OsmPoi poi = fromCursor(c);
+                if (poi != null) { result.add(poi); }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * バージョン8で追加されたカラムを既存データに反映する。
+     */
+    public void migrateToV8() {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            try (Cursor c = db.query(PoiDbHelper.TABLE_POI, null,
+                    PoiDbHelper.COL_NAME + " IS NULL", null, null, null, null)) {
+                while (c.moveToNext()) {
+                    OsmPoi poi = fromCursor(c);
+                    if (poi != null) {
+                        ContentValues v = new ContentValues();
+                        Map<String, String> tags = poi.getTags();
+                        v.put(PoiDbHelper.COL_NAME, tags.get("name"));
+                        v.put(PoiDbHelper.COL_AMENITY, tags.get("amenity"));
+                        v.put(PoiDbHelper.COL_ADDR_TEXT, JpPostalUtil.getAddressText(tags));
+                        db.update(PoiDbHelper.TABLE_POI, v,
+                                PoiDbHelper.COL_TYPE + " = ? AND " + PoiDbHelper.COL_ID + " = ?",
+                                new String[]{poi.getType(), String.valueOf(poi.getId())});
+                    }
+                }
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
     public List<PrefMeta> getAllPrefMeta() {
         SQLiteDatabase db = helper.getReadableDatabase();
         List<PrefMeta> result = new ArrayList<>();
@@ -363,6 +451,13 @@ public class PoiLocalDataSource {
         v.put(PoiDbHelper.COL_LAT, poi.getLat());
         v.put(PoiDbHelper.COL_LON, poi.getLon());
         v.put(PoiDbHelper.COL_VER, poi.getVer());
+
+        Map<String, String> tags = poi.getTags();
+        if (tags != null) {
+            v.put(PoiDbHelper.COL_NAME, tags.get("name"));
+            v.put(PoiDbHelper.COL_AMENITY, tags.get("amenity"));
+            v.put(PoiDbHelper.COL_ADDR_TEXT, JpPostalUtil.getAddressText(tags));
+        }
         return v;
     }
 

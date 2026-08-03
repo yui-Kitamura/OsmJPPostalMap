@@ -25,8 +25,8 @@ public class PostOfficeSearchEngine implements SearchEngine {
         if (query == null || query.trim().isEmpty()) return results;
         String q = query.trim();
 
-        List<OsmPoi> allPois = repository.getAllCachedPois();
-        for (OsmPoi poi : allPois) {
+        List<OsmPoi> matchingPois = repository.searchPois(q, true, false);
+        for (OsmPoi poi : matchingPois) {
             String amenity = poi.getTag("amenity");
             if (!"post_office".equals(amenity) && !"post_box".equals(amenity)) continue;
 
@@ -45,10 +45,13 @@ public class PostOfficeSearchEngine implements SearchEngine {
             if (name != null) {
                 if (name.equals(q)) {
                     match = true;
-                    weight = 100.0;
+                    weight = 80.0;
+                } else if (name.startsWith(q)) {
+                    match = true;
+                    weight = 75.0;
                 } else if (name.contains(q)) {
                     match = true;
-                    weight = 80.0;
+                    weight = 70.0;
                 }
             }
             

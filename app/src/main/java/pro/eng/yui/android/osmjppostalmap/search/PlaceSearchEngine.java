@@ -26,9 +26,13 @@ public class PlaceSearchEngine implements SearchEngine {
         List<SearchResult> results = new ArrayList<>();
 
         for (PlaceInfo place : places) {
-            double weight = 40.0;
+            double weight = 60.0;
             if (place.getName().equals(trimmedQuery)) {
-                weight = 60.0;
+                weight = 100.0;
+            } else if (place.getName().startsWith(trimmedQuery)) {
+                weight = 95.0;
+            } else if (place.getName().contains(trimmedQuery)) {
+                weight = 90.0;
             }
 
             Double lat = place.getLat();

@@ -26,8 +26,8 @@ public class AddressSearchEngine implements SearchEngine {
         if (query == null || query.trim().isEmpty()) return results;
         String q = query.trim();
 
-        List<OsmPoi> allPois = repository.getAllCachedPois();
-        for (OsmPoi poi : allPois) {
+        List<OsmPoi> matchingPois = repository.searchPois(q, false, true);
+        for (OsmPoi poi : matchingPois) {
             boolean match = false;
             double weight = 0.0;
 
@@ -40,10 +40,13 @@ public class AddressSearchEngine implements SearchEngine {
             String fullAddress = getFullAddress(poi);
             if (fullAddress.equals(q)) {
                 match = true;
-                weight = isPO ? 30.0 : 10.0;
+                weight = isPO ? 60.0 : 30.0;
+            } else if (fullAddress.startsWith(q)) {
+                match = true;
+                weight = isPO ? 55.0 : 25.0;
             } else if (fullAddress.contains(q)) {
                 match = true;
-                weight = isPO ? 20.0 : 5.0;
+                weight = isPO ? 50.0 : 20.0;
             }
 
             if (!match) {
@@ -53,10 +56,13 @@ public class AddressSearchEngine implements SearchEngine {
                         if (value == null) continue;
                         if (value.equals(q)) {
                             match = true;
-                            weight = Math.max(weight, isPO ? 30.0 : 10.0);
+                            weight = Math.max(weight, isPO ? 60.0 : 30.0);
+                        } else if (value.startsWith(q)) {
+                            match = true;
+                            weight = Math.max(weight, isPO ? 55.0 : 25.0);
                         } else if (value.contains(q)) {
                             match = true;
-                            weight = Math.max(weight, isPO ? 20.0 : 5.0);
+                            weight = Math.max(weight, isPO ? 50.0 : 20.0);
                         }
                     }
                 }

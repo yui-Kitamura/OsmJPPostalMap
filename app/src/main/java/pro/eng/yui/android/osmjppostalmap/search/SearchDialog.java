@@ -1,12 +1,17 @@
 package pro.eng.yui.android.osmjppostalmap.search;
 
 import android.app.Dialog;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
+import android.text.SpannableString;
+import android.text.Spanned;
 import android.text.TextWatcher;
+import android.text.style.StyleSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,6 +20,7 @@ import android.widget.CompoundButton;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -104,6 +110,8 @@ public class SearchDialog extends DialogFragment {
             public void afterTextChanged(Editable s) {}
         });
 
+        applyPlaceholderStyle(getContext(), input);
+
         checkPostOffice.setOnCheckedChangeListener((buttonView, isChecked) -> performSearch(currentQuery));
         checkAddress.setOnCheckedChangeListener((buttonView, isChecked) -> performSearch(currentQuery));
         checkPlace.setOnCheckedChangeListener((buttonView, isChecked) -> performSearch(currentQuery));
@@ -121,7 +129,6 @@ public class SearchDialog extends DialogFragment {
         if (searchProgress != null) searchProgress.setVisibility(View.VISIBLE);
 
         executor.execute(() -> {
-            Map<String, SearchResult> resultMap = new HashMap<>();
             boolean searchPO = checkPostOffice.isChecked();
             boolean searchAddress = checkAddress.isChecked();
             boolean searchPlace = checkPlace.isChecked();
@@ -131,30 +138,54 @@ public class SearchDialog extends DialogFragment {
                 currentLoc = repository.getLocationLiveData().getValue();
             }
 
+            Map<String, SearchResult> resultMap = new HashMap<>();
+
+            // Phase 1: Priority Results (City/Town start match, Post Office name start match)
+            for (SearchEngine engine : engines) {
+                if (engine instanceof PostOfficeSearchEngine && !searchPO) continue;
+                if (engine instanceof PlaceSearchEngine && !searchPlace) continue;
+                if (engine instanceof AddressSearchEngine) continue; // Not priority
+
+                List<SearchResult> engineResults = engine.search(query, currentLoc);
+                for (SearchResult res : engineResults) {
+                    // Only include prefix matches in Phase 1
+                    boolean isPrefixMatch = false;
+                    if (res.getType() == SearchResult.Type.POST_OFFICE || res.getType() == SearchResult.Type.POST_BOX) {
+                        if (res.getTitle().startsWith(query)) isPrefixMatch = true;
+                    } else if (res.getType() == SearchResult.Type.PLACE) {
+                        if (res.getTitle().startsWith(query)) isPrefixMatch = true;
+                    }
+
+                    if (isPrefixMatch) {
+                        addToResultMap(resultMap, res);
+                    }
+                }
+            }
+
+            final List<SearchResult> phase1Results = new ArrayList<>(resultMap.values());
+            Collections.sort(phase1Results);
+
+            mainHandler.post(() -> {
+                if (query.equals(currentQuery)) {
+                    adapter.setResults(phase1Results);
+                }
+            });
+
+            // Phase 2: Other matches
             for (SearchEngine engine : engines) {
                 if (engine instanceof PostOfficeSearchEngine && !searchPO) continue;
                 if (engine instanceof AddressSearchEngine && !searchAddress) continue;
                 if (engine instanceof PlaceSearchEngine && !searchPlace) continue;
-                
+
                 List<SearchResult> engineResults = engine.search(query, currentLoc);
                 for (SearchResult res : engineResults) {
-                    String key;
-                    if (res.getOriginalData() instanceof OsmPoi) {
-                        key = "POI_" + ((OsmPoi) res.getOriginalData()).getId();
-                    } else {
-                        // PlaceInfoなどの場合はタイトルと位置で簡易的なキーを作成
-                        key = res.getType() + "_" + res.getTitle() + "_" + res.getLat() + "_" + res.getLon();
-                    }
-                    
-                    if (!resultMap.containsKey(key) || resultMap.get(key).getWeight() < res.getWeight()) {
-                        resultMap.put(key, res);
-                    }
+                    addToResultMap(resultMap, res);
                 }
             }
-            
-            List<SearchResult> allResults = new ArrayList<>(resultMap.values());
+
+            final List<SearchResult> allResults = new ArrayList<>(resultMap.values());
             Collections.sort(allResults);
-            
+
             mainHandler.post(() -> {
                 if (query.equals(currentQuery)) {
                     adapter.setResults(allResults);
@@ -162,6 +193,29 @@ public class SearchDialog extends DialogFragment {
                 }
             });
         });
+    }
+
+    private void addToResultMap(Map<String, SearchResult> resultMap, SearchResult res) {
+        String key;
+        if (res.getOriginalData() instanceof OsmPoi) {
+            key = "POI_" + ((OsmPoi) res.getOriginalData()).getId();
+        } else {
+            key = res.getType() + "_" + res.getTitle() + "_" + res.getLat() + "_" + res.getLon();
+        }
+
+        if (!resultMap.containsKey(key) || resultMap.get(key).getWeight() < res.getWeight()) {
+            resultMap.put(key, res);
+        }
+    }
+
+    private void applyPlaceholderStyle(android.content.Context context, EditText input) {
+        CharSequence hint = input.getHint();
+        if (hint == null) { return; }
+        SpannableString styled = new SpannableString(hint.toString());
+        styled.setSpan(new StyleSpan(Typeface.ITALIC), 0, styled.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        input.setHint(styled);
+        input.setHintTextColor(ContextCompat.getColor(context, R.color.input_placeholder));
     }
 
     private class SearchAdapter extends RecyclerView.Adapter<SearchAdapter.ViewHolder> {
@@ -210,8 +264,14 @@ public class SearchDialog extends DialogFragment {
             }
 
             void bind(final SearchResult result) {
-                title.setText(result.getTitle());
-                subtitle.setText(result.getSubTitle());
+                String q = currentQuery != null ? currentQuery.trim() : "";
+                if (!q.isEmpty()) {
+                    title.setText(highlightText(result.getTitle(), q));
+                    subtitle.setText(highlightText(result.getSubTitle(), q));
+                } else {
+                    title.setText(result.getTitle());
+                    subtitle.setText(result.getSubTitle());
+                }
 
                 // Set icon
                 if (result.getType() == SearchResult.Type.POST_OFFICE || result.getType() == SearchResult.Type.POST_BOX) {
@@ -256,6 +316,16 @@ public class SearchDialog extends DialogFragment {
                         if (listener != null) listener.onPlaceAreaSelected(result);
                     });
                 }
+            }
+            private CharSequence highlightText(String text, String query) {
+                if (text == null || query == null || query.isEmpty()) return text;
+                SpannableString spannable = new SpannableString(text);
+                int start = text.toLowerCase().indexOf(query.toLowerCase());
+                while (start >= 0) {
+                    spannable.setSpan(new StyleSpan(Typeface.BOLD), start, start + query.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    start = text.toLowerCase().indexOf(query.toLowerCase(), start + query.length());
+                }
+                return spannable;
             }
         }
     }
