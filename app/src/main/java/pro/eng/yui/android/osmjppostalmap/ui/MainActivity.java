@@ -309,20 +309,20 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     if (markerRenderGeneration.get() != renderGeneration) return;
 
-                    if (fZoomResult != null) {
+                        if (fZoomResult != null) {
                         if (fZoomResult.satisfied) {
                             map.getController().setZoom(fZoomResult.zoom);
+                            checkPendingPoiDetail();
                             gpsZoomAdjustmentPending = false;
                             if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
-                            checkPendingPoiDetail();
                         } else {
                             Boolean loading = viewModel.getLoading().getValue();
                             if (!Boolean.TRUE.equals(loading)) {
                                 // 読み込みが完了しており、かつこれ以上POIが見つからない場合はフォールバック値を適用して終了
                                 map.getController().setZoom(fZoomResult.zoom);
+                                checkPendingPoiDetail();
                                 gpsZoomAdjustmentPending = false;
                                 if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
-                                checkPendingPoiDetail();
                             }
                             // 読み込み中の場合は、次の更新を待つためフラグを維持し、ズーム変更も行わない
                         }
@@ -332,9 +332,9 @@ public class MainActivity extends AppCompatActivity {
                         if (!Boolean.TRUE.equals(loading)) {
                             // 読み込みが完了してもPOIが0なら、フォールバック値を適用して終了
                             map.getController().setZoom(Math.max(MIN_ZOOM, zoomLimit));
+                            checkPendingPoiDetail();
                             gpsZoomAdjustmentPending = false;
                             if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
-                            checkPendingPoiDetail();
                         }
                     }
 
@@ -634,8 +634,11 @@ public class MainActivity extends AppCompatActivity {
         pendingPoiDetail = poi;
         initialLocationSet = true;
 
-        map.getController().setZoom(gpsZoomBase);
-        map.getController().setCenter(gpsZoomCenter);
+        // v0データ（仮座標）の場合は、すぐにはジャンプせず詳細データの到着を待つ
+        if (poi.getVer() > 0) {
+            map.getController().setZoom(gpsZoomBase);
+            map.getController().setCenter(gpsZoomCenter);
+        }
 
         String hintPref = poi.getTag("addr:prefecture");
         if (canLoadPois()) {
@@ -663,11 +666,18 @@ public class MainActivity extends AppCompatActivity {
             // 詳細データの座標が暫定座標(v0)と異なる可能性があるため、中心を更新する
             GeoPoint realPoint = new GeoPoint(target.getLat(), target.getLon());
             if (gpsZoomAdjustmentPending && gpsZoomCenter != null) {
-                if (realPoint.distanceToAsDouble(gpsZoomCenter) > 1.0) {
+                if (pendingPoiDetail.getVer() == 0) {
+                    // v0からのジャンプ待機中だった場合は、ここで初めて移動する
+                    map.getController().animateTo(realPoint);
+                    gpsZoomCenter = realPoint;
+                } else if (realPoint.distanceToAsDouble(gpsZoomCenter) > 1.0) {
                     map.getController().animateTo(realPoint);
                     gpsZoomCenter = realPoint;
                 }
             }
+        } else if (gpsZoomAdjustmentPending && pendingPoiDetail.getVer() == 0) {
+            // v0データの実座標が見つからなかった場合のフォールバック
+            map.getController().setCenter(gpsZoomCenter);
         }
         
         showPoiDetails(target);
