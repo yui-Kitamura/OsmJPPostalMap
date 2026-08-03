@@ -16,28 +16,35 @@ public class ClockFilterButton extends AppCompatImageButton {
 
     private Paint paint;
     private boolean isFilterActive = false;
-    private final int activeColor = 0xFF81C784; // Light Green 300
-    private final int inactiveColor = Color.WHITE;
+    private int activeColor = 0xFF81C784;
+    private int inactiveColor = Color.WHITE;
+    private int textColor = Color.BLACK;
 
     public ClockFilterButton(Context context) {
         super(context);
-        init();
+        init(context);
     }
 
     public ClockFilterButton(Context context, AttributeSet attrs) {
         super(context, attrs);
-        init();
+        init(context);
     }
 
     public ClockFilterButton(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init();
+        init(context);
     }
 
-    private void init() {
+    private void init(Context context) {
         paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        // 背景はプログラムで制御するため、XMLの背景をクリアするか、自前で描画する
-        // ここではbg_menu_buttonの形状を維持したいが、要件の「背景色を変える」を優先
+        
+        android.util.TypedValue typedValue = new android.util.TypedValue();
+        context.getTheme().resolveAttribute(R.attr.colorEditable, typedValue, true);
+        activeColor = typedValue.data;
+        context.getTheme().resolveAttribute(android.R.attr.colorBackground, typedValue, true);
+        inactiveColor = typedValue.data;
+        context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
+        textColor = typedValue.data;
     }
 
     public void setFilterActive(boolean active) {
@@ -60,7 +67,7 @@ public class ClockFilterButton extends AppCompatImageButton {
 
         // 枠線描画
         paint.setStyle(Paint.Style.STROKE);
-        paint.setColor(Color.BLACK);
+        paint.setColor(textColor);
         paint.setStrokeWidth(2);
         canvas.drawCircle(centerX, centerY, radius, paint);
 
@@ -81,7 +88,7 @@ public class ClockFilterButton extends AppCompatImageButton {
         } else if (today == Days.SATURDAY) {
             paint.setColor(Color.BLUE);
         } else {
-            paint.setColor(Color.BLACK);
+            paint.setColor(textColor);
         }
 
         paint.setTextAlign(Paint.Align.CENTER);
@@ -105,13 +112,13 @@ public class ClockFilterButton extends AppCompatImageButton {
 
         // 中心点
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(Color.BLACK);
+        paint.setColor(textColor);
         canvas.drawCircle(centerX, centerY, 4, paint);
     }
 
     private void drawHand(Canvas canvas, int cx, int cy, float length, float angleDegrees, float strokeWidth) {
         paint.setStrokeWidth(strokeWidth);
-        paint.setColor(Color.BLACK);
+        paint.setColor(textColor);
         double angleRadians = Math.toRadians(angleDegrees - 90);
         float stopX = (float) (cx + Math.cos(angleRadians) * length);
         float stopY = (float) (cy + Math.sin(angleRadians) * length);

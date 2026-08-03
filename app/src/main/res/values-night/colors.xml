@@ -2,10 +2,12 @@
 <resources>
     <!-- ダークテーマでは黒の半透明だと沈むため、白の半透明で同じ薄さを出す -->
     <color name="input_placeholder">#40FFFFFF</color>
+    <color name="brand_red">#FF5252</color>
+    <color name="editable_green">#81C784</color>
     <color name="gray_bg">#FF303030</color>
     <color name="gray_divider">#FF444444</color>
-    <color name="map_overlay_bg">#80000000</color>
-    <color name="map_overlay_text">#FFFFFFFF</color>
+    <color name="map_overlay_bg">#80FFFFFF</color>
+    <color name="map_overlay_text">#FF000000</color>
     <color name="warning_bg">#4E342E</color>
     <color name="warning_text">#FFB17E</color>
     <color name="text_secondary">#BDBDBD</color>

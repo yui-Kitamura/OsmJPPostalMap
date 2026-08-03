@@ -2,9 +2,10 @@
     <!-- Base application theme. -->
     <style name="Theme.OsmJPPostalMap" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/jp_post_red</item>
-        <item name="colorPrimaryVariant">@color/jp_post_red</item>
+        <item name="colorPrimary">@color/brand_red</item>
+        <item name="colorPrimaryVariant">@color/brand_red</item>
         <item name="colorOnPrimary">@color/white</item>
+        <item name="colorEditable">@color/editable_green</item>
         <!-- Secondary brand color. -->
         <item name="colorSecondary">@color/teal_200</item>
         <item name="colorSecondaryVariant">@color/teal_200</item>
