@@ -288,12 +288,10 @@ public class PoiDetailsDialog {
                 lsTable.removeAllViews();
             } else {
                 // 不明
-                lsLayout.setVisibility(View.VISIBLE);
-                lsStatus.setText("不明");
-                lsStatus.setTextColor(ContextCompat.getColor(context, R.color.black));
-                lsStatus.setTypeface(null, android.graphics.Typeface.NORMAL);
-                lsTable.removeAllViews();
+                lsLayout.setVisibility(View.GONE);
             }
+        } else {
+            lsLayout.setVisibility(View.GONE);
         }
 
         String checkDate = poi.getTag("check_date");
