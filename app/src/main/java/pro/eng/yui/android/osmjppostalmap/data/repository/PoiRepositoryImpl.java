@@ -26,6 +26,7 @@ import com.google.gson.Gson;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.text.Normalizer;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -39,6 +40,7 @@ import pro.eng.yui.android.osmjppostalmap.data.local.PoiLocalDataSource;
 import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateApi;
 import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateResponse;
 import pro.eng.yui.android.osmjppostalmap.data.remote.OverpassApi;
+import pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo;
 import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import retrofit2.Call;
@@ -107,6 +109,10 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final Map<Long, Set<String>> gridPrefCache = new java.util.concurrent.ConcurrentHashMap<>();
     /** 都道府県の境界ボックス（BBox）キャッシュ。 */
     private final Map<String, BBox> prefBoundaryCache = new java.util.concurrent.ConcurrentHashMap<>();
+    /** 都道府県コードから都道府県名へのマッピング */
+    private final Map<Integer, String> prefCodeNameMap = new java.util.concurrent.ConcurrentHashMap<>();
+    /** 市区町村情報のキャッシュ（検索用） */
+    private final List<PlaceInfo> placeCache = Collections.synchronizedList(new ArrayList<>());
 
     private static PoiRepositoryImpl instance;
 
@@ -129,6 +135,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             repo.preloadBoundaries();
             repo.loadAllFromCache();
             repo.loadGridCacheFromDb();
+            repo.loadPlacesFromCache();
         }
         if (repo.locationManager == null) {
             repo.locationManager = (LocationManager) repo.context.getSystemService(Context.LOCATION_SERVICE);
@@ -151,6 +158,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                 for (Map.Entry<String, Integer> entry : prefNameAndCode.entrySet()) {
                     prefCodeAndName.put(entry.getValue(), entry.getKey());
                 }
+                prefCodeNameMap.putAll(prefCodeAndName);
 
                 String bboxJson = JpPostalUtil.getRawPrefecturesJson().join();
                 if (bboxJson == null || bboxJson.isEmpty()) {
@@ -427,8 +435,111 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public List<PrefMeta> getSavedPrefectures() {
-        if (local == null) { return new ArrayList<>(); }
         return local.getAllPrefMeta();
+    }
+
+    @Override
+    public List<OsmPoi> getAllCachedPois() {
+        return local.getAllPois();
+    }
+
+    @Override
+    public void fetchCityData() {
+        runOnExecutor("地名データを読み込み中", () -> {
+            try {
+                String cityJson = JpPostalUtil.getRawCityJson().join();
+                if (cityJson == null || cityJson.isEmpty()) {
+                    return;
+                }
+                JSONArray array = new JSONArray(cityJson);
+                List<PlaceInfo> places = new ArrayList<>();
+                for (int i = 0; i < array.length(); i++) {
+                    JSONObject obj = array.getJSONObject(i);
+                    int prefCode = obj.has("prefCode") ? obj.getInt("prefCode") : obj.getInt("is_in");
+                    String name = obj.has("city") ? obj.getString("city") : obj.getString("name");
+
+                    Double lat = null;
+                    Double lon = null;
+                    if (obj.has("label")) {
+                        JSONObject label = obj.getJSONObject("label");
+                        lat = label.getDouble("lat");
+                        lon = label.getDouble("lon");
+                    } else if (obj.has("lat")) {
+                        lat = obj.getDouble("lat");
+                        lon = obj.getDouble("lon");
+                    }
+
+                    double minLat, maxLat, minLon, maxLon;
+                    if (obj.has("bbox")) {
+                        JSONObject bbox = obj.getJSONObject("bbox");
+                        minLat = bbox.getDouble("minLat");
+                        maxLat = bbox.getDouble("maxLat");
+                        minLon = bbox.getDouble("minLon");
+                        maxLon = bbox.getDouble("maxLon");
+                    } else {
+                        minLat = obj.getDouble("minLat");
+                        maxLat = obj.getDouble("maxLat");
+                        minLon = obj.getDouble("minLon");
+                        maxLon = obj.getDouble("maxLon");
+                    }
+
+                    places.add(new PlaceInfo(
+                            prefCode, name, lat, lon, minLat, maxLat, minLon, maxLon
+                    ));
+                }
+                if (local != null) {
+                    local.upsertPlaces(places);
+                    synchronized (placeCache) {
+                        placeCache.clear();
+                        placeCache.addAll(places);
+                    }
+                }
+            } catch (Exception e) {
+                Log.e("PoiRepository", "Failed to fetch city data", e);
+            }
+        });
+    }
+
+    @Override
+    public List<PlaceInfo> searchPlaces(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        String q = Normalizer.normalize(query.trim(), Normalizer.Form.NFKC).toLowerCase();
+        List<PlaceInfo> results = new ArrayList<>();
+        synchronized (placeCache) {
+            for (PlaceInfo place : placeCache) {
+                String normalizedName = Normalizer.normalize(place.getName(), Normalizer.Form.NFKC).toLowerCase();
+                if (normalizedName.contains(q)) {
+                    results.add(place);
+                }
+            }
+        }
+        // キャッシュが空の場合は念のためDBからも探す（初回起動時など）
+        if (results.isEmpty() && local != null) {
+            return local.searchPlaces(query);
+        }
+        return results;
+    }
+
+    /**
+     * SQLiteに保存されている市区町村データをメモリキャッシュへ読み込む。
+     */
+    private void loadPlacesFromCache() {
+        if (local == null) return;
+        executor.execute(() -> {
+            List<PlaceInfo> places = local.getAllPlaces();
+            synchronized (placeCache) {
+                placeCache.clear();
+                placeCache.addAll(places);
+            }
+        });
+    }
+
+    @Override
+    public String getPrefectureName(int prefCode) {
+        String name = prefCodeNameMap.get(prefCode);
+        return name != null ? name : "Unknown(" + prefCode + ")";
     }
 
     @Override

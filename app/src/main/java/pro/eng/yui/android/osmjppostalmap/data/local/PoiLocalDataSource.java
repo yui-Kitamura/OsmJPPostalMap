@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo;
 import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
@@ -223,6 +224,71 @@ public class PoiLocalDataSource {
         v.put(PoiDbHelper.COL_PREF_NAME, prefNames);
         db.insertWithOnConflict(PoiDbHelper.TABLE_GRID_PREF, null,
                 v, SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    public void upsertPlaces(List<PlaceInfo> places) {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            db.delete(PoiDbHelper.TABLE_PLACE, null, null);
+            for (PlaceInfo place : places) {
+                ContentValues v = new ContentValues();
+                v.put(PoiDbHelper.COL_PLACE_PREF_CODE, place.getPrefCode());
+                v.put(PoiDbHelper.COL_PLACE_NAME, place.getName());
+                v.put(PoiDbHelper.COL_PLACE_LAT, place.getLat());
+                v.put(PoiDbHelper.COL_PLACE_LON, place.getLon());
+                v.put(PoiDbHelper.COL_PLACE_MIN_LAT, place.getMinLat());
+                v.put(PoiDbHelper.COL_PLACE_MAX_LAT, place.getMaxLat());
+                v.put(PoiDbHelper.COL_PLACE_MIN_LON, place.getMinLon());
+                v.put(PoiDbHelper.COL_PLACE_MAX_LON, place.getMaxLon());
+                db.insert(PoiDbHelper.TABLE_PLACE, null, v);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    public List<PlaceInfo> searchPlaces(String query) {
+        SQLiteDatabase db = helper.getReadableDatabase();
+        List<PlaceInfo> result = new ArrayList<>();
+        String selection = PoiDbHelper.COL_PLACE_NAME + " LIKE ?";
+        String[] args = new String[]{"%" + query + "%"};
+        try (Cursor c = db.query(PoiDbHelper.TABLE_PLACE, null, selection, args, null, null, null)) {
+            while (c.moveToNext()) {
+                result.add(fromPlaceCursor(c));
+            }
+        }
+        return result;
+    }
+
+    public List<PlaceInfo> getAllPlaces() {
+        SQLiteDatabase db = helper.getReadableDatabase();
+        List<PlaceInfo> result = new ArrayList<>();
+        try (Cursor c = db.query(PoiDbHelper.TABLE_PLACE, null, null, null, null, null, null)) {
+            while (c.moveToNext()) {
+                result.add(fromPlaceCursor(c));
+            }
+        }
+        return result;
+    }
+
+    private PlaceInfo fromPlaceCursor(Cursor c) {
+        int iLat = c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_LAT);
+        int iLon = c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_LON);
+        Double lat = c.isNull(iLat) ? null : c.getDouble(iLat);
+        Double lon = c.isNull(iLon) ? null : c.getDouble(iLon);
+
+        return new PlaceInfo(
+                c.getInt(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_PREF_CODE)),
+                c.getString(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_NAME)),
+                lat,
+                lon,
+                c.getDouble(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_MIN_LAT)),
+                c.getDouble(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_MAX_LAT)),
+                c.getDouble(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_MIN_LON)),
+                c.getDouble(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_MAX_LON))
+        );
     }
 
     public Map<Long, Set<String>> getAllGridPrefs() {

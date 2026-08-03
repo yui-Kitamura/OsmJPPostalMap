@@ -111,151 +111,27 @@ public class PoiMarker extends Marker {
         }
 
         // 外周リング
+        PoiStatusDrawingUtil.drawStatusRing(canvas, screenPos.x, screenPos.y, size,
+                poiType == PoiType.POST_OFFICE, schedule, limitedServiceSchedule,
+                ringPaint, innerRingPaint, 10f);
+
+        // 〒 記号
         ScheduleResult effectiveSchedule = schedule;
         if (limitedServiceSchedule != null && 
             (limitedServiceSchedule.getCurrentState() == ScheduleResult.CurrentState.OPENING || 
              limitedServiceSchedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON)) {
             effectiveSchedule = limitedServiceSchedule;
         }
-
-        if (effectiveSchedule != null && effectiveSchedule.getCurrentState() != ScheduleResult.CurrentState.UNKNOWN) {
-            updateRingPaint(effectiveSchedule);
-            float sweepAngle = 360f;
-            long now = System.currentTimeMillis();
-            
-            // リングを少し外側に描画
-            float ringSize = size + ringPaint.getStrokeWidth() + 1f;
-            RectF ringRect = new RectF(screenPos.x - ringSize, screenPos.y - ringSize, screenPos.x + ringSize, screenPos.y + ringSize);
-
-            if (effectiveSchedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON && effectiveSchedule.getNextEvent() != null) {
-                long remainingMillis = effectiveSchedule.getNextEvent().getTimestamp().toInstant().toEpochMilli() - now;
-                float remainingMinutes = remainingMillis / 60000f;
-                if (remainingMinutes < 0) remainingMinutes = 0;
-                if (remainingMinutes > 60) remainingMinutes = 60;
-                sweepAngle = (remainingMinutes / 60f) * 360f;
-            }
-            
-            boolean showDot = false;
-            if (effectiveSchedule.getCurrentState() == ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON && effectiveSchedule.getNextEvent() != null) {
-                showDot = true;
-            }
-
-            if (showDot) {
-                // 営業開始前または収集前：緑ドットを短針の位置に配置
-                if (poiType == PoiType.POST_OFFICE) {
-                    canvas.drawRoundRect(ringRect, 10f, 10f, ringPaint);
-                } else {
-                    canvas.drawArc(ringRect, -90f, 360f, false, ringPaint);
-                }
-                
-                int hour = effectiveSchedule.getNextEvent().getTimestamp().getHour();
-                int minute = effectiveSchedule.getNextEvent().getTimestamp().getMinute();
-                float angle = (hour + minute / 60f) * 30f - 90f;
-                
-                Paint dotPaint = new Paint(ringPaint);
-                dotPaint.setColor(0xFF00FF00); // 明るい緑
-                dotPaint.setStyle(Paint.Style.FILL);
-                
-                float dotX = (float) (screenPos.x + ringSize * Math.cos(Math.toRadians(angle)));
-                float dotY = (float) (screenPos.y + ringSize * Math.sin(Math.toRadians(angle)));
-                canvas.drawCircle(dotX, dotY, 6f, dotPaint);
-            } else {
-                if (effectiveSchedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
-                    // 背景としてグレーのリングを描画
-                    Paint bgRingPaint = new Paint(ringPaint);
-                    bgRingPaint.setColor(0xFF808080);
-                    if (poiType == PoiType.POST_OFFICE) {
-                        canvas.drawRoundRect(ringRect, 10f, 10f, bgRingPaint);
-                    } else {
-                        canvas.drawArc(ringRect, -90f, 360f, false, bgRingPaint);
-                    }
-                }
-
-                if (poiType == PoiType.POST_OFFICE) {
-                    if (sweepAngle == 360f) {
-                        canvas.drawRoundRect(ringRect, 10f, 10f, ringPaint);
-                    } else {
-                        drawSquareGauge(canvas, ringRect, sweepAngle / 360f, ringPaint);
-                    }
-                } else {
-                    canvas.drawArc(ringRect, -90f, sweepAngle, false, ringPaint);
-                }
-            }
-
-            // ゆうゆう窓口が営業中で通常窓口が閉まっている場合、メインリングの上に淡い赤のリングを重ねる
-            if (limitedServiceSchedule == effectiveSchedule && schedule != null &&
-                    schedule.getCurrentState() != ScheduleResult.CurrentState.OPENING &&
-                    schedule.getCurrentState() != ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
-                float innerRingSize = ringSize;
-                RectF innerRingRect = new RectF(screenPos.x - innerRingSize, screenPos.y - innerRingSize, screenPos.x + innerRingSize, screenPos.y + innerRingSize);
-                if (poiType == PoiType.POST_OFFICE) {
-                    canvas.drawRoundRect(innerRingRect, 10f, 10f, innerRingPaint);
-                } else {
-                    canvas.drawArc(innerRingRect, -90f, 360f, false, innerRingPaint);
-                }
-            }
-        }
-
-        // 〒 記号
-        String symbol = "〒";
-        if (effectiveSchedule != null) {
-            if (effectiveSchedule.getCurrentState() == ScheduleResult.CurrentState.UNKNOWN) {
-                symbol = "？";
-            } else if (effectiveSchedule.getCurrentState() == ScheduleResult.CurrentState.PARSE_ERROR) {
-                symbol = "△";
-            }
-        }
+        
+        String symbol = PoiStatusDrawingUtil.getStatusSymbol(effectiveSchedule);
         canvas.drawText(symbol, screenPos.x, screenPos.y + (symbolPaint.getTextSize() / 3), symbolPaint);
     }
 
     private void updateRingPaint(ScheduleResult schedule) {
-        switch (schedule.getCurrentState()) {
-            case OPENING:
-                ringPaint.setColor(0xFF00FF00); // 緑
-                break;
-            case OPENING_BUT_EVENT_SOON:
-                ringPaint.setColor(0xFFFFA500); // 橙
-                break;
-            case CLOSED:
-                ringPaint.setColor(0xFF808080); // グレー (赤から変更)
-                break;
-            case TODAY_FINISHED:
-                ringPaint.setColor(0xFF808080); // グレー
-                break;
-            case CLOSING_BUT_OPEN_SOON:
-                if (poiType == PoiType.POST_BOX) {
-                    ringPaint.setColor(0xFF808080); // ポストの収集待ちはグレー
-                } else {
-                    ringPaint.setColor(0xFF556B2F); // 郵便局の営業開始前は灰がかった緑
-                }
-                break;
-            case UNKNOWN:
-                ringPaint.setColor(0x00000000); // 透明
-                break;
-        }
+        ringPaint.setColor(PoiStatusDrawingUtil.getRingColor(schedule, poiType == PoiType.POST_BOX));
     }
 
     private void drawSquareGauge(Canvas canvas, RectF rect, float progress, Paint paint) {
-        Path path = new Path();
-        float rx = 10f;
-        float ry = 10f;
-
-        // 上部中央から開始して時計回りに描画
-        path.moveTo(rect.centerX(), rect.top);
-        path.lineTo(rect.right - rx, rect.top);
-        path.arcTo(new RectF(rect.right - 2 * rx, rect.top, rect.right, rect.top + 2 * ry), -90, 90);
-        path.lineTo(rect.right, rect.bottom - ry);
-        path.arcTo(new RectF(rect.right - 2 * rx, rect.bottom - 2 * ry, rect.right, rect.bottom), 0, 90);
-        path.lineTo(rect.left + rx, rect.bottom);
-        path.arcTo(new RectF(rect.left, rect.bottom - 2 * ry, rect.left + 2 * rx, rect.bottom), 90, 90);
-        path.lineTo(rect.left, rect.top + ry);
-        path.arcTo(new RectF(rect.left, rect.top, rect.left + 2 * rx, rect.top + 2 * ry), 180, 90);
-        path.lineTo(rect.centerX(), rect.top);
-
-        PathMeasure pm = new PathMeasure(path, false);
-        float length = pm.getLength();
-        Path dst = new Path();
-        pm.getSegment(0, length * progress, dst, true);
-        canvas.drawPath(dst, paint);
+        PoiStatusDrawingUtil.drawSquareGauge(canvas, rect, progress, 10f, 10f, paint);
     }
 }

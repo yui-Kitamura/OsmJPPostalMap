@@ -164,6 +164,10 @@ public class MainViewModel extends ViewModel {
         });
     }
 
+    public void fetchCityData() {
+        repository.fetchCityData();
+    }
+
     public LiveData<DataDateResponse> getDataDate() {
         return dataDate;
     }
