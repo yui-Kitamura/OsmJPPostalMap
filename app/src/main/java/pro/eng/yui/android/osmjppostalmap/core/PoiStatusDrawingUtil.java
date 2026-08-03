@@ -146,9 +146,13 @@ public class PoiStatusDrawingUtil {
                 schedule.getCurrentState() != ScheduleResult.CurrentState.OPENING &&
                 schedule.getCurrentState() != ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
             if (isPostOffice) {
-                canvas.drawRoundRect(ringRect, cornerRadius, cornerRadius, innerRingPaint);
+                if (sweepAngle == 360f) {
+                    canvas.drawRoundRect(ringRect, cornerRadius, cornerRadius, innerRingPaint);
+                } else {
+                    drawSquareGauge(canvas, ringRect, sweepAngle / 360f, cornerRadius, cornerRadius, innerRingPaint);
+                }
             } else {
-                canvas.drawArc(ringRect, -90f, 360f, false, innerRingPaint);
+                canvas.drawArc(ringRect, -90f, sweepAngle, false, innerRingPaint);
             }
         }
     }
