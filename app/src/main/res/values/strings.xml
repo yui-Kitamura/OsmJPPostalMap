@@ -47,4 +47,8 @@
     <string name="memo_postoffice">郵便局の情報（現地確認）\n営業時間 = %1$s\n住所 = %2$s</string>
     <string name="changeset_comment_update">更新 %1$s</string>
     <string name="changeset_comment_add_postbox">郵便ポストの追加</string>
+    <string name="settings_theme_title">テーマ</string>
+    <string name="settings_theme_light">ライト</string>
+    <string name="settings_theme_system">システム</string>
+    <string name="settings_theme_dark">ダーク</string>
 </resources>

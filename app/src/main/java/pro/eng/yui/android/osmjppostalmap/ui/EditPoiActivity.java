@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.graphics.drawable.LayerDrawable;
@@ -101,13 +102,19 @@ public class EditPoiActivity extends AppCompatActivity {
     private boolean isResettingCenter = false;
     private static final double MIN_ZOOM = 15.0;
 
+    private int getThemeColor(int attr) {
+        TypedValue typedValue = new TypedValue();
+        getTheme().resolveAttribute(attr, typedValue, true);
+        return typedValue.data;
+    }
+
     private class ReticleMarker extends Marker {
         private final android.graphics.Paint paint;
 
         public ReticleMarker(MapView mapView) {
             super(mapView);
             paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-            paint.setColor(androidx.core.content.ContextCompat.getColor(EditPoiActivity.this, R.color.jp_post_red)); // 赤
+            paint.setColor(androidx.core.content.ContextCompat.getColor(EditPoiActivity.this, R.color.brand_red)); // 赤
             paint.setStyle(android.graphics.Paint.Style.STROKE);
             paint.setStrokeWidth(5f);
         }
@@ -1107,14 +1114,14 @@ public class EditPoiActivity extends AppCompatActivity {
             if (isMapUnlocked) {
                 androidx.core.graphics.drawable.DrawableCompat.setTint(bg, ContextCompat.getColor(this, R.color.white));
             } else {
-                androidx.core.graphics.drawable.DrawableCompat.setTint(bg, ContextCompat.getColor(this, R.color.jp_post_red));
+                androidx.core.graphics.drawable.DrawableCompat.setTint(bg, ContextCompat.getColor(this, R.color.brand_red));
             }
             btn.setBackground(bg);
         }
 
         if (isMapUnlocked) {
             btn.setImageResource(R.drawable.ic_lock_unlocked);
-            btn.setColorFilter(ContextCompat.getColor(this, R.color.jp_post_red));
+            btn.setColorFilter(ContextCompat.getColor(this, R.color.brand_red));
         } else {
             btn.setImageResource(R.drawable.ic_lock_locked);
             btn.setColorFilter(ContextCompat.getColor(this, R.color.white));
@@ -1148,14 +1155,14 @@ public class EditPoiActivity extends AppCompatActivity {
             String status = getString(R.string.location_status_tracking, distance);
             if (location.getAccuracy() > 50) {
                 status += getString(R.string.location_status_low_accuracy);
-                textLocationStatus.setTextColor(0xFFFF0000);
+                textLocationStatus.setTextColor(getThemeColor(androidx.appcompat.R.attr.colorPrimary));
             } else {
-                textLocationStatus.setTextColor(0xFF008800);
+                textLocationStatus.setTextColor(getThemeColor(R.attr.colorEditable));
             }
             textLocationStatus.setText(status);
         } else {
             textLocationStatus.setText(R.string.location_status_fetching);
-            textLocationStatus.setTextColor(0xFFFF0000);
+            textLocationStatus.setTextColor(getThemeColor(androidx.appcompat.R.attr.colorPrimary));
         }
     }
 
@@ -1191,7 +1198,7 @@ public class EditPoiActivity extends AppCompatActivity {
 
     private void showErrorBanner(String message) {
         if (topBanner == null) return;
-        topBanner.setBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.jp_post_red));
+        topBanner.setBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.brand_red));
         topBanner.setText(message);
         topBanner.setVisibility(View.VISIBLE);
         findViewById(R.id.edit_scroll_view).scrollTo(0, 0);
@@ -1273,12 +1280,12 @@ public class EditPoiActivity extends AppCompatActivity {
         if (value.isEmpty()) {
             // 未入力
             background.setColor(ContextCompat.getColor(this, R.color.gray_bg));
-            et.setTextColor(ContextCompat.getColor(this, R.color.gray_light));
-            et.setHintTextColor(ContextCompat.getColor(this, R.color.gray_light));
+            et.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
+            et.setHintTextColor(ContextCompat.getColor(this, R.color.text_secondary));
         } else {
             // 入力済み
-            background.setColor(ContextCompat.getColor(this, R.color.white));
-            et.setTextColor(ContextCompat.getColor(this, R.color.black));
+            background.setColor(getThemeColor(android.R.attr.colorBackground));
+            et.setTextColor(getThemeColor(com.google.android.material.R.attr.colorOnSurface));
         }
 
         if (isModified) {
@@ -1444,11 +1451,11 @@ public class EditPoiActivity extends AppCompatActivity {
             if (!hasPH) {
                 findViewById(R.id.layout_holiday_warning).setVisibility(View.VISIBLE);
                 TextView header = findViewById(R.id.header_sun_ph);
-                if (header != null) header.setTextColor(android.graphics.Color.RED);
-                
+                if (header != null) header.setTextColor(getThemeColor(androidx.appcompat.R.attr.colorPrimary));
+                 
                 findViewById(R.id.btn_apply_sun_to_ph).setOnClickListener(v -> {
                     findViewById(R.id.layout_holiday_warning).setVisibility(View.GONE);
-                    if (header != null) header.setTextColor(android.graphics.Color.BLACK);
+                    if (header != null) header.setTextColor(getThemeColor(com.google.android.material.R.attr.colorOnSurface));
                 });
             }
 

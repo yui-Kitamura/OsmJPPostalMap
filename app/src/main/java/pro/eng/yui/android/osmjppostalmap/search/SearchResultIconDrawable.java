@@ -45,7 +45,7 @@ public class SearchResultIconDrawable extends Drawable {
         innerRingPaint.setColor(0xFFFF8888); // 淡い赤
         
         bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        int logoRed = ContextCompat.getColor(context, R.color.jp_post_red);
+        int logoRed = ContextCompat.getColor(context, R.color.brand_red);
         bgPaint.setColor((logoRed & 0x00FFFFFF) | 0xCC000000);
         
         symbolPaint = new Paint(Paint.ANTI_ALIAS_FLAG);

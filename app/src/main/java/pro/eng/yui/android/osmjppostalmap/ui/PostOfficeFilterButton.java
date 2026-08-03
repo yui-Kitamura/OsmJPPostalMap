@@ -7,31 +7,41 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.util.AttributeSet;
 import androidx.appcompat.widget.AppCompatImageButton;
+import pro.eng.yui.android.osmjppostalmap.R;
 
 public class PostOfficeFilterButton extends AppCompatImageButton {
 
     private Paint paint;
     private boolean isFilterActive = false;
-    private final int activeColor = 0xFF81C784; // Light Green 300
-    private final int inactiveColor = Color.WHITE;
+    private int activeColor = 0xFF81C784;
+    private int inactiveColor = Color.WHITE;
+    private int textColor = Color.BLACK;
 
     public PostOfficeFilterButton(Context context) {
         super(context);
-        init();
+        init(context);
     }
 
     public PostOfficeFilterButton(Context context, AttributeSet attrs) {
         super(context, attrs);
-        init();
+        init(context);
     }
 
     public PostOfficeFilterButton(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init();
+        init(context);
     }
 
-    private void init() {
+    private void init(Context context) {
         paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        
+        android.util.TypedValue typedValue = new android.util.TypedValue();
+        context.getTheme().resolveAttribute(R.attr.colorEditable, typedValue, true);
+        activeColor = typedValue.data;
+        context.getTheme().resolveAttribute(android.R.attr.colorBackground, typedValue, true);
+        inactiveColor = typedValue.data;
+        context.getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
+        textColor = typedValue.data;
     }
 
     public void setFilterActive(boolean active) {
@@ -52,13 +62,13 @@ public class PostOfficeFilterButton extends AppCompatImageButton {
 
         // 枠線描画
         paint.setStyle(Paint.Style.STROKE);
-        paint.setColor(Color.BLACK);
+        paint.setColor(textColor);
         paint.setStrokeWidth(2);
         canvas.drawRect(padding, padding, width - padding, height - padding, paint);
 
         // 「局」ラベル描画
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(Color.BLACK);
+        paint.setColor(textColor);
         paint.setTextSize(Math.min(width, height) * 0.5f);
         paint.setFakeBoldText(true);
         paint.setTextAlign(Paint.Align.CENTER);

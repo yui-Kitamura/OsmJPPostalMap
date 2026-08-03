@@ -30,11 +30,14 @@ import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.android.osmjppostalmap.BuildConfig;
 import pro.eng.yui.android.osmjppostalmap.core.PrefRefreshDialog;
 import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
+import pro.eng.yui.android.osmjppostalmap.data.repository.SettingsRepository;
+import com.google.android.material.button.MaterialButtonToggleGroup;
 import org.osmdroid.tileprovider.modules.SqlTileWriter;
 
 public class SettingsActivity extends AppCompatActivity {
 
     private AuthRepository authRepository;
+    private SettingsRepository settingsRepository;
     private MainViewModel viewModel;
     private static final String CLIENT_ID = BuildConfig.OSM_CLIENT_ID;
     private static final String CLIENT_SECRET = BuildConfig.OSM_CLIENT_SECRET;
@@ -54,12 +57,37 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         authRepository = new AuthRepository(this);
+        settingsRepository = new SettingsRepository(this);
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
 
         TextView loginStatus = findViewById(R.id.login_status);
         Button btnLogin = findViewById(R.id.btn_login);
         Button btnUserPage = findViewById(R.id.btn_user_page);
         Button btnLogout = findViewById(R.id.btn_logout);
+
+        MaterialButtonToggleGroup themeToggleGroup = findViewById(R.id.theme_toggle_group);
+        int currentTheme = settingsRepository.getTheme();
+        if (currentTheme == SettingsRepository.THEME_LIGHT) {
+            themeToggleGroup.check(R.id.btn_theme_light);
+        } else if (currentTheme == SettingsRepository.THEME_DARK) {
+            themeToggleGroup.check(R.id.btn_theme_dark);
+        } else {
+            themeToggleGroup.check(R.id.btn_theme_system);
+        }
+
+        themeToggleGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+            if (isChecked) {
+                int theme;
+                if (checkedId == R.id.btn_theme_light) {
+                    theme = SettingsRepository.THEME_LIGHT;
+                } else if (checkedId == R.id.btn_theme_dark) {
+                    theme = SettingsRepository.THEME_DARK;
+                } else {
+                    theme = SettingsRepository.THEME_SYSTEM;
+                }
+                settingsRepository.setTheme(theme);
+            }
+        });
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
         updateUi(loginStatus, btnLogin, btnUserPage, btnLogout);

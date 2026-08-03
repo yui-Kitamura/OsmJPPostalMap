@@ -260,16 +260,14 @@ public class PoiDetailsDialog {
                     lsStatus.setText(limitedServiceSchedule.getTodayStatus());
                     if (limitedServiceSchedule.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
                             limitedServiceSchedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
-                        lsStatus.setTextColor(ContextCompat.getColor(context, R.color.jp_post_red));
+                        lsStatus.setTextColor(ContextCompat.getColor(context, R.color.brand_red));
                         lsStatus.setTypeface(null, android.graphics.Typeface.BOLD);
                     } else {
-                        lsStatus.setTextColor(ContextCompat.getColor(context, R.color.black));
                         lsStatus.setTypeface(null, android.graphics.Typeface.NORMAL);
                     }
                     populateWeeklyTable(context, lsTable, limitedServiceSchedule, false);
                 } else {
                     lsStatus.setText("あり (詳細時間不明)");
-                    lsStatus.setTextColor(ContextCompat.getColor(context, R.color.black));
                     lsStatus.setTypeface(null, android.graphics.Typeface.NORMAL);
                     lsTable.removeAllViews();
                 }
@@ -283,7 +281,6 @@ public class PoiDetailsDialog {
             } else if ("no".equals(lsMail)) {
                 lsLayout.setVisibility(View.VISIBLE);
                 lsStatus.setText("なし");
-                lsStatus.setTextColor(ContextCompat.getColor(context, R.color.black));
                 lsStatus.setTypeface(null, android.graphics.Typeface.NORMAL);
                 lsTable.removeAllViews();
             } else {
@@ -340,10 +337,8 @@ public class PoiDetailsDialog {
             TextView dayView = new TextView(context);
             dayView.setText(groupNames[i]);
             dayView.setPadding(8, 4, 16, 4);
-            dayView.setTextColor(ContextCompat.getColor(context, R.color.black));
             
             TextView timeView = new TextView(context);
-            timeView.setTextColor(ContextCompat.getColor(context, R.color.black));
             IDaySchedule daySchedule = null;
             boolean foundDay = false;
             for (String day : groupDays[i]) {

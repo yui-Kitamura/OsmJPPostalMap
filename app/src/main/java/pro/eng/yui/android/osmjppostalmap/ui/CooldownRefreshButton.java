@@ -39,7 +39,7 @@ public class CooldownRefreshButton extends AppCompatImageButton {
     private void init() {
         paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setStyle(Paint.Style.STROKE);
-        ringColor = ContextCompat.getColor(getContext(), R.color.jp_post_red);
+        ringColor = ContextCompat.getColor(getContext(), R.color.brand_red);
     }
 
     public void setCooldown(long remaining, long interval) {

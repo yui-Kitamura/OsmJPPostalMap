@@ -489,6 +489,7 @@ public class PrefRefreshDialog {
         if (isSaved) {
             ImageButton deleteButton = new ImageButton(context);
             deleteButton.setImageResource(R.drawable.ic_delete_24);
+            deleteButton.setColorFilter(androidx.core.content.ContextCompat.getColor(context, R.color.white));
             deleteButton.setContentDescription(context.getString(R.string.pref_cache_delete));
             deleteButton.setBackgroundResource(android.R.drawable.list_selector_background);
             int buttonSize = (int) (48 * context.getResources().getDisplayMetrics().density + 0.5f);

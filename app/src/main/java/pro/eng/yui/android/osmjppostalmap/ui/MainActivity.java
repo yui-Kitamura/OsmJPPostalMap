@@ -481,7 +481,7 @@ public class MainActivity extends AppCompatActivity {
             if (msg == null || msg.isEmpty()) {
                 statusBar.setVisibility(View.GONE);
             } else {
-                statusBar.setBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.jp_post_red)); // Red
+                statusBar.setBackgroundColor(androidx.core.content.ContextCompat.getColor(this, R.color.brand_red)); // Red
                 statusBar.setText(msg);
                 statusBar.setVisibility(View.VISIBLE);
                 statusBar.postDelayed(() -> {

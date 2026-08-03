@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/settings_root"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/jp_post_red">
+                xmlns:app="http://schemas.android.com/apk/res-auto"
+                android:id="@+id/settings_root"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/brand_red">
 
 
     <androidx.appcompat.widget.AppCompatImageButton
@@ -15,13 +16,17 @@
         android:src="@drawable/ic_back_postbox"
         android:contentDescription="戻る" />
 
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/btn_back"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:background="@android:color/white">
+        android:layout_below="@id/btn_back">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="?android:attr/colorBackground">
 
     <TextView
         android:layout_width="wrap_content"
@@ -61,7 +66,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#CCCCCC"
+        android:background="@color/gray_divider"
         android:layout_marginVertical="16dp" />
     
     <TextView
@@ -78,7 +83,7 @@
         android:layout_height="wrap_content"
         android:text="@string/settings_delete_map_cache"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:textColor="@color/jp_post_red" />
+        android:textColor="@color/brand_red" />
 
     <Button
         android:id="@+id/btn_data_management"
@@ -113,10 +118,52 @@
             style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
     </LinearLayout>
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/settings_theme_title"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/theme_toggle_group"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:singleSelection="true"
+        app:selectionRequired="true">
+
+        <Button
+            android:id="@+id/btn_theme_light"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/settings_theme_light" />
+
+        <Button
+            android:id="@+id/btn_theme_system"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/settings_theme_system" />
+
+        <Button
+            android:id="@+id/btn_theme_dark"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/settings_theme_dark" />
+
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#CCCCCC"
+        android:background="@color/gray_divider"
         android:layout_marginVertical="16dp" />
 
     <TextView
@@ -170,4 +217,5 @@
         android:gravity="start|center_vertical" />
 
     </LinearLayout>
+    </ScrollView>
 </RelativeLayout>
