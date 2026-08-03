@@ -46,6 +46,9 @@ public class PostOfficeSearchEngine implements SearchEngine {
                 if (name.equals(q)) {
                     match = true;
                     weight = 100.0;
+                } else if (name.startsWith(q)) {
+                    match = true;
+                    weight = 90.0;
                 } else if (name.contains(q)) {
                     match = true;
                     weight = 80.0;

@@ -40,10 +40,13 @@ public class AddressSearchEngine implements SearchEngine {
             String fullAddress = getFullAddress(poi);
             if (fullAddress.equals(q)) {
                 match = true;
-                weight = isPO ? 30.0 : 10.0;
+                weight = isPO ? 35.0 : 15.0;
+            } else if (fullAddress.startsWith(q)) {
+                match = true;
+                weight = isPO ? 32.0 : 12.0;
             } else if (fullAddress.contains(q)) {
                 match = true;
-                weight = isPO ? 20.0 : 5.0;
+                weight = isPO ? 30.0 : 10.0;
             }
 
             if (!match) {
@@ -53,10 +56,13 @@ public class AddressSearchEngine implements SearchEngine {
                         if (value == null) continue;
                         if (value.equals(q)) {
                             match = true;
-                            weight = Math.max(weight, isPO ? 30.0 : 10.0);
+                            weight = Math.max(weight, isPO ? 35.0 : 15.0);
+                        } else if (value.startsWith(q)) {
+                            match = true;
+                            weight = Math.max(weight, isPO ? 32.0 : 12.0);
                         } else if (value.contains(q)) {
                             match = true;
-                            weight = Math.max(weight, isPO ? 20.0 : 5.0);
+                            weight = Math.max(weight, isPO ? 30.0 : 10.0);
                         }
                     }
                 }

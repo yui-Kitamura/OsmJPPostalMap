@@ -28,6 +28,10 @@ public class PlaceSearchEngine implements SearchEngine {
         for (PlaceInfo place : places) {
             double weight = 40.0;
             if (place.getName().equals(trimmedQuery)) {
+                weight = 70.0;
+            } else if (place.getName().startsWith(trimmedQuery)) {
+                weight = 65.0;
+            } else if (place.getName().contains(trimmedQuery)) {
                 weight = 60.0;
             }
 
