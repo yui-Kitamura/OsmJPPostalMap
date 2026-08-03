@@ -7,6 +7,7 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.util.AttributeSet;
 import androidx.appcompat.widget.AppCompatImageButton;
+import pro.eng.yui.android.osmjppostalmap.R;
 import java.time.LocalDateTime;
 
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
