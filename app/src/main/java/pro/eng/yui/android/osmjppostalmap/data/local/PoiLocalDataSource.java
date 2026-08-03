@@ -76,6 +76,40 @@ public class PoiLocalDataSource {
     }
 
     /**
+     * 複数のPOIを一括で追加/更新する。
+     */
+    public void upsertPois(int prefCode, String subName, List<OsmPoi> pois) {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            for (OsmPoi poi : pois) {
+                db.insertWithOnConflict(PoiDbHelper.TABLE_POI, null,
+                        toValues(prefCode, subName, poi), SQLiteDatabase.CONFLICT_REPLACE);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
+     * 複数のPOIを一括で追加する。既に存在する場合は無視する。
+     */
+    public void insertPoisIfNotExist(int prefCode, String subName, List<OsmPoi> pois) {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            for (OsmPoi poi : pois) {
+                db.insertWithOnConflict(PoiDbHelper.TABLE_POI, null,
+                        toValues(prefCode, subName, poi), SQLiteDatabase.CONFLICT_IGNORE);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
      * 指定した都道府県のPOIとメタ情報をまとめて削除する。
      */
     public void deletePrefecture(int prefCode) {

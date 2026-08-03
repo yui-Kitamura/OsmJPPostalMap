@@ -54,6 +54,11 @@ public interface PoiRepository {
     void fetchCityData();
 
     /**
+     * 全国の郵便局データを取得して保存する。
+     */
+    void fetchOfficeData();
+
+    /**
      * 市町村名を検索する。
      */
     List<PlaceInfo> searchPlaces(String query);

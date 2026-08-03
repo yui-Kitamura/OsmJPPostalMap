@@ -501,6 +501,55 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     @Override
+    public void fetchOfficeData() {
+        runOnExecutor("郵便局データを読み込み中", () -> {
+            try {
+                String officeJson = JpPostalUtil.getRawOfficeJson().join();
+                if (officeJson == null || officeJson.isEmpty()) {
+                    return;
+                }
+                JSONArray array = new JSONArray(officeJson);
+                Map<Integer, List<OsmPoi>> prefPoiMap = new HashMap<>();
+
+                for (int i = 0; i < array.length(); i++) {
+                    JSONObject obj = array.getJSONObject(i);
+                    String name = obj.getString("name");
+                    int prefCode = obj.getInt("is_in");
+                    String poiType = obj.optString("poiType", "node");
+                    long poiId = obj.getLong("poiId");
+
+                    Map<String, String> tags = new HashMap<>();
+                    tags.put("name", name);
+                    tags.put("amenity", "post_office");
+
+                    String prefName = prefCodeNameMap.get(prefCode);
+                    if (prefName != null) {
+                        tags.put("addr:prefecture", prefName);
+                    }
+
+                    // v0 data as requested. lat/lon might not be present in raw json.
+                    double lat = obj.optDouble("lat", 0.0);
+                    double lon = obj.optDouble("lon", 0.0);
+                    OsmPoi poi = new OsmPoi(poiId, lat, lon, poiType, tags, 0);
+
+                    if (!prefPoiMap.containsKey(prefCode)) {
+                        prefPoiMap.put(prefCode, new ArrayList<>());
+                    }
+                    prefPoiMap.get(prefCode).add(poi);
+                }
+
+                if (local != null) {
+                    for (Map.Entry<Integer, List<OsmPoi>> entry : prefPoiMap.entrySet()) {
+                        local.insertPoisIfNotExist(entry.getKey(), null, entry.getValue());
+                    }
+                }
+            } catch (Exception e) {
+                Log.e("PoiRepository", "Failed to fetch office data", e);
+            }
+        });
+    }
+
+    @Override
     public List<PlaceInfo> searchPlaces(String query) {
         if (query == null || query.trim().isEmpty()) {
             return new ArrayList<>();

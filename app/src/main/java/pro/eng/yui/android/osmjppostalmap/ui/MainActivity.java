@@ -211,6 +211,7 @@ public class MainActivity extends AppCompatActivity {
         viewModel.setFilterOpenOnly(false); // 初期化トリガー
         viewModel.fetchDataDate(); // データ鮮度情報の取得を開始
         viewModel.fetchCityData(); // 地名データの取得を開始
+        viewModel.fetchOfficeData(); // 全国郵便局データの取得を開始
         
         editPoiLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),

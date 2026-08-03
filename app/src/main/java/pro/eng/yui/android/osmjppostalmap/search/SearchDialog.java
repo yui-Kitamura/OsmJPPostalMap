@@ -1,6 +1,7 @@
 package pro.eng.yui.android.osmjppostalmap.search;
 
 import android.app.Dialog;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -120,12 +121,17 @@ public class SearchDialog extends DialogFragment {
             boolean searchAddress = checkAddress.isChecked();
             boolean searchPlace = checkPlace.isChecked();
 
+            Location currentLoc = null;
+            if (repository.getLocationLiveData() != null) {
+                currentLoc = repository.getLocationLiveData().getValue();
+            }
+
             for (SearchEngine engine : engines) {
                 if (engine instanceof PostOfficeSearchEngine && !searchPO) continue;
                 if (engine instanceof AddressSearchEngine && !searchAddress) continue;
                 if (engine instanceof PlaceSearchEngine && !searchPlace) continue;
                 
-                List<SearchResult> engineResults = engine.search(query);
+                List<SearchResult> engineResults = engine.search(query, currentLoc);
                 for (SearchResult res : engineResults) {
                     String key;
                     if (res.getOriginalData() instanceof OsmPoi) {

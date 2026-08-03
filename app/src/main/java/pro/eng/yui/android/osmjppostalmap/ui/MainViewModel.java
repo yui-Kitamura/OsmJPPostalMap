@@ -168,6 +168,10 @@ public class MainViewModel extends ViewModel {
         repository.fetchCityData();
     }
 
+    public void fetchOfficeData() {
+        repository.fetchOfficeData();
+    }
+
     public LiveData<DataDateResponse> getDataDate() {
         return dataDate;
     }

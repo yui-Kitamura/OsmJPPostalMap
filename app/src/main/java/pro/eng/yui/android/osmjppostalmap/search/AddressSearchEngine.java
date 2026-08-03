@@ -1,5 +1,6 @@
 package pro.eng.yui.android.osmjppostalmap.search;
 
+import android.location.Location;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +21,7 @@ public class AddressSearchEngine implements SearchEngine {
     }
 
     @Override
-    public List<SearchResult> search(String query) {
+    public List<SearchResult> search(String query, Location currentLoc) {
         List<SearchResult> results = new ArrayList<>();
         if (query == null || query.trim().isEmpty()) return results;
         String q = query.trim();
@@ -62,6 +63,14 @@ public class AddressSearchEngine implements SearchEngine {
             }
             
             if (match) {
+                // 距離による重みづけ (誘導用)
+                if (currentLoc != null && poi.getLat() != 0.0 && poi.getLon() != 0.0) {
+                    float[] distResults = new float[1];
+                    Location.distanceBetween(currentLoc.getLatitude(), currentLoc.getLongitude(), poi.getLat(), poi.getLon(), distResults);
+                    double distanceKm = distResults[0] / 1000.0;
+                    weight += 1.0 / (1.0 + distanceKm);
+                }
+
                 String title = poi.getTag("name");
                 SearchResult.Type resultType = SearchResult.Type.ADDRESS;
                 // String amenity = poi.getTag("amenity"); // Moved up
