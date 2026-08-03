@@ -231,7 +231,9 @@ public class SearchDialog extends DialogFragment {
                         dismiss();
                     });
                 } else if (result.getType() == SearchResult.Type.PLACE) {
-                    btnShowCenter.setVisibility(View.VISIBLE);
+                    if (result.getLat() != null && result.getLon() != null) {
+                        btnShowCenter.setVisibility(View.VISIBLE);
+                    }
                     btnShowAll.setVisibility(View.VISIBLE);
                     btnShowCenter.setOnClickListener(v -> {
                         if (listener != null) listener.onPlaceCenterSelected(result);

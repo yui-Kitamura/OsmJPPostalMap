@@ -15,14 +15,14 @@ public class SearchResult implements Comparable<SearchResult> {
     private final Type type;
     private final String title;
     private final String subTitle;
-    private final double lat;
-    private final double lon;
+    private final Double lat;
+    private final Double lon;
     private final double weight;
     private final Object originalData;
     private ScheduleResult schedule;
     private ScheduleResult limitedServiceSchedule;
 
-    public SearchResult(Type type, String title, String subTitle, double lat, double lon, double weight, Object originalData) {
+    public SearchResult(Type type, String title, String subTitle, Double lat, Double lon, double weight, Object originalData) {
         this.type = type;
         this.title = title;
         this.subTitle = subTitle;
@@ -35,8 +35,8 @@ public class SearchResult implements Comparable<SearchResult> {
     public Type getType() { return type; }
     public String getTitle() { return title; }
     public String getSubTitle() { return subTitle; }
-    public double getLat() { return lat; }
-    public double getLon() { return lon; }
+    public Double getLat() { return lat; }
+    public Double getLon() { return lon; }
     public double getWeight() { return weight; }
     public Object getOriginalData() { return originalData; }
 

@@ -274,11 +274,16 @@ public class PoiLocalDataSource {
     }
 
     private PlaceInfo fromPlaceCursor(Cursor c) {
+        int iLat = c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_LAT);
+        int iLon = c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_LON);
+        Double lat = c.isNull(iLat) ? null : c.getDouble(iLat);
+        Double lon = c.isNull(iLon) ? null : c.getDouble(iLon);
+
         return new PlaceInfo(
                 c.getInt(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_PREF_CODE)),
                 c.getString(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_NAME)),
-                c.getDouble(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_LAT)),
-                c.getDouble(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_LON)),
+                lat,
+                lon,
                 c.getDouble(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_MIN_LAT)),
                 c.getDouble(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_MAX_LAT)),
                 c.getDouble(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_MIN_LON)),

@@ -455,15 +455,36 @@ public class PoiRepositoryImpl implements PoiRepository {
                 List<PlaceInfo> places = new ArrayList<>();
                 for (int i = 0; i < array.length(); i++) {
                     JSONObject obj = array.getJSONObject(i);
+                    int prefCode = obj.has("prefCode") ? obj.getInt("prefCode") : obj.getInt("is_in");
+                    String name = obj.has("city") ? obj.getString("city") : obj.getString("name");
+
+                    Double lat = null;
+                    Double lon = null;
+                    if (obj.has("label")) {
+                        JSONObject label = obj.getJSONObject("label");
+                        lat = label.getDouble("lat");
+                        lon = label.getDouble("lon");
+                    } else if (obj.has("lat")) {
+                        lat = obj.getDouble("lat");
+                        lon = obj.getDouble("lon");
+                    }
+
+                    double minLat, maxLat, minLon, maxLon;
+                    if (obj.has("bbox")) {
+                        JSONObject bbox = obj.getJSONObject("bbox");
+                        minLat = bbox.getDouble("minLat");
+                        maxLat = bbox.getDouble("maxLat");
+                        minLon = bbox.getDouble("minLon");
+                        maxLon = bbox.getDouble("maxLon");
+                    } else {
+                        minLat = obj.getDouble("minLat");
+                        maxLat = obj.getDouble("maxLat");
+                        minLon = obj.getDouble("minLon");
+                        maxLon = obj.getDouble("maxLon");
+                    }
+
                     places.add(new PlaceInfo(
-                            obj.getInt("prefCode"),
-                            obj.getString("city"),
-                            obj.getDouble("lat"),
-                            obj.getDouble("lon"),
-                            obj.getDouble("minLat"),
-                            obj.getDouble("maxLat"),
-                            obj.getDouble("minLon"),
-                            obj.getDouble("maxLon")
+                            prefCode, name, lat, lon, minLat, maxLat, minLon, maxLon
                     ));
                 }
                 if (local != null) {
