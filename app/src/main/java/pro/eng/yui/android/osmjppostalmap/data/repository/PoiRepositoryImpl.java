@@ -78,7 +78,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     /** 一度に描画する上限POI数（超過時はズーム要求） */
     private static final int MAX_RENDER = 500;
     private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService executor = Executors.newFixedThreadPool(3);
     private final CountDownLatch boundaryLatch = new CountDownLatch(1);
     private Runnable cooldownRunnable;
     private final AtomicInteger pendingOperations = new AtomicInteger();
@@ -283,6 +283,8 @@ public class PoiRepositoryImpl implements PoiRepository {
     public void loadPoisForArea(double[][] latLonPoints, boolean forceNotify) {
         if (latLonPoints == null || latLonPoints.length == 0) { return; }
 
+        this.currentPrefCodes.clear();
+
         // 表示・計算対象範囲の更新
         double latMin = Double.MAX_VALUE, latMax = -Double.MAX_VALUE;
         double lonMin = Double.MAX_VALUE, lonMax = -Double.MAX_VALUE;
@@ -326,7 +328,6 @@ public class PoiRepositoryImpl implements PoiRepository {
             }
 
             // 新規フェッチが必要なエリアを特定
-            Map<String, Integer> prefs = JpPostalUtil.getPrefectures().join();
             List<String[]> neededAreas = new ArrayList<>();
 
             for (String key : cachedAreaKeys) {
@@ -342,7 +343,13 @@ public class PoiRepositoryImpl implements PoiRepository {
                     subName = null;
                 }
 
-                Integer code = prefs.get(prefName);
+                Integer code = null;
+                for(Map.Entry<Integer, String> e : prefCodeNameMap.entrySet()){
+                    if(e.getValue().equals(prefName)){
+                        code = e.getKey();
+                        break;
+                    }
+                }
                 if (code == null || code < 0) {
                     continue;
                 }
@@ -350,7 +357,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                 currentPrefCodes.add(code);
 
                 // サブエリアの存在を常に確認し、ある場合はサブ単位での取得を優先する
-                Map<String, Integer> subAll = JpPostalUtil.getSubAreas(prefName).join();
+                Map<Integer, String> subAll = prefSubCodeNameMap.get(code);
                 if (subAll != null && !subAll.isEmpty()) {
                     if (subName != null) {
                         // 特定のサブエリアが判明している場合
@@ -359,7 +366,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                         }
                     } else {
                         // サブエリアがあるはずだがキーが都道府県名のみの場合、交差するサブエリアを全て特定
-                        for (String sub : subAll.keySet()) {
+                        for (String sub : subAll.values()) {
                             String subKey = prefName + ":" + sub;
                             BBox subBBox = prefBoundaryCache.get(subKey);
                             if (subBBox != null) {
@@ -392,7 +399,7 @@ public class PoiRepositoryImpl implements PoiRepository {
 
             // クールダウン判定（新規ネットワーク取得が発生する場合のみ適用）
             long currentTime = System.currentTimeMillis();
-            if (currentTime - lastFetchTime < MIN_INTERVAL_MS) {
+            if (!forceNotify && currentTime - lastFetchTime < MIN_INTERVAL_MS) {
                 postCombined();
                 return;
             }
@@ -400,8 +407,16 @@ public class PoiRepositoryImpl implements PoiRepository {
             startCooldownTimer();
 
             for (String[] area : neededAreas) {
-                Integer code = prefs.get(area[0]);
-                loadArea(code, area[0], area[1], false);
+                Integer code = null;
+                for(Map.Entry<Integer, String> e : prefCodeNameMap.entrySet()){
+                    if(e.getValue().equals(area[0])){
+                        code = e.getKey();
+                        break;
+                    }
+                }
+                if (code != null) {
+                    loadArea(code, area[0], area[1], false);
+                }
             }
 
             // 新しくフェッチしたデータがあるため再反映
