@@ -409,7 +409,6 @@ public class MainActivity extends AppCompatActivity {
         // GPS Button
         findViewById(R.id.gps_button).setOnClickListener(v -> {
             if (lastLocation != null) {
-                gpsZoomLimit = map.getZoomLevelDouble();
                 performInitialGpsZoom(lastLocation);
             } else {
                 Toast.makeText(this, "現在地を取得中です...", Toast.LENGTH_SHORT).show();
@@ -561,6 +560,9 @@ public class MainActivity extends AppCompatActivity {
         if (gpsProgress != null) gpsProgress.setVisibility(View.VISIBLE);
         gpsZoomCenter = mapTargetFor(location);
         gpsZoomBase = GPS_MIN_ZOOM;
+        if (map != null) {
+            gpsZoomLimit = map.getZoomLevelDouble();
+        }
 
         // 計算式による範囲算出を導入したため、移動完了を待つ必要がない。
         gpsZoomAdjustmentPending = true;
@@ -757,17 +759,22 @@ public class MainActivity extends AppCompatActivity {
             map.invalidate();
         }
         if (firstLocation && !initialLocationSet) {
-            // ここで即座に initialLocationSet = true にするとレイアウト完了時のロードが走る可能性があるが、
-            // ズームアニメーションを優先するため、performInitialGpsZoom 内で適切に管理する。
-            gpsZoomLimit = map.getZoomLevelDouble();
             performInitialGpsZoom(location);
         } else if (firstLocation && initialLocationSet) {
             // すでに前回の位置が復旧されている場合、アニメーションさせずにGPS位置へ即時移動してPOIを更新する
+            if (gpsProgress != null) gpsProgress.setVisibility(View.VISIBLE);
             gpsZoomCenter = mapTargetFor(location);
+            gpsZoomBase = map.getZoomLevelDouble();
+            gpsZoomLimit = map.getZoomLevelDouble();
+            gpsZoomAdjustmentPending = true;
+
             map.getController().setCenter(gpsZoomCenter);
             updatePois(true, UpdateMode.GPS_OR_INITIAL);
         }
-        if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
+
+        if (gpsProgress != null && !gpsZoomAdjustmentPending) {
+            gpsProgress.setVisibility(View.GONE);
+        }
     }
 
     @Override
