@@ -233,14 +233,14 @@ public class SearchDialog extends DialogFragment {
                 if (result.getType() == SearchResult.Type.POST_OFFICE || result.getType() == SearchResult.Type.POST_BOX) {
                     btnShow.setVisibility(View.VISIBLE);
                     btnShow.setOnClickListener(v -> {
-                        if (listener != null) listener.onPostOfficeSelected((OsmPoi) result.getOriginalData());
                         dismiss();
+                        if (listener != null) listener.onPostOfficeSelected((OsmPoi) result.getOriginalData());
                     });
                 } else if (result.getType() == SearchResult.Type.ADDRESS) {
                     btnShow.setVisibility(View.VISIBLE);
                     btnShow.setOnClickListener(v -> {
-                        if (listener != null) listener.onAddressSelected((OsmPoi) result.getOriginalData());
                         dismiss();
+                        if (listener != null) listener.onAddressSelected((OsmPoi) result.getOriginalData());
                     });
                 } else if (result.getType() == SearchResult.Type.PLACE) {
                     if (result.getLat() != null && result.getLon() != null) {
@@ -248,12 +248,12 @@ public class SearchDialog extends DialogFragment {
                     }
                     btnShowAll.setVisibility(View.VISIBLE);
                     btnShowCenter.setOnClickListener(v -> {
-                        if (listener != null) listener.onPlaceCenterSelected(result);
                         dismiss();
+                        if (listener != null) listener.onPlaceCenterSelected(result);
                     });
                     btnShowAll.setOnClickListener(v -> {
-                        if (listener != null) listener.onPlaceAreaSelected(result);
                         dismiss();
+                        if (listener != null) listener.onPlaceAreaSelected(result);
                     });
                 }
             }

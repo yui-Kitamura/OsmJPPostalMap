@@ -258,7 +258,11 @@ public class PoiRepositoryImpl implements PoiRepository {
     private void runOnExecutor(String operation, Runnable task) {
         synchronized (pendingOperations) {
             if (pendingOperations.getAndIncrement() == 0) {
-                loadingLiveData.postValue(true);
+                if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+                    loadingLiveData.setValue(true);
+                } else {
+                    loadingLiveData.postValue(true);
+                }
             }
         }
         loadingStatusLiveData.postValue(operation);
