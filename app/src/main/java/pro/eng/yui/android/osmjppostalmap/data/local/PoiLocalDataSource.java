@@ -268,6 +268,7 @@ public class PoiLocalDataSource {
             for (PlaceInfo place : places) {
                 ContentValues v = new ContentValues();
                 v.put(PoiDbHelper.COL_PLACE_PREF_CODE, place.getPrefCode());
+                v.put(PoiDbHelper.COL_PLACE_SUB_NAME, place.getSubName());
                 v.put(PoiDbHelper.COL_PLACE_NAME, place.getName());
                 v.put(PoiDbHelper.COL_PLACE_LAT, place.getLat());
                 v.put(PoiDbHelper.COL_PLACE_LON, place.getLon());
@@ -310,11 +311,14 @@ public class PoiLocalDataSource {
     private PlaceInfo fromPlaceCursor(Cursor c) {
         int iLat = c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_LAT);
         int iLon = c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_LON);
+        int iSub = c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_SUB_NAME);
         Double lat = c.isNull(iLat) ? null : c.getDouble(iLat);
         Double lon = c.isNull(iLon) ? null : c.getDouble(iLon);
+        String subName = c.isNull(iSub) ? null : c.getString(iSub);
 
         return new PlaceInfo(
                 c.getInt(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_PREF_CODE)),
+                subName,
                 c.getString(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_NAME)),
                 lat,
                 lon,

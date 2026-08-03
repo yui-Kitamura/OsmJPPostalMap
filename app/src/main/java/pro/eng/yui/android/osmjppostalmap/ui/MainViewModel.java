@@ -135,6 +135,10 @@ public class MainViewModel extends ViewModel {
         repository.loadPoisForArea(latLonPoints, forceNotify);
     }
 
+    public void fetchPoisForArea(double[][] latLonPoints, boolean forceNotify, String hintPrefName, String hintSubName) {
+        repository.loadPoisForArea(latLonPoints, forceNotify, hintPrefName, hintSubName);
+    }
+
     /** 互換用 */
     public void fetchPoisForArea(double[][] latLonPoints) {
         fetchPoisForArea(latLonPoints, false);
@@ -166,6 +170,10 @@ public class MainViewModel extends ViewModel {
 
     public void fetchCityData() {
         repository.fetchCityData();
+    }
+
+    public String getPrefectureName(int prefCode) {
+        return repository.getPrefectureName(prefCode);
     }
 
     public void fetchOfficeData() {

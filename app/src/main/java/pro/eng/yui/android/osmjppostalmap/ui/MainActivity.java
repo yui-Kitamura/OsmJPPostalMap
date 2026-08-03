@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import pro.eng.yui.android.osmjppostalmap.core.PoiDetailsDialog;
 import pro.eng.yui.android.osmjppostalmap.core.PoiMarker;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
+import pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.CollectionTimes;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OpeningHours;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
@@ -636,8 +637,9 @@ public class MainActivity extends AppCompatActivity {
         map.getController().setZoom(gpsZoomBase);
         map.getController().setCenter(gpsZoomCenter);
 
+        String hintPref = poi.getTag("addr:prefecture");
         if (canLoadPois()) {
-            updatePois(true, UpdateMode.GPS_OR_INITIAL);
+            updatePois(true, UpdateMode.GPS_OR_INITIAL, hintPref, null);
         }
     }
 
@@ -646,14 +648,28 @@ public class MainActivity extends AppCompatActivity {
         
         OsmPoi target = pendingPoiDetail;
         List<OsmPoi> currentPois = viewModel.getPois().getValue();
+        boolean found = false;
         if (currentPois != null) {
             for (OsmPoi p : currentPois) {
                 if (p.getId() == pendingPoiDetail.getId() && p.getType().equals(pendingPoiDetail.getType())) {
                     target = p;
+                    found = true;
                     break;
                 }
             }
         }
+        
+        if (found) {
+            // 詳細データの座標が暫定座標(v0)と異なる可能性があるため、中心を更新する
+            GeoPoint realPoint = new GeoPoint(target.getLat(), target.getLon());
+            if (gpsZoomAdjustmentPending && gpsZoomCenter != null) {
+                if (realPoint.distanceToAsDouble(gpsZoomCenter) > 1.0) {
+                    map.getController().animateTo(realPoint);
+                    gpsZoomCenter = realPoint;
+                }
+            }
+        }
+        
         showPoiDetails(target);
         pendingPoiDetail = null;
     }
@@ -692,8 +708,16 @@ public class MainActivity extends AppCompatActivity {
         map.getController().setZoom(gpsZoomBase);
         map.getController().setCenter(gpsZoomCenter);
 
+        String hintPref = null;
+        String hintSub = null;
+        if (result.getOriginalData() instanceof PlaceInfo) {
+            PlaceInfo info = (PlaceInfo) result.getOriginalData();
+            hintPref = viewModel.getPrefectureName(info.getPrefCode());
+            hintSub = info.getSubName();
+        }
+
         if (canLoadPois()) {
-            updatePois(true, UpdateMode.GPS_OR_INITIAL);
+            updatePois(true, UpdateMode.GPS_OR_INITIAL, hintPref, hintSub);
         }
     }
 
@@ -708,6 +732,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updatePois(boolean forceNotify, UpdateMode mode) {
+        updatePois(forceNotify, mode, null, null);
+    }
+
+    private void updatePois(boolean forceNotify, UpdateMode mode, String hintPrefName, String hintSubName) {
         if (!canLoadPois() || map == null || !map.isLayoutOccurred()) {
             return;
         }
@@ -775,7 +803,7 @@ public class MainActivity extends AppCompatActivity {
             pointsList.add(new double[]{gpsZoomCenter.getLatitude(), gpsZoomCenter.getLongitude()});
         }
 
-        viewModel.fetchPoisForArea(pointsList.toArray(new double[0][0]), forceNotify);
+        viewModel.fetchPoisForArea(pointsList.toArray(new double[0][0]), forceNotify, hintPrefName, hintSubName);
     }
 
     private void updatePois() {

@@ -15,7 +15,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class PoiDbHelper extends SQLiteOpenHelper {
 
     public static final String DB_NAME = "poi_cache.db";
-    public static final int DB_VERSION = 6;
+    public static final int DB_VERSION = 7;
 
     /* poi table */
     public static final String TABLE_POI = "poi";
@@ -43,6 +43,7 @@ public class PoiDbHelper extends SQLiteOpenHelper {
     /* place table (city/town/village) */
     public static final String TABLE_PLACE = "place";
     public static final String COL_PLACE_PREF_CODE = "pref_code";
+    public static final String COL_PLACE_SUB_NAME = "sub_name";
     public static final String COL_PLACE_NAME = "name";
     public static final String COL_PLACE_LAT = "lat";
     public static final String COL_PLACE_LON = "lon";
@@ -87,6 +88,7 @@ public class PoiDbHelper extends SQLiteOpenHelper {
 
         db.execSQL("CREATE TABLE " + TABLE_PLACE + " ("
                 + COL_PLACE_PREF_CODE + " INTEGER NOT NULL, "
+                + COL_PLACE_SUB_NAME + " TEXT, "
                 + COL_PLACE_NAME + " TEXT NOT NULL, "
                 + COL_PLACE_LAT + " REAL NOT NULL, "
                 + COL_PLACE_LON + " REAL NOT NULL, "
@@ -159,6 +161,9 @@ public class PoiDbHelper extends SQLiteOpenHelper {
                     + "PRIMARY KEY (" + COL_PLACE_PREF_CODE + ", " + COL_PLACE_NAME + ")"
                     + ")");
             db.execSQL("CREATE INDEX idx_place_name ON " + TABLE_PLACE + "(" + COL_PLACE_NAME + ")");
+        }
+        if (oldVersion < 7) {
+            db.execSQL("ALTER TABLE " + TABLE_PLACE + " ADD COLUMN " + COL_PLACE_SUB_NAME + " TEXT");
         }
     }
 }

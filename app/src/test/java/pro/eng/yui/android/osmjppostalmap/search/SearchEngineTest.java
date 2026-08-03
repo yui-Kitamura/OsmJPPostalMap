@@ -40,6 +40,7 @@ class SearchEngineTest {
 
         @Override public LiveData<List<OsmPoi>> getPoisLiveData() { return null; }
         @Override public void loadPoisForArea(double[][] latLonPoints, boolean forceNotify) {}
+        @Override public void loadPoisForArea(double[][] latLonPoints, boolean forceNotify, String hintPrefName, String hintSubName) {}
         @Override public void refreshPrefecture(int prefCode, String prefName, String subName) {}
         @Override public void deletePrefectureCache(int prefCode, String subName) {}
         @Override public List<PrefMeta> getSavedPrefectures() { return null; }
@@ -202,7 +203,7 @@ class SearchEngineTest {
     void testPlaceSearch() {
         List<pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo> mockPlaces = new ArrayList<>();
         mockPlaces.add(new pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo(
-                19, "甲府市", 35.666, 138.568, 35.6, 35.7, 138.5, 138.6
+                19, null, "甲府市", 35.65, 138.55, 35.6, 35.7, 138.5, 138.6
         ));
         ((TestPoiRepository)repository).setMockPlaces(mockPlaces);
 
@@ -233,7 +234,7 @@ class SearchEngineTest {
         // 2. Place Name Match (Exact)
         List<pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo> mockPlaces = new ArrayList<>();
         mockPlaces.add(new pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo(
-                19, "甲府市",35.0, 138.0, 35.0, 35.0, 138.0, 138.0
+                19, null, "甲府市", 35.0, 138.0, 35.0, 35.0, 138.0, 138.0
         ));
         ((TestPoiRepository)repository).setMockPlaces(mockPlaces);
         

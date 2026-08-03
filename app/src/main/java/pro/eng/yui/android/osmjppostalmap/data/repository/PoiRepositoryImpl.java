@@ -285,6 +285,11 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public void loadPoisForArea(double[][] latLonPoints, boolean forceNotify) {
+        loadPoisForArea(latLonPoints, forceNotify, null, null);
+    }
+
+    @Override
+    public void loadPoisForArea(double[][] latLonPoints, boolean forceNotify, String hintPrefName, String hintSubName) {
         if (latLonPoints == null || latLonPoints.length == 0) { return; }
 
         this.currentPrefCodes.clear();
@@ -324,6 +329,14 @@ public class PoiRepositoryImpl implements PoiRepository {
                 cachedAreaKeys = findIntersectingAreas(fLatMin, fLatMax, fLonMin, fLonMax);
             } else {
                 cachedAreaKeys = new HashSet<>();
+            }
+
+            if (hintPrefName != null) {
+                if (hintSubName != null) {
+                    cachedAreaKeys.add(hintPrefName + ":" + hintSubName);
+                } else {
+                    cachedAreaKeys.add(hintPrefName);
+                }
             }
 
             if (cachedAreaKeys.isEmpty()) {
@@ -495,8 +508,15 @@ public class PoiRepositoryImpl implements PoiRepository {
                     if ("-1".equals(isInStr) || isInStr.isEmpty()) continue;
 
                     int prefCode;
+                    String subName = null;
                     if (isInStr.contains("_")) {
-                        prefCode = Integer.parseInt(isInStr.split("_")[0]);
+                        String[] parts = isInStr.split("_");
+                        prefCode = Integer.parseInt(parts[0]);
+                        int subCode = Integer.parseInt(parts[1]);
+                        Map<Integer, String> subMap = prefSubCodeNameMap.get(prefCode);
+                        if (subMap != null) {
+                            subName = subMap.get(subCode);
+                        }
                     } else {
                         prefCode = Integer.parseInt(isInStr);
                     }
@@ -529,7 +549,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                     }
 
                     places.add(new PlaceInfo(
-                            prefCode, name, lat, lon, minLat, maxLat, minLon, maxLon
+                            prefCode, subName, name, lat, lon, minLat, maxLat, minLon, maxLon
                     ));
                 }
                 if (local != null) {
