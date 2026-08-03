@@ -662,6 +662,9 @@ public class MainActivity extends AppCompatActivity {
 
         org.osmdroid.util.BoundingBox bb = map.getBoundingBox();
         org.osmdroid.api.IGeoPoint center = map.getMapCenter();
+        if (gpsZoomAdjustmentPending && gpsZoomCenter != null) {
+            center = gpsZoomCenter;
+        }
         double centerLat = center.getLatitude();
         double centerLon = center.getLongitude();
 
@@ -715,6 +718,9 @@ public class MainActivity extends AppCompatActivity {
         // GPS座標そのものも判定対象に含める
         if (lastLocation != null) {
             pointsList.add(new double[]{lastLocation.getLatitude(), lastLocation.getLongitude()});
+        }
+        if (gpsZoomAdjustmentPending && gpsZoomCenter != null) {
+            pointsList.add(new double[]{gpsZoomCenter.getLatitude(), gpsZoomCenter.getLongitude()});
         }
 
         viewModel.fetchPoisForArea(pointsList.toArray(new double[0][0]), forceNotify);

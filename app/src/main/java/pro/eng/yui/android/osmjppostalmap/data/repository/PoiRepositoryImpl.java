@@ -577,6 +577,18 @@ public class PoiRepositoryImpl implements PoiRepository {
                     // v0 data as requested. lat/lon might not be present in raw json.
                     double lat = obj.optDouble("lat", 0.0);
                     double lon = obj.optDouble("lon", 0.0);
+
+                    // 座標がない場合は都道府県またはサブエリアの代表点をセットする
+                    if (lat == 0.0 && lon == 0.0) {
+                        String boundaryKey = (subName == null) ? prefName : prefName + ":" + subName;
+                        if (boundaryKey != null) {
+                            BBox bbox = prefBoundaryCache.get(boundaryKey);
+                            if (bbox != null) {
+                                lat = (bbox.getMinLat() + bbox.getMaxLat()) / 2.0;
+                                lon = (bbox.getMinLon() + bbox.getMaxLon()) / 2.0;
+                            }
+                        }
+                    }
                     OsmPoi poi = new OsmPoi(poiId, lat, lon, poiType, tags, 0);
 
                     if (!groupedPois.containsKey(prefCode)) {
