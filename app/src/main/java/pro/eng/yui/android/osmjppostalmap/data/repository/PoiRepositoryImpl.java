@@ -256,8 +256,10 @@ public class PoiRepositoryImpl implements PoiRepository {
      * Executorのワーカースレッドが死なないよう保護する。
      */
     private void runOnExecutor(String operation, Runnable task) {
-        if (pendingOperations.getAndIncrement() == 0) {
-            loadingLiveData.postValue(true);
+        synchronized (pendingOperations) {
+            if (pendingOperations.getAndIncrement() == 0) {
+                loadingLiveData.postValue(true);
+            }
         }
         loadingStatusLiveData.postValue(operation);
         executor.execute(() -> {
@@ -267,9 +269,11 @@ public class PoiRepositoryImpl implements PoiRepository {
                 Log.e("PoiRepository", "Error in " + operation, e);
                 errorLiveData.postValue("処理中にエラーが発生しました");
             } finally {
-                if (pendingOperations.decrementAndGet() == 0) {
-                    loadingLiveData.postValue(false);
-                    loadingStatusLiveData.postValue("");
+                synchronized (pendingOperations) {
+                    if (pendingOperations.decrementAndGet() == 0) {
+                        loadingLiveData.postValue(false);
+                        loadingStatusLiveData.postValue("");
+                    }
                 }
             }
         });

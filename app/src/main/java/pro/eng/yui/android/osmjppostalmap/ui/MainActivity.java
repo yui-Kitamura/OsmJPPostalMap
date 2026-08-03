@@ -113,6 +113,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private static class ZoomResult {
+        final Double zoom;
+        final boolean satisfied;
+        ZoomResult(Double zoom, boolean satisfied) {
+            this.zoom = zoom;
+            this.satisfied = satisfied;
+        }
+    }
+
     /** 一度生成・解析したマーカーを、地図移動後の再通知でも再利用する。 */
     private final Map<String, MarkerEntry> markerCache = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -281,15 +290,11 @@ public class MainActivity extends AppCompatActivity {
                 if (markerRenderGeneration.get() != renderGeneration) return;
 
                 // 1. GPSズームの計算 (Background)
-                Double targetZoom = null;
-                boolean satisfied = false;
+                ZoomResult zoomResult = null;
                 if (zoomAdjustmentPending && zoomCenter != null && mapWidth > 0 && mapHeight > 0) {
-                    // 計算部分は重複を避けるため helper に切り出すか、ここでインライン化
-                    targetZoom = calculateTargetZoomInBackground(pois, zoomCenter, zoomBase, mapWidth, mapHeight, postOfficeOnly, zoomLimit);
-                    if (targetZoom != null) satisfied = true;
+                    zoomResult = calculateTargetZoomInBackground(pois, zoomCenter, zoomBase, mapWidth, mapHeight, postOfficeOnly, zoomLimit);
                 }
-                final Double fTargetZoom = targetZoom;
-                final boolean fSatisfied = satisfied;
+                final ZoomResult fZoomResult = zoomResult;
 
                 // 2. マーカーキャッシュのクリーンアップ (Background)
                 if (allPoisSnapshot != null) {
@@ -302,17 +307,29 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     if (markerRenderGeneration.get() != renderGeneration) return;
 
-                    if (fTargetZoom != null) {
-                        map.getController().setZoom(fTargetZoom);
-                        if (fSatisfied) {
+                    if (fZoomResult != null) {
+                        if (fZoomResult.satisfied) {
+                            map.getController().setZoom(fZoomResult.zoom);
                             gpsZoomAdjustmentPending = false;
                             if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
                         } else {
                             Boolean loading = viewModel.getLoading().getValue();
                             if (!Boolean.TRUE.equals(loading)) {
+                                // 読み込みが完了しており、かつこれ以上POIが見つからない場合はフォールバック値を適用して終了
+                                map.getController().setZoom(fZoomResult.zoom);
                                 gpsZoomAdjustmentPending = false;
                                 if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
                             }
+                            // 読み込み中の場合は、次の更新を待つためフラグを維持し、ズーム変更も行わない
+                        }
+                    } else if (zoomAdjustmentPending) {
+                        // POIが全く見つからない場合
+                        Boolean loading = viewModel.getLoading().getValue();
+                        if (!Boolean.TRUE.equals(loading)) {
+                            // 読み込みが完了してもPOIが0なら、フォールバック値を適用して終了
+                            map.getController().setZoom(Math.max(MIN_ZOOM, zoomLimit));
+                            gpsZoomAdjustmentPending = false;
+                            if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
                         }
                     }
 
@@ -505,7 +522,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * GPS移動先のPOI密度に応じて、適切なズームレベルを計算する（バックグラウンド実行用）。
      */
-    private Double calculateTargetZoomInBackground(List<OsmPoi> pois, GeoPoint center, double zoomBase, int width, int height, boolean postOfficeOnly, double zoomLimit) {
+    private ZoomResult calculateTargetZoomInBackground(List<OsmPoi> pois, GeoPoint center, double zoomBase, int width, int height, boolean postOfficeOnly, double zoomLimit) {
         if (pois == null || center == null) return null;
 
         int shortSide = Math.min(width, height);
@@ -519,12 +536,18 @@ public class MainActivity extends AppCompatActivity {
         double halfLatBase = (shortSide * dLatPerPixel) / 2.0;
 
         List<PoiInfo> poiInfos = new ArrayList<>(pois.size());
+        double minDistance = Double.MAX_VALUE;
         for (OsmPoi poi : pois) {
             double dLat = Math.abs(poi.getLat() - center.getLatitude());
             double dLon = longitudeDistance(poi.getLon(), center.getLongitude());
+            minDistance = Math.min(minDistance, Math.sqrt(dLat * dLat + dLon * dLon));
             String amenity = poi.getTag("amenity");
             poiInfos.add(new PoiInfo(dLat, dLon, "post_office".equals(amenity), "post_box".equals(amenity)));
         }
+
+        // 近傍に一つもPOIがない場合は、まだデータがロードされていない可能性が高いためnullを返す
+        // (日本の郵便局・ポスト密度からして10km四方に0ということは考えにくい)
+        if (minDistance > 0.1) return null;
 
         for (double candidateZoom = GPS_MAX_ZOOM; candidateZoom >= MIN_ZOOM; candidateZoom -= 1.0) {
             double scale = Math.pow(2.0, candidateZoom - zoomBase);
@@ -544,10 +567,10 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (visibleCount >= 5 && hasPostOffice && (postOfficeOnly || hasPostBox)) {
-                return candidateZoom;
+                return new ZoomResult(candidateZoom, true);
             }
         }
-        return Math.max(MIN_ZOOM, zoomLimit);
+        return new ZoomResult(Math.max(MIN_ZOOM, zoomLimit), false);
     }
 
     /** 互換用。 */
