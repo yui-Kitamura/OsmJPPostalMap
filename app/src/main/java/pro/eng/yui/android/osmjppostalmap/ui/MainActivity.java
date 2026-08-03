@@ -52,6 +52,8 @@ import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
 import pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.TextValue;
+import pro.eng.yui.android.osmjppostalmap.search.SearchDialog;
+import pro.eng.yui.android.osmjppostalmap.search.SearchResult;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -208,6 +210,7 @@ public class MainActivity extends AppCompatActivity {
         viewModel.updateAccessToken(authRepository.getAccessToken());
         viewModel.setFilterOpenOnly(false); // 初期化トリガー
         viewModel.fetchDataDate(); // データ鮮度情報の取得を開始
+        viewModel.fetchCityData(); // 地名データの取得を開始
         
         editPoiLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -412,6 +415,33 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Search Button
+        findViewById(R.id.search_button).setOnClickListener(v -> {
+            SearchDialog dialog = new SearchDialog();
+            dialog.setOnResultSelectedListener(new SearchDialog.OnResultSelectedListener() {
+                @Override
+                public void onPostOfficeSelected(OsmPoi poi) {
+                    navigateToPoi(poi);
+                }
+
+                @Override
+                public void onPlaceCenterSelected(SearchResult result) {
+                    navigateToPlaceCenter(result);
+                }
+
+                @Override
+                public void onPlaceAreaSelected(SearchResult result) {
+                    navigateToPlaceArea(result);
+                }
+
+                @Override
+                public void onAddressSelected(OsmPoi poi) {
+                    navigateToPoi(poi);
+                }
+            });
+            dialog.show(getSupportFragmentManager(), "search");
+        });
+
         // Add PostBox Button
         findViewById(R.id.add_postbox_button).setOnClickListener(v -> {
             Intent intent = new Intent(this, EditPoiActivity.class);
@@ -558,6 +588,46 @@ public class MainActivity extends AppCompatActivity {
             return new GeoPoint(latitude, longitude);
         }
         return TOKYO_CENTRAL_POST_OFFICE;
+    }
+
+    private void navigateToPoi(OsmPoi poi) {
+        GeoPoint point = new GeoPoint(poi.getLat(), poi.getLon());
+        map.getController().animateTo(point);
+        map.getController().setZoom(19.0);
+
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        boolean isPostOffice = "post_office".equals(poi.getTag("amenity"));
+        ScheduleResult sr;
+        ScheduleResult lsr = null;
+
+        long now = System.currentTimeMillis();
+        if (isPostOffice) {
+            OpeningHours tagValue = new OpeningHours(poi.getTag("opening_hours"));
+            sr = parser.parse(tagValue, now, ScheduleParser.TimeType.OPENING_HOURS);
+            tagValue = new OpeningHours(poi.getTag("opening_hours:limited"));
+            lsr = parser.parse(tagValue, now, ScheduleParser.TimeType.OPENING_HOURS);
+        } else {
+            CollectionTimes tagValue = new CollectionTimes(poi.getTag("collection_times"));
+            sr = parser.parse(tagValue, now, ScheduleParser.TimeType.COLLECTION_TIMES);
+        }
+
+        currentPoiDetailsDialog = PoiDetailsDialog.show(this, poi, sr, lsr, lastLocation);
+    }
+
+    private void navigateToPlaceCenter(SearchResult result) {
+        GeoPoint point = new GeoPoint(result.getLat(), result.getLon());
+        map.getController().animateTo(point);
+        map.getController().setZoom(15.0);
+    }
+
+    private void navigateToPlaceArea(SearchResult result) {
+        if (result.getOriginalData() instanceof pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo) {
+            pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo info = (pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo) result.getOriginalData();
+            BoundingBox bb = new BoundingBox(info.getMaxLat(), info.getMaxLon(), info.getMinLat(), info.getMinLon());
+            map.zoomToBoundingBox(bb, true);
+        } else {
+            navigateToPlaceCenter(result);
+        }
     }
 
     private void updatePois(boolean forceNotify, UpdateMode mode) {
