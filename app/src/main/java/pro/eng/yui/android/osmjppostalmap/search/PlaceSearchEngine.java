@@ -1,5 +1,6 @@
 package pro.eng.yui.android.osmjppostalmap.search;
 
+import android.location.Location;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -15,7 +16,7 @@ public class PlaceSearchEngine implements SearchEngine {
     }
 
     @Override
-    public List<SearchResult> search(String query) {
+    public List<SearchResult> search(String query, Location currentLoc) {
         if (query == null || query.trim().isEmpty()) {
             return new ArrayList<>();
         }
@@ -32,6 +33,14 @@ public class PlaceSearchEngine implements SearchEngine {
 
             Double lat = place.getLat();
             Double lon = place.getLon();
+
+            // 距離による重みづけ (誘導用)
+            if (currentLoc != null && lat != null && lon != null) {
+                float[] distResults = new float[1];
+                Location.distanceBetween(currentLoc.getLatitude(), currentLoc.getLongitude(), lat, lon, distResults);
+                double distanceKm = distResults[0] / 1000.0;
+                weight += 1.0 / (1.0 + distanceKm);
+            }
 
             results.add(new SearchResult(
                     SearchResult.Type.PLACE,

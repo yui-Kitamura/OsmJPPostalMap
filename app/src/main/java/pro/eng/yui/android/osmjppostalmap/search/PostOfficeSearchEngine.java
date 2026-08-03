@@ -1,5 +1,6 @@
 package pro.eng.yui.android.osmjppostalmap.search;
 
+import android.location.Location;
 import java.util.ArrayList;
 import java.util.List;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
@@ -19,7 +20,7 @@ public class PostOfficeSearchEngine implements SearchEngine {
     }
 
     @Override
-    public List<SearchResult> search(String query) {
+    public List<SearchResult> search(String query, Location currentLoc) {
         List<SearchResult> results = new ArrayList<>();
         if (query == null || query.trim().isEmpty()) return results;
         String q = query.trim();
@@ -31,6 +32,12 @@ public class PostOfficeSearchEngine implements SearchEngine {
 
             String name = poi.getTag("name");
             String address = JpPostalUtil.getAddressText(poi.getTags());
+            if (address.isEmpty()) {
+                String pref = poi.getTag("addr:prefecture");
+                if (pref != null) {
+                    address = pref;
+                }
+            }
             
             boolean match = false;
             double weight = 0.0;
@@ -56,6 +63,15 @@ public class PostOfficeSearchEngine implements SearchEngine {
             }
 
             if (!match) continue;
+
+            // 距離による重みづけ (誘導用)
+            if (currentLoc != null && poi.getLat() != 0.0 && poi.getLon() != 0.0) {
+                float[] distResults = new float[1];
+                Location.distanceBetween(currentLoc.getLatitude(), currentLoc.getLongitude(), poi.getLat(), poi.getLon(), distResults);
+                double distanceKm = distResults[0] / 1000.0;
+                // 最大1.0のボーナス。近いほど大きく、100kmで約0.01になる
+                weight += 1.0 / (1.0 + distanceKm);
+            }
 
             SearchResult.Type type = "post_box".equals(amenity) ? SearchResult.Type.POST_BOX : SearchResult.Type.POST_OFFICE;
             String displayTitle = (name != null) ? name : ("post_box".equals(amenity) ? "郵便ポスト" : "無名郵便局");

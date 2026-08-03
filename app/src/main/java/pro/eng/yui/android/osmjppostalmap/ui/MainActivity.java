@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import pro.eng.yui.android.osmjppostalmap.core.PoiDetailsDialog;
 import pro.eng.yui.android.osmjppostalmap.core.PoiMarker;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
+import pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.CollectionTimes;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OpeningHours;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
@@ -81,6 +82,7 @@ public class MainActivity extends AppCompatActivity {
     private double gpsZoomBase = GPS_MIN_ZOOM;
     private double gpsZoomLimit = MIN_ZOOM;
     private ProgressBar gpsProgress;
+    private OsmPoi pendingPoiDetail;
     private final ExecutorService markerStateExecutor = new ThreadPoolExecutor(
             1, 1, 0L, TimeUnit.MILLISECONDS,
             new LinkedBlockingDeque<Runnable>() {
@@ -110,6 +112,15 @@ public class MainActivity extends AppCompatActivity {
             this.dLon = dLon;
             this.isPostOffice = isPostOffice;
             this.isPostBox = isPostBox;
+        }
+    }
+
+    private static class ZoomResult {
+        final Double zoom;
+        final boolean satisfied;
+        ZoomResult(Double zoom, boolean satisfied) {
+            this.zoom = zoom;
+            this.satisfied = satisfied;
         }
     }
 
@@ -211,6 +222,7 @@ public class MainActivity extends AppCompatActivity {
         viewModel.setFilterOpenOnly(false); // 初期化トリガー
         viewModel.fetchDataDate(); // データ鮮度情報の取得を開始
         viewModel.fetchCityData(); // 地名データの取得を開始
+        viewModel.fetchOfficeData(); // 全国郵便局データの取得を開始
         
         editPoiLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -280,15 +292,11 @@ public class MainActivity extends AppCompatActivity {
                 if (markerRenderGeneration.get() != renderGeneration) return;
 
                 // 1. GPSズームの計算 (Background)
-                Double targetZoom = null;
-                boolean satisfied = false;
+                ZoomResult zoomResult = null;
                 if (zoomAdjustmentPending && zoomCenter != null && mapWidth > 0 && mapHeight > 0) {
-                    // 計算部分は重複を避けるため helper に切り出すか、ここでインライン化
-                    targetZoom = calculateTargetZoomInBackground(pois, zoomCenter, zoomBase, mapWidth, mapHeight, postOfficeOnly, zoomLimit);
-                    if (targetZoom != null) satisfied = true;
+                    zoomResult = calculateTargetZoomInBackground(pois, zoomCenter, zoomBase, mapWidth, mapHeight, postOfficeOnly, zoomLimit);
                 }
-                final Double fTargetZoom = targetZoom;
-                final boolean fSatisfied = satisfied;
+                final ZoomResult fZoomResult = zoomResult;
 
                 // 2. マーカーキャッシュのクリーンアップ (Background)
                 if (allPoisSnapshot != null) {
@@ -301,17 +309,32 @@ public class MainActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     if (markerRenderGeneration.get() != renderGeneration) return;
 
-                    if (fTargetZoom != null) {
-                        map.getController().setZoom(fTargetZoom);
-                        if (fSatisfied) {
+                        if (fZoomResult != null) {
+                        if (fZoomResult.satisfied) {
+                            map.getController().setZoom(fZoomResult.zoom);
+                            checkPendingPoiDetail();
                             gpsZoomAdjustmentPending = false;
                             if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
                         } else {
                             Boolean loading = viewModel.getLoading().getValue();
                             if (!Boolean.TRUE.equals(loading)) {
+                                // 読み込みが完了しており、かつこれ以上POIが見つからない場合はフォールバック値を適用して終了
+                                map.getController().setZoom(fZoomResult.zoom);
+                                checkPendingPoiDetail();
                                 gpsZoomAdjustmentPending = false;
                                 if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
                             }
+                            // 読み込み中の場合は、次の更新を待つためフラグを維持し、ズーム変更も行わない
+                        }
+                    } else if (zoomAdjustmentPending) {
+                        // POIが全く見つからない場合
+                        Boolean loading = viewModel.getLoading().getValue();
+                        if (!Boolean.TRUE.equals(loading)) {
+                            // 読み込みが完了してもPOIが0なら、フォールバック値を適用して終了
+                            map.getController().setZoom(Math.max(MIN_ZOOM, zoomLimit));
+                            checkPendingPoiDetail();
+                            gpsZoomAdjustmentPending = false;
+                            if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
                         }
                     }
 
@@ -408,7 +431,6 @@ public class MainActivity extends AppCompatActivity {
         // GPS Button
         findViewById(R.id.gps_button).setOnClickListener(v -> {
             if (lastLocation != null) {
-                gpsZoomLimit = map.getZoomLevelDouble();
                 performInitialGpsZoom(lastLocation);
             } else {
                 Toast.makeText(this, "現在地を取得中です...", Toast.LENGTH_SHORT).show();
@@ -505,7 +527,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * GPS移動先のPOI密度に応じて、適切なズームレベルを計算する（バックグラウンド実行用）。
      */
-    private Double calculateTargetZoomInBackground(List<OsmPoi> pois, GeoPoint center, double zoomBase, int width, int height, boolean postOfficeOnly, double zoomLimit) {
+    private ZoomResult calculateTargetZoomInBackground(List<OsmPoi> pois, GeoPoint center, double zoomBase, int width, int height, boolean postOfficeOnly, double zoomLimit) {
         if (pois == null || center == null) return null;
 
         int shortSide = Math.min(width, height);
@@ -519,12 +541,18 @@ public class MainActivity extends AppCompatActivity {
         double halfLatBase = (shortSide * dLatPerPixel) / 2.0;
 
         List<PoiInfo> poiInfos = new ArrayList<>(pois.size());
+        double minDistance = Double.MAX_VALUE;
         for (OsmPoi poi : pois) {
             double dLat = Math.abs(poi.getLat() - center.getLatitude());
             double dLon = longitudeDistance(poi.getLon(), center.getLongitude());
+            minDistance = Math.min(minDistance, Math.sqrt(dLat * dLat + dLon * dLon));
             String amenity = poi.getTag("amenity");
             poiInfos.add(new PoiInfo(dLat, dLon, "post_office".equals(amenity), "post_box".equals(amenity)));
         }
+
+        // 近傍に一つもPOIがない場合は、まだデータがロードされていない可能性が高いためnullを返す
+        // (日本の郵便局・ポスト密度からして10km四方に0ということは考えにくい)
+        if (minDistance > 0.1) return null;
 
         for (double candidateZoom = GPS_MAX_ZOOM; candidateZoom >= MIN_ZOOM; candidateZoom -= 1.0) {
             double scale = Math.pow(2.0, candidateZoom - zoomBase);
@@ -544,10 +572,10 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (visibleCount >= 5 && hasPostOffice && (postOfficeOnly || hasPostBox)) {
-                return candidateZoom;
+                return new ZoomResult(candidateZoom, true);
             }
         }
-        return Math.max(MIN_ZOOM, zoomLimit);
+        return new ZoomResult(Math.max(MIN_ZOOM, zoomLimit), false);
     }
 
     /** 互換用。 */
@@ -560,6 +588,10 @@ public class MainActivity extends AppCompatActivity {
         if (gpsProgress != null) gpsProgress.setVisibility(View.VISIBLE);
         gpsZoomCenter = mapTargetFor(location);
         gpsZoomBase = GPS_MIN_ZOOM;
+        if (map != null) {
+            // 現在のズームが広域すぎる場合は、GPSジャンプ後の最低ズームを15.0程度に制限する
+            gpsZoomLimit = Math.max(15.0, map.getZoomLevelDouble());
+        }
 
         // 計算式による範囲算出を導入したため、移動完了を待つ必要がない。
         gpsZoomAdjustmentPending = true;
@@ -592,9 +624,67 @@ public class MainActivity extends AppCompatActivity {
 
     private void navigateToPoi(OsmPoi poi) {
         GeoPoint point = new GeoPoint(poi.getLat(), poi.getLon());
-        map.getController().animateTo(point);
-        map.getController().setZoom(19.0);
 
+        if (gpsProgress != null) gpsProgress.setVisibility(View.VISIBLE);
+        gpsZoomCenter = point;
+        gpsZoomBase = GPS_MIN_ZOOM;
+        // POIへのジャンプでは、以前のズーム率に関わらず詳細を表示できるズーム率を維持する
+        gpsZoomLimit = Math.max(17.0, map.getZoomLevelDouble());
+        gpsZoomAdjustmentPending = true;
+        pendingPoiDetail = poi;
+        initialLocationSet = true;
+
+        // v0データ（仮座標）の場合は、すぐにはジャンプせず詳細データの到着を待つ
+        if (poi.getVer() > 0) {
+            map.getController().setZoom(gpsZoomBase);
+            map.getController().setCenter(gpsZoomCenter);
+        }
+
+        String hintPref = poi.getTag("addr:prefecture");
+        if (canLoadPois()) {
+            updatePois(true, UpdateMode.GPS_OR_INITIAL, hintPref, null);
+        }
+    }
+
+    private void checkPendingPoiDetail() {
+        if (pendingPoiDetail == null) return;
+        
+        OsmPoi target = pendingPoiDetail;
+        List<OsmPoi> currentPois = viewModel.getPois().getValue();
+        boolean found = false;
+        if (currentPois != null) {
+            for (OsmPoi p : currentPois) {
+                if (p.getId() == pendingPoiDetail.getId() && p.getType().equals(pendingPoiDetail.getType())) {
+                    target = p;
+                    found = true;
+                    break;
+                }
+            }
+        }
+        
+        if (found) {
+            // 詳細データの座標が暫定座標(v0)と異なる可能性があるため、中心を更新する
+            GeoPoint realPoint = new GeoPoint(target.getLat(), target.getLon());
+            if (gpsZoomAdjustmentPending && gpsZoomCenter != null) {
+                if (pendingPoiDetail.getVer() == 0) {
+                    // v0からのジャンプ待機中だった場合は、ここで初めて移動する
+                    map.getController().animateTo(realPoint);
+                    gpsZoomCenter = realPoint;
+                } else if (realPoint.distanceToAsDouble(gpsZoomCenter) > 1.0) {
+                    map.getController().animateTo(realPoint);
+                    gpsZoomCenter = realPoint;
+                }
+            }
+        } else if (gpsZoomAdjustmentPending && pendingPoiDetail.getVer() == 0) {
+            // v0データの実座標が見つからなかった場合のフォールバック
+            map.getController().setCenter(gpsZoomCenter);
+        }
+        
+        showPoiDetails(target);
+        pendingPoiDetail = null;
+    }
+
+    private void showPoiDetails(OsmPoi poi) {
         SimpleScheduleParser parser = new SimpleScheduleParser();
         boolean isPostOffice = "post_office".equals(poi.getTag("amenity"));
         ScheduleResult sr;
@@ -616,8 +706,29 @@ public class MainActivity extends AppCompatActivity {
 
     private void navigateToPlaceCenter(SearchResult result) {
         GeoPoint point = new GeoPoint(result.getLat(), result.getLon());
-        map.getController().animateTo(point);
-        map.getController().setZoom(15.0);
+
+        if (gpsProgress != null) gpsProgress.setVisibility(View.VISIBLE);
+        gpsZoomCenter = point;
+        gpsZoomBase = 15.0;
+        // 市中心へのジャンプでは、以前のズーム率に関わらず市街地を表示できるズーム率を維持する
+        gpsZoomLimit = Math.max(14.0, map.getZoomLevelDouble());
+        gpsZoomAdjustmentPending = true;
+        initialLocationSet = true;
+
+        map.getController().setZoom(gpsZoomBase);
+        map.getController().setCenter(gpsZoomCenter);
+
+        String hintPref = null;
+        String hintSub = null;
+        if (result.getOriginalData() instanceof PlaceInfo) {
+            PlaceInfo info = (PlaceInfo) result.getOriginalData();
+            hintPref = viewModel.getPrefectureName(info.getPrefCode());
+            hintSub = info.getSubName();
+        }
+
+        if (canLoadPois()) {
+            updatePois(true, UpdateMode.GPS_OR_INITIAL, hintPref, hintSub);
+        }
     }
 
     private void navigateToPlaceArea(SearchResult result) {
@@ -631,12 +742,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updatePois(boolean forceNotify, UpdateMode mode) {
+        updatePois(forceNotify, mode, null, null);
+    }
+
+    private void updatePois(boolean forceNotify, UpdateMode mode, String hintPrefName, String hintSubName) {
         if (!canLoadPois() || map == null || !map.isLayoutOccurred()) {
             return;
         }
 
         org.osmdroid.util.BoundingBox bb = map.getBoundingBox();
         org.osmdroid.api.IGeoPoint center = map.getMapCenter();
+        if (gpsZoomAdjustmentPending && gpsZoomCenter != null) {
+            center = gpsZoomCenter;
+        }
         double centerLat = center.getLatitude();
         double centerLon = center.getLongitude();
 
@@ -691,8 +809,11 @@ public class MainActivity extends AppCompatActivity {
         if (lastLocation != null) {
             pointsList.add(new double[]{lastLocation.getLatitude(), lastLocation.getLongitude()});
         }
+        if (gpsZoomAdjustmentPending && gpsZoomCenter != null) {
+            pointsList.add(new double[]{gpsZoomCenter.getLatitude(), gpsZoomCenter.getLongitude()});
+        }
 
-        viewModel.fetchPoisForArea(pointsList.toArray(new double[0][0]), forceNotify);
+        viewModel.fetchPoisForArea(pointsList.toArray(new double[0][0]), forceNotify, hintPrefName, hintSubName);
     }
 
     private void updatePois() {
@@ -726,17 +847,23 @@ public class MainActivity extends AppCompatActivity {
             map.invalidate();
         }
         if (firstLocation && !initialLocationSet) {
-            // ここで即座に initialLocationSet = true にするとレイアウト完了時のロードが走る可能性があるが、
-            // ズームアニメーションを優先するため、performInitialGpsZoom 内で適切に管理する。
-            gpsZoomLimit = map.getZoomLevelDouble();
             performInitialGpsZoom(location);
         } else if (firstLocation && initialLocationSet) {
             // すでに前回の位置が復旧されている場合、アニメーションさせずにGPS位置へ即時移動してPOIを更新する
+            if (gpsProgress != null) gpsProgress.setVisibility(View.VISIBLE);
             gpsZoomCenter = mapTargetFor(location);
+            gpsZoomBase = map.getZoomLevelDouble();
+            // 現在のズームが広域すぎる場合は、GPS位置への移動後の最低ズームを制限する
+            gpsZoomLimit = Math.max(15.0, map.getZoomLevelDouble());
+            gpsZoomAdjustmentPending = true;
+
             map.getController().setCenter(gpsZoomCenter);
             updatePois(true, UpdateMode.GPS_OR_INITIAL);
         }
-        if (gpsProgress != null) gpsProgress.setVisibility(View.GONE);
+
+        if (gpsProgress != null && !gpsZoomAdjustmentPending) {
+            gpsProgress.setVisibility(View.GONE);
+        }
     }
 
     @Override

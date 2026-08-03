@@ -30,6 +30,14 @@ public interface PoiRepository {
     void loadPoisForArea(double[][] latLonPoints, boolean forceNotify);
 
     /**
+     * ヒント情報を伴って表示範囲のPOIを読み込む。
+     *
+     * @param hintPrefName 強制的にロード対象に含める都道府県名（オプション）
+     * @param hintSubName 強制的にロード対象に含めるサブエリア名（オプション）
+     */
+    void loadPoisForArea(double[][] latLonPoints, boolean forceNotify, String hintPrefName, String hintSubName);
+
+    /**
      * 指定した都道府県をキャッシュ有無に関わらずネットワークから再取得し、
      * SQLiteを更新する（更新ダイアログの個別更新ボタン用）。
      */
@@ -52,6 +60,11 @@ public interface PoiRepository {
      * 市町村データをネットワークから取得して保存する。
      */
     void fetchCityData();
+
+    /**
+     * 全国の郵便局データを取得して保存する。
+     */
+    void fetchOfficeData();
 
     /**
      * 市町村名を検索する。

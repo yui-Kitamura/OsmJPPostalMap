@@ -78,7 +78,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     /** 一度に描画する上限POI数（超過時はズーム要求） */
     private static final int MAX_RENDER = 500;
     private final android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService executor = Executors.newFixedThreadPool(3);
     private final CountDownLatch boundaryLatch = new CountDownLatch(1);
     private Runnable cooldownRunnable;
     private final AtomicInteger pendingOperations = new AtomicInteger();
@@ -111,6 +111,8 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final Map<String, BBox> prefBoundaryCache = new java.util.concurrent.ConcurrentHashMap<>();
     /** 都道府県コードから都道府県名へのマッピング */
     private final Map<Integer, String> prefCodeNameMap = new java.util.concurrent.ConcurrentHashMap<>();
+    /** 都道府県コード -> (サブエリアコード -> サブエリア名) のマッピング */
+    private final Map<Integer, Map<Integer, String>> prefSubCodeNameMap = new java.util.concurrent.ConcurrentHashMap<>();
     /** 市区町村情報のキャッシュ（検索用） */
     private final List<PlaceInfo> placeCache = Collections.synchronizedList(new ArrayList<>());
 
@@ -194,6 +196,10 @@ public class PoiRepositoryImpl implements PoiRepository {
                     JsonObject subObj = prefObj.getAsJsonObject("sub");
                     boolean hasOthers = subObj.keySet().size() > 1;
 
+                    if (!subNamesByCode.isEmpty()) {
+                        prefSubCodeNameMap.put(prefCode, new HashMap<>(subNamesByCode));
+                    }
+
                     for (Map.Entry<String, JsonElement> subEntry : subObj.entrySet()) {
                         String subCodeKey = subEntry.getKey();
                         int subCode = Integer.parseInt(subCodeKey);
@@ -250,8 +256,14 @@ public class PoiRepositoryImpl implements PoiRepository {
      * Executorのワーカースレッドが死なないよう保護する。
      */
     private void runOnExecutor(String operation, Runnable task) {
-        if (pendingOperations.getAndIncrement() == 0) {
-            loadingLiveData.postValue(true);
+        synchronized (pendingOperations) {
+            if (pendingOperations.getAndIncrement() == 0) {
+                if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+                    loadingLiveData.setValue(true);
+                } else {
+                    loadingLiveData.postValue(true);
+                }
+            }
         }
         loadingStatusLiveData.postValue(operation);
         executor.execute(() -> {
@@ -261,9 +273,11 @@ public class PoiRepositoryImpl implements PoiRepository {
                 Log.e("PoiRepository", "Error in " + operation, e);
                 errorLiveData.postValue("処理中にエラーが発生しました");
             } finally {
-                if (pendingOperations.decrementAndGet() == 0) {
-                    loadingLiveData.postValue(false);
-                    loadingStatusLiveData.postValue("");
+                synchronized (pendingOperations) {
+                    if (pendingOperations.decrementAndGet() == 0) {
+                        loadingLiveData.postValue(false);
+                        loadingStatusLiveData.postValue("");
+                    }
                 }
             }
         });
@@ -271,7 +285,14 @@ public class PoiRepositoryImpl implements PoiRepository {
 
     @Override
     public void loadPoisForArea(double[][] latLonPoints, boolean forceNotify) {
+        loadPoisForArea(latLonPoints, forceNotify, null, null);
+    }
+
+    @Override
+    public void loadPoisForArea(double[][] latLonPoints, boolean forceNotify, String hintPrefName, String hintSubName) {
         if (latLonPoints == null || latLonPoints.length == 0) { return; }
+
+        this.currentPrefCodes.clear();
 
         // 表示・計算対象範囲の更新
         double latMin = Double.MAX_VALUE, latMax = -Double.MAX_VALUE;
@@ -310,13 +331,20 @@ public class PoiRepositoryImpl implements PoiRepository {
                 cachedAreaKeys = new HashSet<>();
             }
 
+            if (hintPrefName != null) {
+                if (hintSubName != null) {
+                    cachedAreaKeys.add(hintPrefName + ":" + hintSubName);
+                } else {
+                    cachedAreaKeys.add(hintPrefName);
+                }
+            }
+
             if (cachedAreaKeys.isEmpty()) {
                 postCombined();
                 return;
             }
 
             // 新規フェッチが必要なエリアを特定
-            Map<String, Integer> prefs = JpPostalUtil.getPrefectures().join();
             List<String[]> neededAreas = new ArrayList<>();
 
             for (String key : cachedAreaKeys) {
@@ -332,7 +360,13 @@ public class PoiRepositoryImpl implements PoiRepository {
                     subName = null;
                 }
 
-                Integer code = prefs.get(prefName);
+                Integer code = null;
+                for(Map.Entry<Integer, String> e : prefCodeNameMap.entrySet()){
+                    if(e.getValue().equals(prefName)){
+                        code = e.getKey();
+                        break;
+                    }
+                }
                 if (code == null || code < 0) {
                     continue;
                 }
@@ -340,7 +374,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                 currentPrefCodes.add(code);
 
                 // サブエリアの存在を常に確認し、ある場合はサブ単位での取得を優先する
-                Map<String, Integer> subAll = JpPostalUtil.getSubAreas(prefName).join();
+                Map<Integer, String> subAll = prefSubCodeNameMap.get(code);
                 if (subAll != null && !subAll.isEmpty()) {
                     if (subName != null) {
                         // 特定のサブエリアが判明している場合
@@ -349,7 +383,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                         }
                     } else {
                         // サブエリアがあるはずだがキーが都道府県名のみの場合、交差するサブエリアを全て特定
-                        for (String sub : subAll.keySet()) {
+                        for (String sub : subAll.values()) {
                             String subKey = prefName + ":" + sub;
                             BBox subBBox = prefBoundaryCache.get(subKey);
                             if (subBBox != null) {
@@ -382,7 +416,7 @@ public class PoiRepositoryImpl implements PoiRepository {
 
             // クールダウン判定（新規ネットワーク取得が発生する場合のみ適用）
             long currentTime = System.currentTimeMillis();
-            if (currentTime - lastFetchTime < MIN_INTERVAL_MS) {
+            if (!forceNotify && currentTime - lastFetchTime < MIN_INTERVAL_MS) {
                 postCombined();
                 return;
             }
@@ -390,8 +424,16 @@ public class PoiRepositoryImpl implements PoiRepository {
             startCooldownTimer();
 
             for (String[] area : neededAreas) {
-                Integer code = prefs.get(area[0]);
-                loadArea(code, area[0], area[1], false);
+                Integer code = null;
+                for(Map.Entry<Integer, String> e : prefCodeNameMap.entrySet()){
+                    if(e.getValue().equals(area[0])){
+                        code = e.getKey();
+                        break;
+                    }
+                }
+                if (code != null) {
+                    loadArea(code, area[0], area[1], false);
+                }
             }
 
             // 新しくフェッチしたデータがあるため再反映
@@ -447,6 +489,9 @@ public class PoiRepositoryImpl implements PoiRepository {
     public void fetchCityData() {
         runOnExecutor("地名データを読み込み中", () -> {
             try {
+                // 境界データの読み込みを待機
+                boundaryLatch.await(10, TimeUnit.SECONDS);
+
                 String cityJson = JpPostalUtil.getRawCityJson().join();
                 if (cityJson == null || cityJson.isEmpty()) {
                     return;
@@ -455,7 +500,27 @@ public class PoiRepositoryImpl implements PoiRepository {
                 List<PlaceInfo> places = new ArrayList<>();
                 for (int i = 0; i < array.length(); i++) {
                     JSONObject obj = array.getJSONObject(i);
-                    int prefCode = obj.has("prefCode") ? obj.getInt("prefCode") : obj.getInt("is_in");
+                    
+                    String isInStr = obj.optString("is_in", null);
+                    if (isInStr == null) {
+                        isInStr = String.valueOf(obj.optInt("is_in", obj.optInt("prefCode", -1)));
+                    }
+                    if ("-1".equals(isInStr) || isInStr.isEmpty()) continue;
+
+                    int prefCode;
+                    String subName = null;
+                    if (isInStr.contains("_")) {
+                        String[] parts = isInStr.split("_");
+                        prefCode = Integer.parseInt(parts[0]);
+                        int subCode = Integer.parseInt(parts[1]);
+                        Map<Integer, String> subMap = prefSubCodeNameMap.get(prefCode);
+                        if (subMap != null) {
+                            subName = subMap.get(subCode);
+                        }
+                    } else {
+                        prefCode = Integer.parseInt(isInStr);
+                    }
+
                     String name = obj.has("city") ? obj.getString("city") : obj.getString("name");
 
                     Double lat = null;
@@ -484,7 +549,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                     }
 
                     places.add(new PlaceInfo(
-                            prefCode, name, lat, lon, minLat, maxLat, minLon, maxLon
+                            prefCode, subName, name, lat, lon, minLat, maxLat, minLon, maxLon
                     ));
                 }
                 if (local != null) {
@@ -496,6 +561,102 @@ public class PoiRepositoryImpl implements PoiRepository {
                 }
             } catch (Exception e) {
                 Log.e("PoiRepository", "Failed to fetch city data", e);
+            }
+        });
+    }
+
+    @Override
+    public void fetchOfficeData() {
+        runOnExecutor("郵便局データを読み込み中", () -> {
+            try {
+                // 境界データの読み込みを待機
+                boundaryLatch.await(10, TimeUnit.SECONDS);
+
+                String officeJson = JpPostalUtil.getRawOfficeJson().join();
+                if (officeJson == null || officeJson.isEmpty()) {
+                    return;
+                }
+                JSONArray array = new JSONArray(officeJson);
+                // Map<PrefCode, Map<SubNameKey, List<OsmPoi>>>
+                Map<Integer, Map<String, List<OsmPoi>>> groupedPois = new HashMap<>();
+
+                for (int i = 0; i < array.length(); i++) {
+                    JSONObject obj = array.getJSONObject(i);
+                    String name = obj.getString("name");
+
+                    String isInStr = obj.optString("is_in", null);
+                    if (isInStr == null) {
+                        isInStr = String.valueOf(obj.optInt("is_in", -1));
+                    }
+                    if ("-1".equals(isInStr) || isInStr.isEmpty()) continue;
+
+                    int prefCode;
+                    String subName = null;
+
+                    if (isInStr.contains("_")) {
+                        String[] parts = isInStr.split("_");
+                        prefCode = Integer.parseInt(parts[0]);
+                        int subCode = Integer.parseInt(parts[1]);
+                        Map<Integer, String> subMap = prefSubCodeNameMap.get(prefCode);
+                        if (subMap != null) {
+                            subName = subMap.get(subCode);
+                        }
+                    } else {
+                        prefCode = Integer.parseInt(isInStr);
+                    }
+
+                    String poiType = obj.optString("poiType", "node");
+                    long poiId = obj.getLong("poiId");
+
+                    Map<String, String> tags = new HashMap<>();
+                    tags.put("name", name);
+                    tags.put("amenity", "post_office");
+
+                    String prefName = prefCodeNameMap.get(prefCode);
+                    if (prefName != null) {
+                        tags.put("addr:prefecture", prefName);
+                    }
+
+                    // v0 data as requested. lat/lon might not be present in raw json.
+                    double lat = obj.optDouble("lat", 0.0);
+                    double lon = obj.optDouble("lon", 0.0);
+
+                    // 座標がない場合は都道府県またはサブエリアの代表点をセットする
+                    if (lat == 0.0 && lon == 0.0) {
+                        String boundaryKey = (subName == null) ? prefName : prefName + ":" + subName;
+                        if (boundaryKey != null) {
+                            BBox bbox = prefBoundaryCache.get(boundaryKey);
+                            if (bbox != null) {
+                                lat = (bbox.getMinLat() + bbox.getMaxLat()) / 2.0;
+                                lon = (bbox.getMinLon() + bbox.getMaxLon()) / 2.0;
+                            }
+                        }
+                    }
+                    OsmPoi poi = new OsmPoi(poiId, lat, lon, poiType, tags, 0);
+
+                    if (!groupedPois.containsKey(prefCode)) {
+                        groupedPois.put(prefCode, new HashMap<>());
+                    }
+                    Map<String, List<OsmPoi>> subMap = groupedPois.get(prefCode);
+                    String subKey = (subName == null) ? "" : subName;
+                    if (!subMap.containsKey(subKey)) {
+                        subMap.put(subKey, new ArrayList<>());
+                    }
+                    subMap.get(subKey).add(poi);
+                }
+
+                if (local != null) {
+                    for (Map.Entry<Integer, Map<String, List<OsmPoi>>> prefEntry : groupedPois.entrySet()) {
+                        int prefCode = prefEntry.getKey();
+                        for (Map.Entry<String, List<OsmPoi>> subEntry : prefEntry.getValue().entrySet()) {
+                            String subName = subEntry.getKey();
+                            if (subName.isEmpty()) subName = null;
+                            local.insertPoisIfNotExist(prefCode, subName, subEntry.getValue());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.e("PoiRepository", "Failed to fetch office data", e);
             }
         });
     }

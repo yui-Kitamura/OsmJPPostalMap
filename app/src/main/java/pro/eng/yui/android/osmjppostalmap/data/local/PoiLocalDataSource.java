@@ -76,6 +76,40 @@ public class PoiLocalDataSource {
     }
 
     /**
+     * 複数のPOIを一括で追加/更新する。
+     */
+    public void upsertPois(int prefCode, String subName, List<OsmPoi> pois) {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            for (OsmPoi poi : pois) {
+                db.insertWithOnConflict(PoiDbHelper.TABLE_POI, null,
+                        toValues(prefCode, subName, poi), SQLiteDatabase.CONFLICT_REPLACE);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
+     * 複数のPOIを一括で追加する。既に存在する場合は無視する。
+     */
+    public void insertPoisIfNotExist(int prefCode, String subName, List<OsmPoi> pois) {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            for (OsmPoi poi : pois) {
+                db.insertWithOnConflict(PoiDbHelper.TABLE_POI, null,
+                        toValues(prefCode, subName, poi), SQLiteDatabase.CONFLICT_IGNORE);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
      * 指定した都道府県のPOIとメタ情報をまとめて削除する。
      */
     public void deletePrefecture(int prefCode) {
@@ -234,6 +268,7 @@ public class PoiLocalDataSource {
             for (PlaceInfo place : places) {
                 ContentValues v = new ContentValues();
                 v.put(PoiDbHelper.COL_PLACE_PREF_CODE, place.getPrefCode());
+                v.put(PoiDbHelper.COL_PLACE_SUB_NAME, place.getSubName());
                 v.put(PoiDbHelper.COL_PLACE_NAME, place.getName());
                 v.put(PoiDbHelper.COL_PLACE_LAT, place.getLat());
                 v.put(PoiDbHelper.COL_PLACE_LON, place.getLon());
@@ -276,11 +311,14 @@ public class PoiLocalDataSource {
     private PlaceInfo fromPlaceCursor(Cursor c) {
         int iLat = c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_LAT);
         int iLon = c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_LON);
+        int iSub = c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_SUB_NAME);
         Double lat = c.isNull(iLat) ? null : c.getDouble(iLat);
         Double lon = c.isNull(iLon) ? null : c.getDouble(iLon);
+        String subName = c.isNull(iSub) ? null : c.getString(iSub);
 
         return new PlaceInfo(
                 c.getInt(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_PREF_CODE)),
+                subName,
                 c.getString(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_NAME)),
                 lat,
                 lon,

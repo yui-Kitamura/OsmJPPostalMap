@@ -1,6 +1,7 @@
 package pro.eng.yui.android.osmjppostalmap.search;
 
 import android.app.Dialog;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -50,6 +51,7 @@ public class SearchDialog extends DialogFragment {
     private CompoundButton checkPostOffice;
     private CompoundButton checkAddress;
     private CompoundButton checkPlace;
+    private ProgressBar searchProgress;
 
     public void setOnResultSelectedListener(OnResultSelectedListener listener) {
         this.listener = listener;
@@ -83,6 +85,7 @@ public class SearchDialog extends DialogFragment {
         checkPostOffice = view.findViewById(R.id.check_post_office);
         checkAddress = view.findViewById(R.id.check_address);
         checkPlace = view.findViewById(R.id.check_place);
+        searchProgress = view.findViewById(R.id.search_progress);
         RecyclerView resultsList = view.findViewById(R.id.search_results);
 
         resultsList.setLayoutManager(new LinearLayoutManager(getContext()));
@@ -111,8 +114,11 @@ public class SearchDialog extends DialogFragment {
     private void performSearch(final String query) {
         if (query.trim().isEmpty()) {
             adapter.setResults(Collections.emptyList());
+            if (searchProgress != null) searchProgress.setVisibility(View.GONE);
             return;
         }
+
+        if (searchProgress != null) searchProgress.setVisibility(View.VISIBLE);
 
         executor.execute(() -> {
             Map<String, SearchResult> resultMap = new HashMap<>();
@@ -120,12 +126,17 @@ public class SearchDialog extends DialogFragment {
             boolean searchAddress = checkAddress.isChecked();
             boolean searchPlace = checkPlace.isChecked();
 
+            Location currentLoc = null;
+            if (repository.getLocationLiveData() != null) {
+                currentLoc = repository.getLocationLiveData().getValue();
+            }
+
             for (SearchEngine engine : engines) {
                 if (engine instanceof PostOfficeSearchEngine && !searchPO) continue;
                 if (engine instanceof AddressSearchEngine && !searchAddress) continue;
                 if (engine instanceof PlaceSearchEngine && !searchPlace) continue;
                 
-                List<SearchResult> engineResults = engine.search(query);
+                List<SearchResult> engineResults = engine.search(query, currentLoc);
                 for (SearchResult res : engineResults) {
                     String key;
                     if (res.getOriginalData() instanceof OsmPoi) {
@@ -147,6 +158,7 @@ public class SearchDialog extends DialogFragment {
             mainHandler.post(() -> {
                 if (query.equals(currentQuery)) {
                     adapter.setResults(allResults);
+                    if (searchProgress != null) searchProgress.setVisibility(View.GONE);
                 }
             });
         });
@@ -221,14 +233,14 @@ public class SearchDialog extends DialogFragment {
                 if (result.getType() == SearchResult.Type.POST_OFFICE || result.getType() == SearchResult.Type.POST_BOX) {
                     btnShow.setVisibility(View.VISIBLE);
                     btnShow.setOnClickListener(v -> {
-                        if (listener != null) listener.onPostOfficeSelected((OsmPoi) result.getOriginalData());
                         dismiss();
+                        if (listener != null) listener.onPostOfficeSelected((OsmPoi) result.getOriginalData());
                     });
                 } else if (result.getType() == SearchResult.Type.ADDRESS) {
                     btnShow.setVisibility(View.VISIBLE);
                     btnShow.setOnClickListener(v -> {
-                        if (listener != null) listener.onAddressSelected((OsmPoi) result.getOriginalData());
                         dismiss();
+                        if (listener != null) listener.onAddressSelected((OsmPoi) result.getOriginalData());
                     });
                 } else if (result.getType() == SearchResult.Type.PLACE) {
                     if (result.getLat() != null && result.getLon() != null) {
@@ -236,12 +248,12 @@ public class SearchDialog extends DialogFragment {
                     }
                     btnShowAll.setVisibility(View.VISIBLE);
                     btnShowCenter.setOnClickListener(v -> {
-                        if (listener != null) listener.onPlaceCenterSelected(result);
                         dismiss();
+                        if (listener != null) listener.onPlaceCenterSelected(result);
                     });
                     btnShowAll.setOnClickListener(v -> {
-                        if (listener != null) listener.onPlaceAreaSelected(result);
                         dismiss();
+                        if (listener != null) listener.onPlaceAreaSelected(result);
                     });
                 }
             }
