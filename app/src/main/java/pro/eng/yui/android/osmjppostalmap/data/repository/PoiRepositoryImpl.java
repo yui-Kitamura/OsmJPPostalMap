@@ -111,6 +111,8 @@ public class PoiRepositoryImpl implements PoiRepository {
     private final Map<String, BBox> prefBoundaryCache = new java.util.concurrent.ConcurrentHashMap<>();
     /** 都道府県コードから都道府県名へのマッピング */
     private final Map<Integer, String> prefCodeNameMap = new java.util.concurrent.ConcurrentHashMap<>();
+    /** 都道府県コード -> (サブエリアコード -> サブエリア名) のマッピング */
+    private final Map<Integer, Map<Integer, String>> prefSubCodeNameMap = new java.util.concurrent.ConcurrentHashMap<>();
     /** 市区町村情報のキャッシュ（検索用） */
     private final List<PlaceInfo> placeCache = Collections.synchronizedList(new ArrayList<>());
 
@@ -193,6 +195,10 @@ public class PoiRepositoryImpl implements PoiRepository {
 
                     JsonObject subObj = prefObj.getAsJsonObject("sub");
                     boolean hasOthers = subObj.keySet().size() > 1;
+
+                    if (!subNamesByCode.isEmpty()) {
+                        prefSubCodeNameMap.put(prefCode, new HashMap<>(subNamesByCode));
+                    }
 
                     for (Map.Entry<String, JsonElement> subEntry : subObj.entrySet()) {
                         String subCodeKey = subEntry.getKey();
@@ -447,6 +453,9 @@ public class PoiRepositoryImpl implements PoiRepository {
     public void fetchCityData() {
         runOnExecutor("地名データを読み込み中", () -> {
             try {
+                // 境界データの読み込みを待機
+                boundaryLatch.await(10, TimeUnit.SECONDS);
+
                 String cityJson = JpPostalUtil.getRawCityJson().join();
                 if (cityJson == null || cityJson.isEmpty()) {
                     return;
@@ -455,7 +464,20 @@ public class PoiRepositoryImpl implements PoiRepository {
                 List<PlaceInfo> places = new ArrayList<>();
                 for (int i = 0; i < array.length(); i++) {
                     JSONObject obj = array.getJSONObject(i);
-                    int prefCode = obj.has("prefCode") ? obj.getInt("prefCode") : obj.getInt("is_in");
+                    
+                    String isInStr = obj.optString("is_in", null);
+                    if (isInStr == null) {
+                        isInStr = String.valueOf(obj.optInt("is_in", obj.optInt("prefCode", -1)));
+                    }
+                    if ("-1".equals(isInStr) || isInStr.isEmpty()) continue;
+
+                    int prefCode;
+                    if (isInStr.contains("_")) {
+                        prefCode = Integer.parseInt(isInStr.split("_")[0]);
+                    } else {
+                        prefCode = Integer.parseInt(isInStr);
+                    }
+
                     String name = obj.has("city") ? obj.getString("city") : obj.getString("name");
 
                     Double lat = null;
@@ -504,17 +526,42 @@ public class PoiRepositoryImpl implements PoiRepository {
     public void fetchOfficeData() {
         runOnExecutor("郵便局データを読み込み中", () -> {
             try {
+                // 境界データの読み込みを待機
+                boundaryLatch.await(10, TimeUnit.SECONDS);
+
                 String officeJson = JpPostalUtil.getRawOfficeJson().join();
                 if (officeJson == null || officeJson.isEmpty()) {
                     return;
                 }
                 JSONArray array = new JSONArray(officeJson);
-                Map<Integer, List<OsmPoi>> prefPoiMap = new HashMap<>();
+                // Map<PrefCode, Map<SubNameKey, List<OsmPoi>>>
+                Map<Integer, Map<String, List<OsmPoi>>> groupedPois = new HashMap<>();
 
                 for (int i = 0; i < array.length(); i++) {
                     JSONObject obj = array.getJSONObject(i);
                     String name = obj.getString("name");
-                    int prefCode = obj.getInt("is_in");
+
+                    String isInStr = obj.optString("is_in", null);
+                    if (isInStr == null) {
+                        isInStr = String.valueOf(obj.optInt("is_in", -1));
+                    }
+                    if ("-1".equals(isInStr) || isInStr.isEmpty()) continue;
+
+                    int prefCode;
+                    String subName = null;
+
+                    if (isInStr.contains("_")) {
+                        String[] parts = isInStr.split("_");
+                        prefCode = Integer.parseInt(parts[0]);
+                        int subCode = Integer.parseInt(parts[1]);
+                        Map<Integer, String> subMap = prefSubCodeNameMap.get(prefCode);
+                        if (subMap != null) {
+                            subName = subMap.get(subCode);
+                        }
+                    } else {
+                        prefCode = Integer.parseInt(isInStr);
+                    }
+
                     String poiType = obj.optString("poiType", "node");
                     long poiId = obj.getLong("poiId");
 
@@ -532,15 +579,25 @@ public class PoiRepositoryImpl implements PoiRepository {
                     double lon = obj.optDouble("lon", 0.0);
                     OsmPoi poi = new OsmPoi(poiId, lat, lon, poiType, tags, 0);
 
-                    if (!prefPoiMap.containsKey(prefCode)) {
-                        prefPoiMap.put(prefCode, new ArrayList<>());
+                    if (!groupedPois.containsKey(prefCode)) {
+                        groupedPois.put(prefCode, new HashMap<>());
                     }
-                    prefPoiMap.get(prefCode).add(poi);
+                    Map<String, List<OsmPoi>> subMap = groupedPois.get(prefCode);
+                    String subKey = (subName == null) ? "" : subName;
+                    if (!subMap.containsKey(subKey)) {
+                        subMap.put(subKey, new ArrayList<>());
+                    }
+                    subMap.get(subKey).add(poi);
                 }
 
                 if (local != null) {
-                    for (Map.Entry<Integer, List<OsmPoi>> entry : prefPoiMap.entrySet()) {
-                        local.insertPoisIfNotExist(entry.getKey(), null, entry.getValue());
+                    for (Map.Entry<Integer, Map<String, List<OsmPoi>>> prefEntry : groupedPois.entrySet()) {
+                        int prefCode = prefEntry.getKey();
+                        for (Map.Entry<String, List<OsmPoi>> subEntry : prefEntry.getValue().entrySet()) {
+                            String subName = subEntry.getKey();
+                            if (subName.isEmpty()) subName = null;
+                            local.insertPoisIfNotExist(prefCode, subName, subEntry.getValue());
+                        }
                     }
                 }
             } catch (Exception e) {
