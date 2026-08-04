@@ -244,10 +244,10 @@ public class PoiDetailsDialog {
             // スケジュール表の作成
             populateWeeklyTable(context, table, schedule, isPostBox);
             
-            rawTagText.setText("Raw: " + schedule.getRawTagValue().getOrigin());
+            rawTagText.setText("Raw: " + schedule.getRawTagValue().getOrigin() + " (v" + poi.getVer() + ")");
         } else {
             statusText.setText("解析不可");
-            rawTagText.setText("Raw: " + poi.getTag(isPostBox ? "collection_times" : "opening_hours"));
+            rawTagText.setText("Raw: " + poi.getTag(isPostBox ? "collection_times" : "opening_hours") + " (v" + poi.getVer() + ")");
         }
 
         // ゆうゆう窓口の表示
@@ -275,7 +275,7 @@ public class PoiDetailsDialog {
                 if (limitedServiceSchedule != null) {
                     String raw = rawTagText.getText().toString();
                     if (!raw.contains("LS: ")) {
-                        rawTagText.setText(raw + "\nLS: " + limitedServiceSchedule.getRawTagValue().getOrigin());
+                        rawTagText.setText(raw + "\nLS: " + limitedServiceSchedule.getRawTagValue().getOrigin() + " (v" + poi.getVer() + ")");
                     }
                 }
             } else if ("no".equals(lsMail)) {
