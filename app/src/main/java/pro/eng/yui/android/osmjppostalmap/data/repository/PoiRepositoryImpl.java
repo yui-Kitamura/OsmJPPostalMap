@@ -69,6 +69,8 @@ public class PoiRepositoryImpl implements PoiRepository {
     };
     private Context context;
     private String accessToken;
+    private volatile DataDateResponse lastDataDateResponse;
+
     public void setAccessToken(String token) {
         this.accessToken = token;
     }
@@ -378,7 +380,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                 if (subAll != null && !subAll.isEmpty()) {
                     if (subName != null) {
                         // 特定のサブエリアが判明している場合
-                        if (local != null && !local.hasArea(code, subName)) {
+                        if (shouldFetchArea(code, prefName, subName)) {
                             neededAreas.add(new String[]{prefName, subName});
                         }
                     } else {
@@ -389,13 +391,13 @@ public class PoiRepositoryImpl implements PoiRepository {
                             if (subBBox != null) {
                                 if (fLatMin <= subBBox.getMaxLat() && fLatMax >= subBBox.getMinLat() &&
                                         fLonMin <= subBBox.getMaxLon() && fLonMax >= subBBox.getMinLon()) {
-                                    if (local != null && !local.hasArea(code, sub)) {
+                                    if (shouldFetchArea(code, prefName, sub)) {
                                         neededAreas.add(new String[]{prefName, sub});
                                     }
                                 }
                             } else {
                                 // BBoxがない場合は念のため全て追加
-                                if (local != null && !local.hasArea(code, sub)) {
+                                if (shouldFetchArea(code, prefName, sub)) {
                                     neededAreas.add(new String[]{prefName, sub});
                                 }
                             }
@@ -403,7 +405,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                     }
                 } else {
                     // サブエリアがない都道府県の場合
-                    if (local != null && !local.hasArea(code, null)) {
+                    if (shouldFetchArea(code, prefName, null)) {
                         neededAreas.add(new String[]{prefName, null});
                     }
                 }
@@ -709,6 +711,31 @@ public class PoiRepositoryImpl implements PoiRepository {
         return name != null ? name : "Unknown(" + prefCode + ")";
     }
 
+    private boolean shouldFetchArea(int prefCode, String prefName, String subName) {
+        if (local == null) return false;
+        PrefMeta meta = local.getAreaMeta(prefCode, subName);
+        if (meta == null) return true; // キャッシュなし
+
+        // 鮮度チェック (data.json との比較)
+        DataDateResponse remote = lastDataDateResponse;
+        if (remote != null && remote.getPrefectures() != null) {
+            for (DataDateResponse.PrefectureDate pd : remote.getPrefectures()) {
+                if (pd.getName().equals(prefName)) {
+                    try {
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd'T'HH:mm:ss", Locale.JAPAN);
+                        Date remoteDate = sdf.parse(pd.getLastModified());
+                        if (remoteDate != null && meta.getLastUpdated() < remoteDate.getTime()) {
+                            return true; // 更新あり
+                        }
+                    } catch (Exception ignored) {
+                    }
+                    break;
+                }
+            }
+        }
+        return false;
+    }
+
     @Override
     public void fetchDataDate(DataDateCallback callback) {
         Retrofit retrofit = new Retrofit.Builder()
@@ -721,6 +748,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             @Override
             public void onResponse(Call<DataDateResponse> call, Response<DataDateResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
+                    lastDataDateResponse = response.body();
                     callback.onSuccess(response.body());
                 } else {
                     callback.onError("データ鮮度情報の取得に失敗しました");
@@ -857,9 +885,8 @@ public class PoiRepositoryImpl implements PoiRepository {
      */
     private void loadArea(int prefCode, String prefName, String subName, boolean forceNetwork) {
         currentPrefCodes.add(prefCode);
-        boolean cached = local != null && local.hasArea(prefCode, subName);
-        if (!forceNetwork && cached) {
-            return; // SQLiteの内容をそのまま利用（postCombinedで読み出す）
+        if (!forceNetwork && !shouldFetchArea(prefCode, prefName, subName)) {
+            return; // キャッシュがあり、かつ最新である場合はそのまま利用
         }
         try {
             Map<String, Integer> subAll = JpPostalUtil.getSubAreas(prefName).join();

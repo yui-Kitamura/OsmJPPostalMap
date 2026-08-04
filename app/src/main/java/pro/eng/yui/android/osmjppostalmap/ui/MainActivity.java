@@ -223,7 +223,17 @@ public class MainActivity extends AppCompatActivity {
         viewModel.fetchDataDate(); // データ鮮度情報の取得を開始
         viewModel.fetchCityData(); // 地名データの取得を開始
         viewModel.fetchOfficeData(); // 全国郵便局データの取得を開始
-        
+
+        // 鮮度情報が取得できたら、現在表示中のエリアに更新がないかチェックする
+        viewModel.getDataDate().observe(this, response -> {
+            if (response != null) {
+                // すでに位置情報が確定していれば、強制通知モードで再チェックを実行
+                if (canLoadPois()) {
+                    updatePois(true, UpdateMode.NORMAL);
+                }
+            }
+        });
+
         editPoiLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
