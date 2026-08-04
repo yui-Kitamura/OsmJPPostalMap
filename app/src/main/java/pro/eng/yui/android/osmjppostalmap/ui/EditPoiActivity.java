@@ -154,7 +154,19 @@ public class EditPoiActivity extends AppCompatActivity {
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, Math.max(systemBars.bottom, ime.bottom));
+
+            // ルートには左右のみ
+            v.setPadding(systemBars.left, 0, systemBars.right, 0);
+
+            // ヘッダーにトップインセットを反映
+            View header = findViewById(R.id.layout_header);
+            header.setPadding(header.getPaddingLeft(), systemBars.top, header.getPaddingRight(), header.getPaddingBottom());
+
+            // 保存ボタンのコンテナにボトムインセット（IME含む）
+            View saveContainer = findViewById(R.id.layout_save_container);
+            saveContainer.setPadding(saveContainer.getPaddingLeft(), saveContainer.getPaddingTop(),
+                    saveContainer.getPaddingRight(), Math.max(systemBars.bottom, ime.bottom));
+
             return insets;
         });
 
