@@ -148,15 +148,26 @@ public class PoiLocalDataSource {
     /* ---------- 読み込み ---------- */
 
     public boolean hasArea(int prefCode, String subName) {
+        return getAreaMeta(prefCode, subName) != null;
+    }
+
+    public PrefMeta getAreaMeta(int prefCode, String subName) {
         SQLiteDatabase db = helper.getReadableDatabase();
         String subStr = (subName == null) ? "" : subName;
         try (Cursor c = db.query(PoiDbHelper.TABLE_PREF_META,
-                new String[]{PoiDbHelper.COL_META_PREF_CODE},
+                null,
                 PoiDbHelper.COL_META_PREF_CODE + " = ? AND " + PoiDbHelper.COL_META_SUB_NAME + " = ?",
                 new String[]{String.valueOf(prefCode), subStr},
                 null, null, null, "1")) {
-            return c.moveToFirst();
+            if (c.moveToFirst()) {
+                int iCode = c.getColumnIndexOrThrow(PoiDbHelper.COL_META_PREF_CODE);
+                int iSub = c.getColumnIndexOrThrow(PoiDbHelper.COL_META_SUB_NAME);
+                int iName = c.getColumnIndexOrThrow(PoiDbHelper.COL_META_NAME);
+                int iTs = c.getColumnIndexOrThrow(PoiDbHelper.COL_META_LAST_UPDATED);
+                return new PrefMeta(c.getInt(iCode), c.getString(iName), c.getString(iSub), c.getLong(iTs));
+            }
         }
+        return null;
     }
 
     public List<OsmPoi> getByPrefCode(int prefCode) {

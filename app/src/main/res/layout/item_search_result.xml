@@ -39,7 +39,7 @@
                 android:minHeight="0dp"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="4dp"
-                android:text="表示"
+                android:text="@string/show"
                 android:textSize="12sp"
                 android:visibility="gone" />
 
@@ -52,7 +52,7 @@
                 android:minHeight="0dp"
                 android:paddingHorizontal="4dp"
                 android:paddingVertical="4dp"
-                android:text="中心"
+                android:text="@string/center"
                 android:textSize="12sp"
                 android:visibility="gone" />
 
@@ -65,7 +65,7 @@
                 android:minHeight="0dp"
                 android:paddingHorizontal="4dp"
                 android:paddingVertical="4dp"
-                android:text="全域"
+                android:text="@string/area"
                 android:textSize="12sp"
                 android:visibility="gone" />
         </LinearLayout>

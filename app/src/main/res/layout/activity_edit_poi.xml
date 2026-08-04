@@ -8,28 +8,36 @@
     android:background="@color/brand_red">
 
     
-    <TextView
-        android:id="@+id/top_banner"
+    <LinearLayout
+        android:id="@+id/layout_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="@color/white"
-        android:padding="8dp"
-        android:visibility="gone"
-        android:elevation="8dp" />
+        android:orientation="vertical">
 
-    <androidx.appcompat.widget.AppCompatImageButton
-        android:id="@+id/btn_back"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_margin="8dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/ic_back_postbox"
-        android:contentDescription="戻る" />
+        <TextView
+            android:id="@+id/top_banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/white"
+            android:padding="8dp"
+            android:visibility="gone"
+            android:elevation="8dp" />
+
+        <androidx.appcompat.widget.AppCompatImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_margin="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_back_postbox"
+            android:contentDescription="@string/back" />
+    </LinearLayout>
 
     <ScrollView
         android:id="@+id/edit_scroll_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:background="?android:attr/colorBackground">
 
         <LinearLayout
@@ -52,7 +60,7 @@
             android:layout_height="wrap_content"
             android:textSize="12sp"
             android:textColor="?attr/colorError"
-            android:text="位置情報を取得中..."
+            android:text="@string/location_status_fetching"
             android:layout_marginBottom="8dp" />
 
         <FrameLayout
@@ -106,7 +114,7 @@
             android:id="@+id/edit_tag_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="営業時間 (タグ直接編集)"
+            android:hint="営業時間 (opening_hours)"
             android:layout_marginBottom="16dp"
             android:visibility="gone">
 
@@ -129,46 +137,48 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:stretchColumns="1,2,3"
-                android:layout_marginBottom="8dp">
+                android:layout_marginBottom="8dp"
+                android:padding="0.5dp"
+                android:background="@color/gray_divider">
                 <TableRow>
-                    <TextView android:text="" android:padding="4dp"/>
-                    <TextView android:text="開店" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
-                    <TextView android:text="閉店" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
-                    <TextView android:text="休憩 (開始-終了)" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
-                    <TextView android:text="休" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
+                    <TextView android:text="@string/label_opening" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
+                    <TextView android:text="@string/label_closing" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
+                    <TextView android:text="@string/label_break_time" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
+                    <TextView android:text="@string/label_off" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
                 </TableRow>
-                <TableRow android:gravity="bottom">
-                    <TextView android:text="平日" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
-                    <EditText android:id="@+id/edit_oh_wd_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
-                    <EditText android:id="@+id/edit_oh_wd_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="bottom">
-                        <EditText android:id="@+id/edit_oh_wd_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="4dp" android:textSize="12sp" android:gravity="center"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="2dp"/>
-                        <EditText android:id="@+id/edit_oh_wd_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="4dp" android:textSize="12sp" android:gravity="center"/>
+                <TableRow android:gravity="center_vertical">
+                    <TextView android:text="@string/day_weekday" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:layout_height="match_parent"/>
+                    <EditText android:id="@+id/edit_oh_wd_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_oh_wd_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_oh_wd_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_oh_wd_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
                     </LinearLayout>
-                    <CheckBox android:id="@+id/check_oh_wd_off" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center"/>
+                    <CheckBox android:id="@+id/check_oh_wd_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
                 </TableRow>
-                <TableRow android:layout_marginTop="4dp" android:gravity="bottom">
-                    <TextView android:text="土曜" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
-                    <EditText android:id="@+id/edit_oh_sa_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
-                    <EditText android:id="@+id/edit_oh_sa_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="bottom">
-                        <EditText android:id="@+id/edit_oh_sa_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="4dp" android:textSize="12sp" android:gravity="center"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="2dp"/>
-                        <EditText android:id="@+id/edit_oh_sa_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="4dp" android:textSize="12sp" android:gravity="center"/>
+                <TableRow android:gravity="center_vertical">
+                    <TextView android:text="@string/day_saturday" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:layout_height="match_parent"/>
+                    <EditText android:id="@+id/edit_oh_sa_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_oh_sa_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_oh_sa_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_oh_sa_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
                     </LinearLayout>
-                    <CheckBox android:id="@+id/check_oh_sa_off" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center"/>
+                    <CheckBox android:id="@+id/check_oh_sa_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
                 </TableRow>
-                <TableRow android:layout_marginTop="4dp" android:gravity="bottom">
-                    <TextView android:text="日祝" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
-                    <EditText android:id="@+id/edit_oh_ph_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
-                    <EditText android:id="@+id/edit_oh_ph_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="bottom">
-                        <EditText android:id="@+id/edit_oh_ph_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="4dp" android:textSize="12sp" android:gravity="center"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="2dp"/>
-                        <EditText android:id="@+id/edit_oh_ph_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="4dp" android:textSize="12sp" android:gravity="center"/>
+                <TableRow android:gravity="center_vertical">
+                    <TextView android:text="@string/day_holiday" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:layout_height="match_parent"/>
+                    <EditText android:id="@+id/edit_oh_ph_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_oh_ph_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_oh_ph_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_oh_ph_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
                     </LinearLayout>
-                    <CheckBox android:id="@+id/check_oh_ph_off" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center"/>
+                    <CheckBox android:id="@+id/check_oh_ph_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
                 </TableRow>
             </TableLayout>
 
@@ -182,7 +192,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="平日→土曜"
+                    android:text="@string/btn_copy_wd_to_sa"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:textSize="12sp" />
                 <Button
@@ -190,7 +200,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="土曜→日祝"
+                    android:text="@string/btn_copy_sa_to_ph"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -226,7 +236,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="ゆうゆう窓口"
+                android:text="@string/label_limited_service"
                 android:textStyle="bold"
                 android:textSize="16sp"
                 android:layout_marginBottom="4dp"/>
@@ -241,17 +251,17 @@
                     android:id="@+id/radio_ls_yes"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="あり" />
+                    android:text="@string/available" />
                 <RadioButton
                     android:id="@+id/radio_ls_no"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="なし" />
+                    android:text="@string/none" />
                 <RadioButton
                     android:id="@+id/radio_ls_unknown"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="不明" />
+                    android:text="@string/unknown" />
             </RadioGroup>
 
             <TableLayout
@@ -260,46 +270,48 @@
                 android:layout_height="wrap_content"
                 android:stretchColumns="1,2,3"
                 android:layout_marginBottom="8dp"
-                android:visibility="gone">
+                android:visibility="gone"
+                android:padding="0.5dp"
+                android:background="@color/gray_divider">
                 <TableRow>
-                    <TextView android:text="" android:padding="4dp"/>
-                    <TextView android:text="開店" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
-                    <TextView android:text="閉店" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
-                    <TextView android:text="休憩 (開始-終了)" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
-                    <TextView android:text="休" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
+                    <TextView android:text="@string/label_opening" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
+                    <TextView android:text="@string/label_closing" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
+                    <TextView android:text="@string/label_break_time" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
+                    <TextView android:text="@string/label_off" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
                 </TableRow>
-                <TableRow android:gravity="bottom">
-                    <TextView android:text="平日" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
-                    <EditText android:id="@+id/edit_ls_wd_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
-                    <EditText android:id="@+id/edit_ls_wd_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="bottom">
-                        <EditText android:id="@+id/edit_ls_wd_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="4dp" android:textSize="12sp" android:gravity="center"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="2dp"/>
-                        <EditText android:id="@+id/edit_ls_wd_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="4dp" android:textSize="12sp" android:gravity="center"/>
+                <TableRow android:gravity="center_vertical">
+                    <TextView android:text="@string/day_weekday" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:layout_height="match_parent"/>
+                    <EditText android:id="@+id/edit_ls_wd_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_ls_wd_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_ls_wd_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_ls_wd_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
                     </LinearLayout>
-                    <CheckBox android:id="@+id/check_ls_wd_off" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center"/>
+                    <CheckBox android:id="@+id/check_ls_wd_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
                 </TableRow>
-                <TableRow android:layout_marginTop="4dp" android:gravity="bottom">
-                    <TextView android:text="土曜" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
-                    <EditText android:id="@+id/edit_ls_sa_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
-                    <EditText android:id="@+id/edit_ls_sa_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="bottom">
-                        <EditText android:id="@+id/edit_ls_sa_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="4dp" android:textSize="12sp" android:gravity="center"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="2dp"/>
-                        <EditText android:id="@+id/edit_ls_sa_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="4dp" android:textSize="12sp" android:gravity="center"/>
+                <TableRow android:gravity="center_vertical">
+                    <TextView android:text="@string/day_saturday" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:layout_height="match_parent"/>
+                    <EditText android:id="@+id/edit_ls_sa_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_ls_sa_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_ls_sa_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_ls_sa_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
                     </LinearLayout>
-                    <CheckBox android:id="@+id/check_ls_sa_off" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center"/>
+                    <CheckBox android:id="@+id/check_ls_sa_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
                 </TableRow>
-                <TableRow android:layout_marginTop="4dp" android:gravity="bottom">
-                    <TextView android:text="日祝" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
-                    <EditText android:id="@+id/edit_ls_ph_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
-                    <EditText android:id="@+id/edit_ls_ph_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="bottom">
-                        <EditText android:id="@+id/edit_ls_ph_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="4dp" android:textSize="12sp" android:gravity="center"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="2dp"/>
-                        <EditText android:id="@+id/edit_ls_ph_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="4dp" android:textSize="12sp" android:gravity="center"/>
+                <TableRow android:gravity="center_vertical">
+                    <TextView android:text="@string/day_holiday" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:layout_height="match_parent"/>
+                    <EditText android:id="@+id/edit_ls_ph_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_ls_ph_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_ls_ph_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_ls_ph_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
                     </LinearLayout>
-                    <CheckBox android:id="@+id/check_ls_ph_off" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center"/>
+                    <CheckBox android:id="@+id/check_ls_ph_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
                 </TableRow>
             </TableLayout>
         </LinearLayout>
@@ -316,56 +328,79 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:stretchColumns="0,1,2"
-                android:layout_marginBottom="8dp">
+                android:layout_marginBottom="8dp"
+                android:padding="0.5dp"
+                android:background="@color/gray_divider">
                 <TableRow>
-                    <TextView android:text="平日" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
-                    <TextView android:text="土曜" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="平日" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
+                    <TextView android:text="土曜" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
                     <TextView
                         android:id="@+id/header_sun_ph"
                         android:text="日祝"
                         android:gravity="center"
                         android:textStyle="bold"
-                        android:padding="4dp"/>
+                        android:padding="1dp"
+                        android:textSize="11sp"
+                        android:background="@drawable/bg_cell_header"
+                        android:layout_margin="0.5dp"/>
                 </TableRow>
                 <TableRow>
                     <Button
                         android:id="@+id/btn_copy_to_sat"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
+                        android:layout_height="match_parent"
                         android:text="→土曜"
                         style="@style/Widget.MaterialComponents.Button.TextButton"
-                        android:textSize="12sp" />
+                        android:textSize="11sp"
+                        android:padding="1dp"
+                        android:background="@drawable/bg_cell_header"
+                        android:layout_margin="0.5dp" />
                     <Button
                         android:id="@+id/btn_copy_to_sun"
                         android:layout_width="0dp"
-                        android:layout_height="wrap_content"
+                        android:layout_height="match_parent"
                         android:text="→日祝"
                         style="@style/Widget.MaterialComponents.Button.TextButton"
-                        android:textSize="12sp" />
-                    <View android:layout_width="0dp" android:layout_height="0dp" />
+                        android:textSize="11sp"
+                        android:padding="1dp"
+                        android:background="@drawable/bg_cell_header"
+                        android:layout_margin="0.5dp" />
+                    <View android:layout_width="0dp" android:layout_height="match_parent" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
                 </TableRow>
                 <TableRow>
                     <CheckBox
                         android:id="@+id/check_col_wd_off"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="収集なし"
+                        android:layout_height="match_parent"
+                        android:text="@string/postbox_no_collection"
                         android:textSize="10sp"
-                        android:gravity="center"/>
+                        android:gravity="center"
+                        android:background="@drawable/bg_cell_header"
+                        android:layout_margin="0.5dp"
+                        android:minHeight="0dp"
+                        android:minWidth="0dp"/>
                     <CheckBox
                         android:id="@+id/check_col_sa_off"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="収集なし"
+                        android:layout_height="match_parent"
+                        android:text="@string/postbox_no_collection"
                         android:textSize="10sp"
-                        android:gravity="center"/>
+                        android:gravity="center"
+                        android:background="@drawable/bg_cell_header"
+                        android:layout_margin="0.5dp"
+                        android:minHeight="0dp"
+                        android:minWidth="0dp"/>
                     <CheckBox
                         android:id="@+id/check_col_ph_off"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="収集なし"
+                        android:layout_height="match_parent"
+                        android:text="@string/postbox_no_collection"
                         android:textSize="10sp"
-                        android:gravity="center"/>
+                        android:gravity="center"
+                        android:background="@drawable/bg_cell_header"
+                        android:layout_margin="0.5dp"
+                        android:minHeight="0dp"
+                        android:minWidth="0dp"/>
                 </TableRow>
             </TableLayout>
 
@@ -383,7 +418,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="祝日の時刻情報がありません"
+                    android:text="@string/msg_no_holiday_times"
                     android:textColor="@color/warning_text"
                     android:textSize="12sp" />
                 <Button
@@ -529,12 +564,20 @@
         </LinearLayout>
 
 
+        </LinearLayout>
+    </ScrollView>
+
+    <FrameLayout
+        android:id="@+id/layout_save_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:background="?android:attr/colorBackground"
+        android:elevation="8dp">
         <Button
             android:id="@+id/btn_save"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/save" />
-
-    </LinearLayout>
-    </ScrollView>
+    </FrameLayout>
 </LinearLayout>

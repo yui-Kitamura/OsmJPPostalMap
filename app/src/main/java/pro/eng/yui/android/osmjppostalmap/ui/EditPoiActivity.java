@@ -154,7 +154,19 @@ public class EditPoiActivity extends AppCompatActivity {
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, Math.max(systemBars.bottom, ime.bottom));
+
+            // ルートには左右のみ
+            v.setPadding(systemBars.left, 0, systemBars.right, 0);
+
+            // ヘッダーにトップインセットを反映
+            View header = findViewById(R.id.layout_header);
+            header.setPadding(header.getPaddingLeft(), systemBars.top, header.getPaddingRight(), header.getPaddingBottom());
+
+            // 保存ボタンのコンテナにボトムインセット（IME含む）
+            View saveContainer = findViewById(R.id.layout_save_container);
+            saveContainer.setPadding(saveContainer.getPaddingLeft(), saveContainer.getPaddingTop(),
+                    saveContainer.getPaddingRight(), Math.max(systemBars.bottom, ime.bottom));
+
             return insets;
         });
 
@@ -531,11 +543,13 @@ public class EditPoiActivity extends AppCompatActivity {
             btnAddRow.setOnClickListener(v -> addNewRow());
             btnCopyToSat.setOnClickListener(v -> {
                 for (EditText[] row : timeRows) {
+                    Util.applyTimeFormat(row[0]);
                     row[1].setText(row[0].getText());
                 }
             });
             btnCopyToSun.setOnClickListener(v -> {
                 for (EditText[] row : timeRows) {
+                    Util.applyTimeFormat(row[1]);
                     row[2].setText(row[1].getText());
                 }
             });
@@ -591,6 +605,10 @@ public class EditPoiActivity extends AppCompatActivity {
             });
 
             btnOhCopyToSa.setOnClickListener(v -> {
+                Util.applyTimeFormat(editOhWdOpen);
+                Util.applyTimeFormat(editOhWdClose);
+                Util.applyTimeFormat(editOhWdBreakStart);
+                Util.applyTimeFormat(editOhWdBreakEnd);
                 editOhSaOpen.setText(editOhWdOpen.getText());
                 editOhSaClose.setText(editOhWdClose.getText());
                 editOhSaBreakStart.setText(editOhWdBreakStart.getText());
@@ -598,6 +616,10 @@ public class EditPoiActivity extends AppCompatActivity {
                 checkOhSaOff.setChecked(checkOhWdOff.isChecked());
             });
             btnOhCopyToPh.setOnClickListener(v -> {
+                Util.applyTimeFormat(editOhSaOpen);
+                Util.applyTimeFormat(editOhSaClose);
+                Util.applyTimeFormat(editOhSaBreakStart);
+                Util.applyTimeFormat(editOhSaBreakEnd);
                 editOhPhOpen.setText(editOhSaOpen.getText());
                 editOhPhClose.setText(editOhSaClose.getText());
                 editOhPhBreakStart.setText(editOhSaBreakStart.getText());
@@ -639,6 +661,7 @@ public class EditPoiActivity extends AppCompatActivity {
                 if (et != null) {
                     Util.addNumberFilter(et);
                     Util.addTimeParseHandler(et);
+                    Util.addClearRestoreHandler(et);
                     et.addTextChangedListener(new OhTextWatcher(et));
                     applyCellStyles(et, et.getText().toString(), false);
                 }
@@ -689,8 +712,39 @@ public class EditPoiActivity extends AppCompatActivity {
             }
         });
 
-        btnSave.setOnClickListener(v -> {
-            float[] results = new float[1];
+            btnSave.setOnClickListener(v -> {
+                // 時刻入力を確定
+                if (layoutFallback.getVisibility() != View.VISIBLE) {
+                    for (EditText[] row : timeRows) {
+                        for (EditText et : row) Util.applyTimeFormat(et);
+                    }
+                    Util.applyTimeFormat(editOhWdOpen);
+                    Util.applyTimeFormat(editOhWdClose);
+                    Util.applyTimeFormat(editOhWdBreakStart);
+                    Util.applyTimeFormat(editOhWdBreakEnd);
+                    Util.applyTimeFormat(editOhSaOpen);
+                    Util.applyTimeFormat(editOhSaClose);
+                    Util.applyTimeFormat(editOhSaBreakStart);
+                    Util.applyTimeFormat(editOhSaBreakEnd);
+                    Util.applyTimeFormat(editOhPhOpen);
+                    Util.applyTimeFormat(editOhPhClose);
+                    Util.applyTimeFormat(editOhPhBreakStart);
+                    Util.applyTimeFormat(editOhPhBreakEnd);
+                    Util.applyTimeFormat(editLsWdOpen);
+                    Util.applyTimeFormat(editLsWdClose);
+                    Util.applyTimeFormat(editLsWdBreakStart);
+                    Util.applyTimeFormat(editLsWdBreakEnd);
+                    Util.applyTimeFormat(editLsSaOpen);
+                    Util.applyTimeFormat(editLsSaClose);
+                    Util.applyTimeFormat(editLsSaBreakStart);
+                    Util.applyTimeFormat(editLsSaBreakEnd);
+                    Util.applyTimeFormat(editLsPhOpen);
+                    Util.applyTimeFormat(editLsPhClose);
+                    Util.applyTimeFormat(editLsPhBreakStart);
+                    Util.applyTimeFormat(editLsPhBreakEnd);
+                }
+
+                float[] results = new float[1];
             GeoPoint markerPos = marker.getPosition();
             if (lastLocation != null) {
                 Location.distanceBetween(markerPos.getLatitude(), markerPos.getLongitude(), lastLocation.getLatitude(), lastLocation.getLongitude(), results);
@@ -727,7 +781,9 @@ public class EditPoiActivity extends AppCompatActivity {
                             } else {
                                 int lastMinutes = -1;
                                 for (int r = 0; r < timeRows.size(); r++) {
-                                    String val = Util.normalizeNumber(timeRows.get(r)[col].getText().toString().trim());
+                                    EditText et = timeRows.get(r)[col];
+                                    Util.applyTimeFormat(et);
+                                    String val = Util.normalizeNumber(et.getText().toString().trim());
                                     if (val.isEmpty()) continue;
                                     if (!TIME_PATTERN.matcher(val).matches()) {
                                         showErrorBanner(String.format(getString(R.string.error_time_format), val));
@@ -786,7 +842,7 @@ public class EditPoiActivity extends AppCompatActivity {
                     String memo = getString(R.string.memo_postoffice, collection, addr);
                     String specialNote = editSpecialNote.getText() != null ? editSpecialNote.getText().toString().trim() : "";
                     if (!specialNote.isEmpty()) {
-                        memo += "\n特殊収集時刻パターン: " + specialNote;
+                        memo += "\n特殊営業時間パターン: " + specialNote;
                     }
                     JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name), memo, pos.getLatitude(), pos.getLongitude());
                 }
@@ -886,7 +942,9 @@ public class EditPoiActivity extends AppCompatActivity {
                     } else {
                         int lastMinutes = -1;
                         for (int r = 0; r < timeRows.size(); r++) {
-                            String val = Util.normalizeNumber(timeRows.get(r)[col].getText().toString().trim());
+                            EditText et = timeRows.get(r)[col];
+                            Util.applyTimeFormat(et);
+                            String val = Util.normalizeNumber(et.getText().toString().trim());
                             if (val.isEmpty()) continue;
 
                             if (!TIME_PATTERN.matcher(val).matches()) {
@@ -949,6 +1007,10 @@ public class EditPoiActivity extends AppCompatActivity {
                 // 平日
                 List<ITagPart> wdTimes = new ArrayList<>();
                 if (!checkOhWdOff.isChecked()) {
+                    Util.applyTimeFormat(editOhWdOpen);
+                    Util.applyTimeFormat(editOhWdClose);
+                    Util.applyTimeFormat(editOhWdBreakStart);
+                    Util.applyTimeFormat(editOhWdBreakEnd);
                     String wdOpen = Util.normalizeNumber(editOhWdOpen.getText().toString().trim());
                     String wdClose = Util.normalizeNumber(editOhWdClose.getText().toString().trim());
                     String wdBreakStart = Util.normalizeNumber(editOhWdBreakStart.getText().toString().trim());
@@ -962,6 +1024,10 @@ public class EditPoiActivity extends AppCompatActivity {
                 // 土曜
                 List<ITagPart> saTimes = new ArrayList<>();
                 if (!checkOhSaOff.isChecked()) {
+                    Util.applyTimeFormat(editOhSaOpen);
+                    Util.applyTimeFormat(editOhSaClose);
+                    Util.applyTimeFormat(editOhSaBreakStart);
+                    Util.applyTimeFormat(editOhSaBreakEnd);
                     String saOpen = Util.normalizeNumber(editOhSaOpen.getText().toString().trim());
                     String saClose = Util.normalizeNumber(editOhSaClose.getText().toString().trim());
                     String saBreakStart = Util.normalizeNumber(editOhSaBreakStart.getText().toString().trim());
@@ -973,6 +1039,10 @@ public class EditPoiActivity extends AppCompatActivity {
                 // 日祝
                 List<ITagPart> phTimes = new ArrayList<>();
                 if (!checkOhPhOff.isChecked()) {
+                    Util.applyTimeFormat(editOhPhOpen);
+                    Util.applyTimeFormat(editOhPhClose);
+                    Util.applyTimeFormat(editOhPhBreakStart);
+                    Util.applyTimeFormat(editOhPhBreakEnd);
                     String phOpen = Util.normalizeNumber(editOhPhOpen.getText().toString().trim());
                     String phClose = Util.normalizeNumber(editOhPhClose.getText().toString().trim());
                     String phBreakStart = Util.normalizeNumber(editOhPhBreakStart.getText().toString().trim());
@@ -995,6 +1065,10 @@ public class EditPoiActivity extends AppCompatActivity {
                 // 平日
                 List<ITagPart> wdTimes = new ArrayList<>();
                 if (!checkLsWdOff.isChecked()) {
+                    Util.applyTimeFormat(editLsWdOpen);
+                    Util.applyTimeFormat(editLsWdClose);
+                    Util.applyTimeFormat(editLsWdBreakStart);
+                    Util.applyTimeFormat(editLsWdBreakEnd);
                     wdTimes.addAll(formatOpeningTimeRange(
                         Util.normalizeNumber(editLsWdOpen.getText().toString().trim()),
                         Util.normalizeNumber(editLsWdClose.getText().toString().trim()),
@@ -1009,6 +1083,10 @@ public class EditPoiActivity extends AppCompatActivity {
                 // 土曜
                 List<ITagPart> saTimes = new ArrayList<>();
                 if (!checkLsSaOff.isChecked()) {
+                    Util.applyTimeFormat(editLsSaOpen);
+                    Util.applyTimeFormat(editLsSaClose);
+                    Util.applyTimeFormat(editLsSaBreakStart);
+                    Util.applyTimeFormat(editLsSaBreakEnd);
                     saTimes.addAll(formatOpeningTimeRange(
                         Util.normalizeNumber(editLsSaOpen.getText().toString().trim()),
                         Util.normalizeNumber(editLsSaClose.getText().toString().trim()),
@@ -1021,6 +1099,10 @@ public class EditPoiActivity extends AppCompatActivity {
                 // 日祝
                 List<ITagPart> phTimes = new ArrayList<>();
                 if (!checkLsPhOff.isChecked()) {
+                    Util.applyTimeFormat(editLsPhOpen);
+                    Util.applyTimeFormat(editLsPhClose);
+                    Util.applyTimeFormat(editLsPhBreakStart);
+                    Util.applyTimeFormat(editLsPhBreakEnd);
                     phTimes.addAll(formatOpeningTimeRange(
                         Util.normalizeNumber(editLsPhOpen.getText().toString().trim()),
                         Util.normalizeNumber(editLsPhClose.getText().toString().trim()),
@@ -1218,8 +1300,19 @@ public class EditPoiActivity extends AppCompatActivity {
             et.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
             Util.addNumberFilter(et);
             Util.addTimeParseHandler(et);
+            Util.addClearRestoreHandler(et);
             et.setGravity(Gravity.CENTER);
             et.setText(Util.normalizeNumber(initialValues[i]));
+            et.setPadding((int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics()),
+                         (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics()),
+                         (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics()),
+                         (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics()));
+            et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+            
+            TableRow.LayoutParams params = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1.0f);
+            int margin = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 0.5f, getResources().getDisplayMetrics());
+            params.setMargins(margin, margin, margin, margin);
+            et.setLayoutParams(params);
             
             // 初期の見た目設定
             applyCellStyles(et, initialValues[i], false);
@@ -1274,7 +1367,6 @@ public class EditPoiActivity extends AppCompatActivity {
         if (bg == null) return;
         bg = (LayerDrawable) bg.mutate();
 
-        GradientDrawable border = (GradientDrawable) bg.findDrawableByLayerId(R.id.cell_border);
         GradientDrawable background = (GradientDrawable) bg.findDrawableByLayerId(R.id.cell_background);
 
         if (value.isEmpty()) {
@@ -1284,14 +1376,13 @@ public class EditPoiActivity extends AppCompatActivity {
             et.setHintTextColor(ContextCompat.getColor(this, R.color.text_secondary));
         } else {
             // 入力済み
-            background.setColor(getThemeColor(android.R.attr.colorBackground));
+            if (isModified) {
+                // 変更あり: 薄い青背景にして目立たせる
+                background.setColor(0xFFE3F2FD);
+            } else {
+                background.setColor(getThemeColor(android.R.attr.colorBackground));
+            }
             et.setTextColor(getThemeColor(com.google.android.material.R.attr.colorOnSurface));
-        }
-
-        if (isModified) {
-            border.setColor(ContextCompat.getColor(this, R.color.blue_frame));
-        } else {
-            border.setColor(android.graphics.Color.TRANSPARENT);
         }
 
         et.setBackground(bg);

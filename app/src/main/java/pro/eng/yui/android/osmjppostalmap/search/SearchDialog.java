@@ -116,6 +116,8 @@ public class SearchDialog extends DialogFragment {
         checkAddress.setOnCheckedChangeListener((buttonView, isChecked) -> performSearch(currentQuery));
         checkPlace.setOnCheckedChangeListener((buttonView, isChecked) -> performSearch(currentQuery));
 
+        view.findViewById(R.id.btn_close_dialog).setOnClickListener(v -> dismiss());
+
         return view;
     }
 

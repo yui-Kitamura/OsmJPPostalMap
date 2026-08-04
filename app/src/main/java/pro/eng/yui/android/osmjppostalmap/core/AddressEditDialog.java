@@ -317,10 +317,10 @@ public class AddressEditDialog {
         });
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(context)
-                .setTitle("住所編集ダイアログ")
+                .setTitle(R.string.title_address_edit)
                 .setView(view)
-                .setNegativeButton("キャンセル", null)
-                .setPositiveButton("保存", null)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.save, null)
                 .create();
         dialog.show();
 
@@ -346,10 +346,10 @@ public class AddressEditDialog {
             }
 
             new MaterialAlertDialogBuilder(context)
-                    .setMessage("入力値検証に失敗しています。続行しますか？\n\n"
+                    .setMessage(context.getString(R.string.msg_validation_failed) + "\n\n"
                             + String.join("\n", invalid))
-                    .setNegativeButton("やり直す", null)
-                    .setPositiveButton("保存", (d, which) -> {
+                    .setNegativeButton(R.string.retry, null)
+                    .setPositiveButton(R.string.save, (d, which) -> {
                         listener.onSaved(edited);
                         dialog.dismiss();
                     })

@@ -132,6 +132,9 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_LAST_LON = "last_lon";
     private static final String KEY_LAST_ZOOM = "last_zoom";
     private static final String KEY_HAS_SAVED_STATE = "has_saved_state";
+    private static final String KEY_IS_FOLLOWING = "is_following";
+
+    private boolean isFollowingGps = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -211,6 +214,7 @@ public class MainActivity extends AppCompatActivity {
             map.getController().setCenter(new GeoPoint(lat, lon));
             // 保存された位置から開始する場合は、GPS確定を待たずにロードを開始できるようにする
             initialLocationSet = true;
+            isFollowingGps = mapPrefs.getBoolean(KEY_IS_FOLLOWING, false);
             // ただしGPSパーミッションがある場合は、GPS確定時の即時移動を許可するために lastLocation は null のままにする
         } else {
             map.getController().setZoom(18.0);
@@ -223,7 +227,17 @@ public class MainActivity extends AppCompatActivity {
         viewModel.fetchDataDate(); // データ鮮度情報の取得を開始
         viewModel.fetchCityData(); // 地名データの取得を開始
         viewModel.fetchOfficeData(); // 全国郵便局データの取得を開始
-        
+
+        // 鮮度情報が取得できたら、現在表示中のエリアに更新がないかチェックする
+        viewModel.getDataDate().observe(this, response -> {
+            if (response != null) {
+                // すでに位置情報が確定していれば、強制通知モードで再チェックを実行
+                if (canLoadPois()) {
+                    updatePois(true, UpdateMode.NORMAL);
+                }
+            }
+        });
+
         editPoiLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
@@ -259,6 +273,21 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean onScroll(org.osmdroid.events.ScrollEvent event) {
                 initialLocationSet = true;
+
+                if (isFollowingGps && lastLocation != null) {
+                    org.osmdroid.api.IGeoPoint center = map.getMapCenter();
+                    GeoPoint mapCenter = new GeoPoint(center.getLatitude(), center.getLongitude());
+                    GeoPoint gpsPoint = new GeoPoint(lastLocation);
+                    double dist = mapCenter.distanceToAsDouble(gpsPoint);
+
+                    // ズームレベルに応じてしきい値を変える（画面ピクセル的に一定以上離れたら解除）
+                    // Zoom 18 で 約100m を目安にする
+                    double threshold = 100.0 * Math.pow(2, 18 - map.getZoomLevelDouble());
+                    if (dist > threshold) {
+                        isFollowingGps = false;
+                    }
+                }
+
                 scheduleUpdatePois();
                 return true;
             }
@@ -596,6 +625,7 @@ public class MainActivity extends AppCompatActivity {
         // 計算式による範囲算出を導入したため、移動完了を待つ必要がない。
         gpsZoomAdjustmentPending = true;
         initialLocationSet = true;
+        isFollowingGps = true;
 
         map.getController().setZoom(gpsZoomBase);
         map.getController().setCenter(gpsZoomCenter);
@@ -643,6 +673,7 @@ public class MainActivity extends AppCompatActivity {
         gpsZoomAdjustmentPending = true;
         pendingPoiDetail = poi;
         initialLocationSet = true;
+        isFollowingGps = false;
 
         // v0データ（仮座標）の場合は、すぐにはジャンプせず詳細データの到着を待つ
         if (poi.getVer() > 0) {
@@ -724,6 +755,7 @@ public class MainActivity extends AppCompatActivity {
         gpsZoomLimit = Math.max(14.0, map.getZoomLevelDouble());
         gpsZoomAdjustmentPending = true;
         initialLocationSet = true;
+        isFollowingGps = false;
 
         map.getController().setZoom(gpsZoomBase);
         map.getController().setCenter(gpsZoomCenter);
@@ -869,6 +901,14 @@ public class MainActivity extends AppCompatActivity {
 
             map.getController().setCenter(gpsZoomCenter);
             updatePois(true, UpdateMode.GPS_OR_INITIAL);
+
+            // 保存された位置と現在地が非常に近い（たとえば1km以内）なら追従を開始する
+            GeoPoint currentCenter = new GeoPoint(map.getMapCenter().getLatitude(), map.getMapCenter().getLongitude());
+            if (new GeoPoint(location).distanceToAsDouble(currentCenter) < 1000) {
+                isFollowingGps = true;
+            }
+        } else if (isFollowingGps) {
+            map.getController().animateTo(new GeoPoint(location));
         }
 
         if (gpsProgress != null && !gpsZoomAdjustmentPending) {
@@ -920,6 +960,19 @@ public class MainActivity extends AppCompatActivity {
         if (viewModel != null) {
             viewModel.startLocationUpdates();
         }
+
+        // フォアグラウンドに戻った時、現在地に近いなら追従を再開する
+        if (lastLocation != null && map != null) {
+            org.osmdroid.api.IGeoPoint center = map.getMapCenter();
+            GeoPoint currentCenter = new GeoPoint(center.getLatitude(), center.getLongitude());
+            GeoPoint gpsPoint = new GeoPoint(lastLocation);
+            double dist = currentCenter.distanceToAsDouble(gpsPoint);
+            double threshold = 100.0 * Math.pow(2, 18 - map.getZoomLevelDouble());
+            if (dist < threshold) {
+                isFollowingGps = true;
+            }
+        }
+
         if (authRepository != null && viewModel != null) {
             viewModel.updateAccessToken(authRepository.getAccessToken());
 
@@ -979,6 +1032,7 @@ public class MainActivity extends AppCompatActivity {
                 .putLong(KEY_LAST_LON, Double.doubleToRawLongBits(center.getLongitude()))
                 .putFloat(KEY_LAST_ZOOM, (float) zoom)
                 .putBoolean(KEY_HAS_SAVED_STATE, true)
+                .putBoolean(KEY_IS_FOLLOWING, isFollowingGps)
                 .apply();
     }
 
