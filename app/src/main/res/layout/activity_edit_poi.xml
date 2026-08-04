@@ -106,7 +106,7 @@
             android:id="@+id/edit_tag_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="営業時間 (タグ直接編集)"
+            android:hint="営業時間 (opening_hours)"
             android:layout_marginBottom="16dp"
             android:visibility="gone">
 

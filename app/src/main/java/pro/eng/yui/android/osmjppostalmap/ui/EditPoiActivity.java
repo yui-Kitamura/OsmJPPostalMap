@@ -786,7 +786,7 @@ public class EditPoiActivity extends AppCompatActivity {
                     String memo = getString(R.string.memo_postoffice, collection, addr);
                     String specialNote = editSpecialNote.getText() != null ? editSpecialNote.getText().toString().trim() : "";
                     if (!specialNote.isEmpty()) {
-                        memo += "\n特殊収集時刻パターン: " + specialNote;
+                        memo += "\n特殊営業時間パターン: " + specialNote;
                     }
                     JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name), memo, pos.getLatitude(), pos.getLongitude());
                 }
