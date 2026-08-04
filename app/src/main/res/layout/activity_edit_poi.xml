@@ -30,7 +30,7 @@
             android:layout_margin="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_back_postbox"
-            android:contentDescription="戻る" />
+            android:contentDescription="@string/back" />
     </LinearLayout>
 
     <ScrollView
@@ -60,7 +60,7 @@
             android:layout_height="wrap_content"
             android:textSize="12sp"
             android:textColor="?attr/colorError"
-            android:text="位置情報を取得中..."
+            android:text="@string/location_status_fetching"
             android:layout_marginBottom="8dp" />
 
         <FrameLayout
@@ -140,13 +140,13 @@
                 android:layout_marginBottom="8dp">
                 <TableRow>
                     <TextView android:text="" android:padding="4dp"/>
-                    <TextView android:text="開店" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
-                    <TextView android:text="閉店" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
-                    <TextView android:text="休憩 (開始-終了)" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
-                    <TextView android:text="休" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="@string/label_opening" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="@string/label_closing" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="@string/label_break_time" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="@string/label_off" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
                 </TableRow>
                 <TableRow android:gravity="bottom">
-                    <TextView android:text="平日" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
+                    <TextView android:text="@string/day_weekday" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
                     <EditText android:id="@+id/edit_oh_wd_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
                     <EditText android:id="@+id/edit_oh_wd_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="bottom">
@@ -157,7 +157,7 @@
                     <CheckBox android:id="@+id/check_oh_wd_off" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center"/>
                 </TableRow>
                 <TableRow android:layout_marginTop="4dp" android:gravity="bottom">
-                    <TextView android:text="土曜" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
+                    <TextView android:text="@string/day_saturday" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
                     <EditText android:id="@+id/edit_oh_sa_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
                     <EditText android:id="@+id/edit_oh_sa_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="bottom">
@@ -168,7 +168,7 @@
                     <CheckBox android:id="@+id/check_oh_sa_off" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center"/>
                 </TableRow>
                 <TableRow android:layout_marginTop="4dp" android:gravity="bottom">
-                    <TextView android:text="日祝" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
+                    <TextView android:text="@string/day_holiday" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
                     <EditText android:id="@+id/edit_oh_ph_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
                     <EditText android:id="@+id/edit_oh_ph_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="bottom">
@@ -190,7 +190,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="平日→土曜"
+                    android:text="@string/btn_copy_wd_to_sa"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:textSize="12sp" />
                 <Button
@@ -198,7 +198,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="土曜→日祝"
+                    android:text="@string/btn_copy_sa_to_ph"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -234,7 +234,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="ゆうゆう窓口"
+                android:text="@string/label_limited_service"
                 android:textStyle="bold"
                 android:textSize="16sp"
                 android:layout_marginBottom="4dp"/>
@@ -249,17 +249,17 @@
                     android:id="@+id/radio_ls_yes"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="あり" />
+                    android:text="@string/available" />
                 <RadioButton
                     android:id="@+id/radio_ls_no"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="なし" />
+                    android:text="@string/none" />
                 <RadioButton
                     android:id="@+id/radio_ls_unknown"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="不明" />
+                    android:text="@string/unknown" />
             </RadioGroup>
 
             <TableLayout
@@ -271,13 +271,13 @@
                 android:visibility="gone">
                 <TableRow>
                     <TextView android:text="" android:padding="4dp"/>
-                    <TextView android:text="開店" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
-                    <TextView android:text="閉店" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
-                    <TextView android:text="休憩 (開始-終了)" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
-                    <TextView android:text="休" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="@string/label_opening" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="@string/label_closing" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="@string/label_break_time" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
+                    <TextView android:text="@string/label_off" android:gravity="center" android:textStyle="bold" android:padding="4dp"/>
                 </TableRow>
                 <TableRow android:gravity="bottom">
-                    <TextView android:text="平日" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
+                    <TextView android:text="@string/day_weekday" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
                     <EditText android:id="@+id/edit_ls_wd_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
                     <EditText android:id="@+id/edit_ls_wd_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="bottom">
@@ -288,7 +288,7 @@
                     <CheckBox android:id="@+id/check_ls_wd_off" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center"/>
                 </TableRow>
                 <TableRow android:layout_marginTop="4dp" android:gravity="bottom">
-                    <TextView android:text="土曜" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
+                    <TextView android:text="@string/day_saturday" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
                     <EditText android:id="@+id/edit_ls_sa_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
                     <EditText android:id="@+id/edit_ls_sa_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="bottom">
@@ -299,7 +299,7 @@
                     <CheckBox android:id="@+id/check_ls_sa_off" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center"/>
                 </TableRow>
                 <TableRow android:layout_marginTop="4dp" android:gravity="bottom">
-                    <TextView android:text="日祝" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
+                    <TextView android:text="@string/day_holiday" android:textStyle="bold" android:padding="4dp" android:gravity="center_vertical"/>
                     <EditText android:id="@+id/edit_ls_ph_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
                     <EditText android:id="@+id/edit_ls_ph_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="8dp" android:textSize="14sp" android:gravity="center"/>
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="bottom">
@@ -357,21 +357,21 @@
                         android:id="@+id/check_col_wd_off"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="収集なし"
+                        android:text="@string/postbox_no_collection"
                         android:textSize="10sp"
                         android:gravity="center"/>
                     <CheckBox
                         android:id="@+id/check_col_sa_off"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="収集なし"
+                        android:text="@string/postbox_no_collection"
                         android:textSize="10sp"
                         android:gravity="center"/>
                     <CheckBox
                         android:id="@+id/check_col_ph_off"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="収集なし"
+                        android:text="@string/postbox_no_collection"
                         android:textSize="10sp"
                         android:gravity="center"/>
                 </TableRow>
@@ -391,7 +391,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="祝日の時刻情報がありません"
+                    android:text="@string/msg_no_holiday_times"
                     android:textColor="@color/warning_text"
                     android:textSize="12sp" />
                 <Button

@@ -274,10 +274,10 @@ public class SettingsActivity extends AppCompatActivity {
 
                     if (isFinishing() || isDestroyed()) return;
                     new MaterialAlertDialogBuilder(this)
-                            .setTitle("行政界データ")
+                            .setTitle(R.string.title_boundary_data)
                             .setView(scrollView)
-                            .setPositiveButton("閉じる", null)
-                            .setNeutralButton("更新", (dialog, which) -> {
+                            .setPositiveButton(R.string.btn_close, null)
+                            .setNeutralButton(R.string.update, (dialog, which) -> {
                                 updateBoundaryData();
                             })
                             .show();
@@ -312,10 +312,10 @@ public class SettingsActivity extends AppCompatActivity {
 
             if (isFinishing() || isDestroyed()) return;
             new MaterialAlertDialogBuilder(this)
-                    .setTitle("取得単位エリア")
+                    .setTitle(R.string.title_fetch_area)
                     .setView(scrollView)
-                    .setPositiveButton("閉じる", null)
-                    .setNeutralButton("更新", (dialog, which) -> {
+                    .setPositiveButton(R.string.btn_close, null)
+                    .setNeutralButton(R.string.update, (dialog, which) -> {
                         showFetchAreaDialog();
                     })
                     .show();

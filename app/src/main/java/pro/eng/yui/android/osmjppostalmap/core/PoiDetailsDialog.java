@@ -28,6 +28,7 @@ import java.util.Locale;
 
 import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
+import pro.eng.yui.android.osmjppostalmap.ui.EditPoiActivity;
 import pro.eng.yui.android.osmjppostalmap.ui.MainActivity;
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.Days;
@@ -80,7 +81,7 @@ public class PoiDetailsDialog {
         
         View titleView = LayoutInflater.from(context).inflate(R.layout.dialog_poi_details_title, null);
         TextView titleText = titleView.findViewById(R.id.dialog_title_text);
-        titleText.setText(isPostBox ? "郵便ポスト" : poi.getTag("name"));
+        titleText.setText(isPostBox ? context.getString(R.string.amenity_postbox) : poi.getTag("name"));
         ImageButton openOsmButton = titleView.findViewById(R.id.dialog_open_osm);
 
         openOsmButton.setOnClickListener(v -> {
@@ -108,9 +109,9 @@ public class PoiDetailsDialog {
         updateUI();
 
         builder.setView(view);
-        builder.setPositiveButton("閉じる", null);
-        builder.setNeutralButton("編集", (dialog, which) -> {
-            android.content.Intent intent = new android.content.Intent(context, pro.eng.yui.android.osmjppostalmap.ui.EditPoiActivity.class);
+        builder.setPositiveButton(R.string.btn_close, null);
+        builder.setNeutralButton(R.string.edit, (dialog, which) -> {
+            android.content.Intent intent = new android.content.Intent(context, EditPoiActivity.class);
             intent.putExtra("POI_ID", poi.getId());
             intent.putExtra("POI_TYPE", poi.getType());
             intent.putExtra("POI_LAT", poi.getLat());
@@ -177,9 +178,9 @@ public class PoiDetailsDialog {
 
                     String dayPrefix;
                     if (daysDiff == 0) {
-                        dayPrefix = "本日";
+                        dayPrefix = context.getString(R.string.day_today);
                     } else if (daysDiff == 1) {
-                        dayPrefix = "明日";
+                        dayPrefix = context.getString(R.string.day_tomorrow);
                     } else {
                         dayPrefix = eventDate.format(DateTimeFormatter.ofPattern("dd日"));
                     }
@@ -187,11 +188,11 @@ public class PoiDetailsDialog {
                     long remainingMinutes = (timestamp - now) / 60000;
                     long h = remainingMinutes / 60;
                     long m = remainingMinutes % 60;
-                    String diffStr = (h > 0 ? h + "時間" : "") + m + "分後";
+                    String diffStr = (h > 0) ? context.getString(R.string.time_duration_hm, h, m) : context.getString(R.string.time_duration_m, m);
 
                     if (schedule.getCurrentState() == ScheduleResult.CurrentState.TODAY_FINISHED ||
                         schedule.getNextEvent().getTimestamp().toLocalDate().isAfter(java.time.LocalDate.now())) {
-                        msg.append("次回 ").append(dayPrefix).append(" ").append(timeStr).append(" (").append(diffStr).append(")");
+                        msg.append(context.getString(R.string.next_event_prefix)).append(" ").append(dayPrefix).append(" ").append(timeStr).append(" (").append(diffStr).append(")");
                     } else {
                         msg.append(diffStr);
                     }
@@ -205,9 +206,9 @@ public class PoiDetailsDialog {
 
                     String fPrefix;
                     if (fDaysDiff == 0) {
-                        fPrefix = "本日";
+                        fPrefix = context.getString(R.string.day_today);
                     } else if (fDaysDiff == 1) {
-                        fPrefix = "明日";
+                        fPrefix = context.getString(R.string.day_tomorrow);
                     } else {
                         fPrefix = fEventDate.format(DateTimeFormatter.ofPattern("dd日"));
                     }
@@ -215,10 +216,10 @@ public class PoiDetailsDialog {
                     long fRemainingMinutes = (fTimestamp - now) / 60000;
                     long fh = fRemainingMinutes / 60;
                     long fm = fRemainingMinutes % 60;
-                    String fDiffStr = (fh > 0 ? fh + "時間" : "") + fm + "分後";
+                    String fDiffStr = (fh > 0) ? context.getString(R.string.time_duration_hm, fh, fm) : context.getString(R.string.time_duration_m, fm);
                     
                     if (msg.length() > 0) msg.append("\n");
-                    msg.append("逃した場合 ").append(fPrefix).append(" ").append(followTime).append(" (").append(fDiffStr).append(")");
+                    msg.append(context.getString(R.string.missed_event_prefix)).append(" ").append(fPrefix).append(" ").append(followTime).append(" (").append(fDiffStr).append(")");
                 }
 
                 if (msg.length() > 0) {
@@ -233,7 +234,7 @@ public class PoiDetailsDialog {
                     long remainingMinutes = (schedule.getNextEvent().getTimestamp().toInstant().toEpochMilli() - System.currentTimeMillis()) / 60000;
                     long h = remainingMinutes / 60;
                     long m = remainingMinutes % 60;
-                    String diffStr = (h > 0 ? h + "時間" : "") + m + "分後";
+                    String diffStr = (h > 0) ? context.getString(R.string.time_duration_hm, h, m) : context.getString(R.string.time_duration_m, m);
                     nextEventText.setText(diffStr);
                     nextEventText.setVisibility(View.VISIBLE);
                 } else {
@@ -246,7 +247,7 @@ public class PoiDetailsDialog {
             
             rawTagText.setText("Raw: " + schedule.getRawTagValue().getOrigin() + " (v" + poi.getVer() + ")");
         } else {
-            statusText.setText("解析不可");
+            statusText.setText(R.string.status_unparseable);
             rawTagText.setText("Raw: " + poi.getTag(isPostBox ? "collection_times" : "opening_hours") + " (v" + poi.getVer() + ")");
         }
 
@@ -267,7 +268,7 @@ public class PoiDetailsDialog {
                     }
                     populateWeeklyTable(context, lsTable, limitedServiceSchedule, false);
                 } else {
-                    lsStatus.setText("あり (詳細時間不明)");
+                    lsStatus.setText(R.string.limited_service_available);
                     lsStatus.setTypeface(null, android.graphics.Typeface.NORMAL);
                     lsTable.removeAllViews();
                 }
@@ -280,7 +281,7 @@ public class PoiDetailsDialog {
                 }
             } else if ("no".equals(lsMail)) {
                 lsLayout.setVisibility(View.VISIBLE);
-                lsStatus.setText("なし");
+                lsStatus.setText(R.string.none);
                 lsStatus.setTypeface(null, android.graphics.Typeface.NORMAL);
                 lsTable.removeAllViews();
             } else {
@@ -293,14 +294,14 @@ public class PoiDetailsDialog {
 
         String checkDate = poi.getTag("check_date");
         if (checkDate != null) {
-            checkDateText.setText("最終確認日: " + checkDate);
+            checkDateText.setText(context.getString(R.string.label_check_date, checkDate));
         } else {
-            checkDateText.setText("最終確認日: 不明");
+            checkDateText.setText(R.string.label_check_date_unknown);
         }
         checkDateText.setVisibility(View.VISIBLE);
         
         String displayAddress = JpPostalUtil.getAddressText(poi.getTags());
-        if (displayAddress.isEmpty()) displayAddress = "データなし";
+        if (displayAddress.isEmpty()) displayAddress = context.getString(R.string.data_none);
 
         if (currentLocation != null) {
             float[] results = new float[1];
@@ -311,9 +312,9 @@ public class PoiDetailsDialog {
             if (distanceMeters <= 50000) { // 50km
                 String distanceStr;
                 if (distanceMeters < 1000) {
-                    distanceStr = String.format(Locale.JAPAN, " (%dm先)", (int) distanceMeters);
+                    distanceStr = context.getString(R.string.distance_meters, (int) distanceMeters);
                 } else {
-                    distanceStr = String.format(Locale.JAPAN, " (%.1fkm先)", distanceMeters / 1000.0);
+                    distanceStr = context.getString(R.string.distance_kilometers, distanceMeters / 1000.0);
                 }
                 displayAddress += distanceStr;
             }
@@ -327,7 +328,11 @@ public class PoiDetailsDialog {
             {"Sa"},
             {"Su", "PH"}
         };
-        String[] groupNames = {"平日", "土曜", "日祝"};
+        String[] groupNames = {
+            context.getString(R.string.day_weekday),
+            context.getString(R.string.day_saturday),
+            context.getString(R.string.day_holiday)
+        };
         
         table.removeAllViews();
         for (int i = 0; i < groupNames.length; i++) {
@@ -352,19 +357,19 @@ public class PoiDetailsDialog {
             
             String displayTime;
             if (!foundDay || daySchedule == null) {
-                displayTime = "不明";
+                displayTime = context.getString(R.string.unknown);
             } else if (daySchedule.schedule().isEmpty()) {
                 if (isPostBox) {
                     if (daySchedule.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY) {
-                        displayTime = "収集なし";
+                        displayTime = context.getString(R.string.postbox_no_collection);
                     } else {
-                        displayTime = "不明";
+                        displayTime = context.getString(R.string.unknown);
                     }
                 } else {
                     if (daySchedule.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.OpeningHoursParser.DayStatus.CLOSED_DAY) {
-                        displayTime = "休業";
+                        displayTime = context.getString(R.string.postoffice_closed);
                     } else {
-                        displayTime = "不明";
+                        displayTime = context.getString(R.string.unknown);
                     }
                 }
             } else {

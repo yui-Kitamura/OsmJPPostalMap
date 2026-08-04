@@ -61,7 +61,7 @@ public class PrefRefreshDialog {
         Button areaButton = view.findViewById(R.id.refresh_area_button);
         TextView emptyText = view.findViewById(R.id.empty_text);
         TextView label = view.findViewById(R.id.pref_list_label);
-        label.setText("都道府県別データ");
+        label.setText(R.string.label_prefecture_data);
 
         // Add a loading indicator
         ProgressBar progressBar = new ProgressBar(context);
@@ -75,19 +75,19 @@ public class PrefRefreshDialog {
         container.addView(progressBar);
 
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
-        builder.setTitle("データの更新");
+        builder.setTitle(R.string.title_data_refresh);
         builder.setView(view);
-        builder.setNeutralButton("更新状況", (d, which) -> {
+        builder.setNeutralButton(R.string.btn_data_refresh_status, (d, which) -> {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://yui-kitamura.github.io/OsmJpPostalMapDataSource/"));
             context.startActivity(intent);
         });
-        builder.setPositiveButton("閉じる", null);
+        builder.setPositiveButton(R.string.btn_close, null);
         AlertDialog dialog = builder.create();
 
         if (onRefreshArea != null) {
             areaButton.setOnClickListener(v -> {
                 onRefreshArea.run();
-                Toast.makeText(context, "表示範囲を取得しています...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, R.string.msg_fetching_area, Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
             });
         } else {

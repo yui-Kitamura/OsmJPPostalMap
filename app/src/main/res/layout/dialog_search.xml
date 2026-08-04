@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="検索"
+        android:text="@string/search"
         android:textSize="20sp"
         android:textStyle="bold"
         android:layout_marginBottom="16dp" />
@@ -18,7 +18,7 @@
         android:id="@+id/search_input"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="例）甲府"
+        android:hint="@string/search_hint"
         android:inputType="text"
         android:maxLines="1"
         android:imeOptions="actionSearch" />
@@ -36,7 +36,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:checked="true"
-            android:text="郵便局名" />
+            android:text="@string/search_filter_post_office" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/check_address"
@@ -44,7 +44,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:checked="true"
-            android:text="住所（キャッシュ済み）" />
+            android:text="@string/search_filter_address" />
 
         <com.google.android.material.chip.Chip
             android:id="@+id/check_place"
@@ -52,7 +52,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:checked="true"
-            android:text="市区町村名" />
+            android:text="@string/search_filter_place" />
     </com.google.android.material.chip.ChipGroup>
 
     <FrameLayout
@@ -73,5 +73,13 @@
             android:indeterminateTint="@android:color/holo_red_light"
             android:visibility="gone" />
     </FrameLayout>
+
+    <Button
+        android:id="@+id/btn_close_dialog"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:text="@string/btn_close" />
 
 </LinearLayout>
