@@ -729,7 +729,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                         }
                     } catch (Exception ignored) {
                     }
-                    break;
+                    return false; // 一致したが更新不要
                 }
             }
         }
