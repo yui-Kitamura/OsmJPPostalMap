@@ -295,7 +295,8 @@ public class SimpleScheduleParser implements ScheduleParser {
                     }
                     data.put(d, new OpeningHoursParser.DaySchedule(status, inner));
                 }
-                return JpPostalUtil.encodeOpeningHours(data).getOrigin();
+                TextValue encoded = JpPostalUtil.encodeOpeningHours(data);
+                return encoded != null ? encoded.getOrigin() : "";
             }
             case COLLECTION_TIMES: {
                 Map<Days, CollectionTimeParser.DaySchedule> data = new HashMap<>();
@@ -317,7 +318,8 @@ public class SimpleScheduleParser implements ScheduleParser {
                     }
                     data.put(d, new CollectionTimeParser.DaySchedule(status, inner));
                 }
-                return JpPostalUtil.encodeCollectionTimes(data).getOrigin();
+                TextValue encoded = JpPostalUtil.encodeCollectionTimes(data);
+                return encoded != null ? encoded.getOrigin() : "";
             }
             default: {
                 return "";

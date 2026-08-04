@@ -1039,8 +1039,18 @@ public class PoiRepositoryImpl implements PoiRepository {
                 return;
             }
             postSuccess(callback);
-            // 2. ローカルSQLiteへ即時反映（既存POIはidが判っているのでそのままupsert）
-            executor.execute(() -> cacheEditedPoi(poi));
+            // 2. ローカルSQLiteへ即時反映。送信成功後はOSM側のバージョンが上がっているのでインクリメントして保存する
+            executor.execute(() -> {
+                OsmPoi cachePoi = new OsmPoi(
+                        poi.getId(),
+                        poi.getLat(),
+                        poi.getLon(),
+                        poi.getType(),
+                        poi.getTags(),
+                        poi.getVer() + 1
+                );
+                cacheEditedPoi(cachePoi);
+            });
         });
     }
 
