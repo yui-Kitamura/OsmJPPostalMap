@@ -182,28 +182,38 @@
                 </TableRow>
             </TableLayout>
 
-            <LinearLayout
+            <TableLayout
                 android:layout_width="match_parent"
+                android:stretchColumns="0,1"
+                android:padding="0.5dp"
+                android:background="@color/gray_divider"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
                 android:layout_marginBottom="16dp">
-                <Button
-                    android:id="@+id/btn_oh_copy_to_sa"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/btn_copy_wd_to_sa"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:textSize="12sp" />
-                <Button
-                    android:id="@+id/btn_oh_copy_to_ph"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/btn_copy_sa_to_ph"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:textSize="12sp" />
-            </LinearLayout>
+                <TableRow>
+                    <Button
+                        android:id="@+id/btn_oh_copy_to_sa"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:text="@string/btn_copy_wd_to_sa"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:textSize="12sp"
+                        android:padding="2dp"
+                        android:background="@drawable/bg_cell_header"
+                        app:backgroundTint="@null"
+                        android:layout_margin="0.5dp" />
+                    <Button
+                        android:id="@+id/btn_oh_copy_to_ph"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:text="@string/btn_copy_sa_to_ph"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:textSize="12sp"
+                        android:padding="2dp"
+                        android:background="@drawable/bg_cell_header"
+                        app:backgroundTint="@null"
+                        android:layout_margin="0.5dp" />
+                </TableRow>
+            </TableLayout>
         </LinearLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -354,6 +364,7 @@
                         android:textSize="11sp"
                         android:padding="1dp"
                         android:background="@drawable/bg_cell_header"
+                        app:backgroundTint="@null"
                         android:layout_margin="0.5dp" />
                     <Button
                         android:id="@+id/btn_copy_to_sun"
@@ -364,6 +375,7 @@
                         android:textSize="11sp"
                         android:padding="1dp"
                         android:background="@drawable/bg_cell_header"
+                        app:backgroundTint="@null"
                         android:layout_margin="0.5dp" />
                     <View android:layout_width="0dp" android:layout_height="match_parent" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
                 </TableRow>
