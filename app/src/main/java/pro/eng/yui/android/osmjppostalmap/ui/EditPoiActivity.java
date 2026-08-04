@@ -661,6 +661,7 @@ public class EditPoiActivity extends AppCompatActivity {
                 if (et != null) {
                     Util.addNumberFilter(et);
                     Util.addTimeParseHandler(et);
+                    Util.addClearRestoreHandler(et);
                     et.addTextChangedListener(new OhTextWatcher(et));
                     applyCellStyles(et, et.getText().toString(), false);
                 }
@@ -1299,6 +1300,7 @@ public class EditPoiActivity extends AppCompatActivity {
             et.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
             Util.addNumberFilter(et);
             Util.addTimeParseHandler(et);
+            Util.addClearRestoreHandler(et);
             et.setGravity(Gravity.CENTER);
             et.setText(Util.normalizeNumber(initialValues[i]));
             
@@ -1372,7 +1374,7 @@ public class EditPoiActivity extends AppCompatActivity {
         if (isModified) {
             border.setColor(ContextCompat.getColor(this, R.color.blue_frame));
         } else {
-            border.setColor(android.graphics.Color.TRANSPARENT);
+            border.setColor(ContextCompat.getColor(this, R.color.gray_divider));
         }
 
         et.setBackground(bg);

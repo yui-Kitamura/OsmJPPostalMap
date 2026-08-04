@@ -1,8 +1,14 @@
 package pro.eng.yui.android.osmjppostalmap.domain;
 
+import android.graphics.drawable.Drawable;
+import android.text.Editable;
 import android.text.InputFilter;
+import android.text.TextWatcher;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.EditText;
+import androidx.core.content.ContextCompat;
+import pro.eng.yui.android.osmjppostalmap.R;
 
 /**
  * 共通ユーティリティクラス。
@@ -118,5 +124,71 @@ public class Util {
         if (!text.equals(formatted)) {
             et.setText(formatted);
         }
+    }
+
+    /**
+     * EditText にクリアボタンと復元ボタンの機能を追加する。
+     * @param et 対象の EditText
+     */
+    public static void addClearRestoreHandler(final EditText et) {
+        if (et == null) return;
+
+        final Drawable clearIcon = ContextCompat.getDrawable(et.getContext(), R.drawable.ic_clear_24);
+        final Drawable undoIcon = ContextCompat.getDrawable(et.getContext(), R.drawable.ic_undo_24);
+
+        if (clearIcon != null) clearIcon.setTint(et.getCurrentTextColor());
+        if (undoIcon != null) undoIcon.setTint(et.getCurrentTextColor());
+
+        final Runnable updateIcon = () -> {
+            String text = et.getText().toString();
+            String restoreValue = (String) et.getTag(R.id.tag_restore_value);
+            if (!text.isEmpty()) {
+                et.setCompoundDrawablesWithIntrinsicBounds(null, null, clearIcon, null);
+            } else if (restoreValue != null && !restoreValue.isEmpty()) {
+                et.setCompoundDrawablesWithIntrinsicBounds(null, null, undoIcon, null);
+            } else {
+                et.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null);
+            }
+        };
+
+        et.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                String text = s.toString();
+                String restoreValue = (String) et.getTag(R.id.tag_restore_value);
+                if (!text.isEmpty() && !text.equals(restoreValue)) {
+                    et.setTag(R.id.tag_restore_value, null);
+                }
+                updateIcon.run();
+            }
+        });
+
+        View.OnTouchListener existingListener = null; // No way to get existing listener easily in Android < 29
+        et.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                Drawable icon = et.getCompoundDrawables()[2];
+                if (icon != null) {
+                    int iconWidth = icon.getBounds().width();
+                    int iconStart = et.getWidth() - et.getPaddingRight() - iconWidth;
+                    if (event.getX() >= iconStart) {
+                        String text = et.getText().toString();
+                        String restoreValue = (String) et.getTag(R.id.tag_restore_value);
+                        if (!text.isEmpty()) {
+                            et.setTag(R.id.tag_restore_value, text);
+                            et.setText("");
+                        } else if (restoreValue != null && !restoreValue.isEmpty()) {
+                            et.setText(restoreValue);
+                            et.setTag(R.id.tag_restore_value, null);
+                        }
+                        return true;
+                    }
+                }
+            }
+            return false;
+        });
+
+        updateIcon.run();
     }
 }
