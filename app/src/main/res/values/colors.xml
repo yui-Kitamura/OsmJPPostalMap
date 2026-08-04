@@ -21,4 +21,5 @@
     <color name="text_secondary">#888888</color>
     <!-- 入力欄のplaceholder。既定のヒント色(38%)より薄くして入力済みの値と見分ける -->
     <color name="input_placeholder">#40000000</color>
+    <color name="cell_bg">#FFFFFF</color>
 </resources>

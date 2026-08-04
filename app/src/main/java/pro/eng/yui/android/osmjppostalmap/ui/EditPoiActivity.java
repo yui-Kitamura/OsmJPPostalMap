@@ -1380,7 +1380,7 @@ public class EditPoiActivity extends AppCompatActivity {
                 // 変更あり: 薄い青背景にして目立たせる
                 background.setColor(0xFFE3F2FD);
             } else {
-                background.setColor(getThemeColor(android.R.attr.colorBackground));
+                background.setColor(ContextCompat.getColor(this, R.color.cell_bg));
             }
             et.setTextColor(getThemeColor(com.google.android.material.R.attr.colorOnSurface));
         }
