@@ -99,15 +99,24 @@ public class Util {
         View.OnFocusChangeListener existingListener = et.getOnFocusChangeListener();
         et.setOnFocusChangeListener((v, hasFocus) -> {
             if (!hasFocus) {
-                String text = et.getText().toString();
-                String formatted = formatTime(text);
-                if (!text.equals(formatted)) {
-                    et.setText(formatted);
-                }
+                applyTimeFormat(et);
             }
             if (existingListener != null) {
                 existingListener.onFocusChange(v, hasFocus);
             }
         });
+    }
+
+    /**
+     * EditText の入力内容を時刻形式にフォーマットして反映する。
+     * @param et 対象の EditText
+     */
+    public static void applyTimeFormat(EditText et) {
+        if (et == null){ return; }
+        String text = et.getText().toString();
+        String formatted = formatTime(text);
+        if (!text.equals(formatted)) {
+            et.setText(formatted);
+        }
     }
 }
