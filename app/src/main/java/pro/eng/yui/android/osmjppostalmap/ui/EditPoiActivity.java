@@ -1303,6 +1303,16 @@ public class EditPoiActivity extends AppCompatActivity {
             Util.addClearRestoreHandler(et);
             et.setGravity(Gravity.CENTER);
             et.setText(Util.normalizeNumber(initialValues[i]));
+            et.setPadding((int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, getResources().getDisplayMetrics()),
+                         (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, getResources().getDisplayMetrics()),
+                         (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, getResources().getDisplayMetrics()),
+                         (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 6, getResources().getDisplayMetrics()));
+            et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            
+            TableRow.LayoutParams params = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1.0f);
+            int margin = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1, getResources().getDisplayMetrics());
+            params.setMargins(margin, margin, margin, margin);
+            et.setLayoutParams(params);
             
             // 初期の見た目設定
             applyCellStyles(et, initialValues[i], false);
@@ -1357,7 +1367,6 @@ public class EditPoiActivity extends AppCompatActivity {
         if (bg == null) return;
         bg = (LayerDrawable) bg.mutate();
 
-        GradientDrawable border = (GradientDrawable) bg.findDrawableByLayerId(R.id.cell_border);
         GradientDrawable background = (GradientDrawable) bg.findDrawableByLayerId(R.id.cell_background);
 
         if (value.isEmpty()) {
@@ -1367,14 +1376,13 @@ public class EditPoiActivity extends AppCompatActivity {
             et.setHintTextColor(ContextCompat.getColor(this, R.color.text_secondary));
         } else {
             // 入力済み
-            background.setColor(getThemeColor(android.R.attr.colorBackground));
+            if (isModified) {
+                // 変更あり: 薄い青背景にして目立たせる
+                background.setColor(0xFFE3F2FD);
+            } else {
+                background.setColor(getThemeColor(android.R.attr.colorBackground));
+            }
             et.setTextColor(getThemeColor(com.google.android.material.R.attr.colorOnSurface));
-        }
-
-        if (isModified) {
-            border.setColor(ContextCompat.getColor(this, R.color.blue_frame));
-        } else {
-            border.setColor(ContextCompat.getColor(this, R.color.gray_divider));
         }
 
         et.setBackground(bg);
