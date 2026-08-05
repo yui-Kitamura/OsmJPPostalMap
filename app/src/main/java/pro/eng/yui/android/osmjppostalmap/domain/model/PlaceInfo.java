@@ -6,6 +6,7 @@ public class PlaceInfo implements Serializable {
     private int prefCode;
     private String subName;
     private String name;
+    private String kana;
     private Double lat;
     private Double lon;
     private double minLat;
@@ -13,10 +14,11 @@ public class PlaceInfo implements Serializable {
     private double minLon;
     private double maxLon;
 
-    public PlaceInfo(int prefCode, String subName, String name, Double lat, Double lon, double minLat, double maxLat, double minLon, double maxLon) {
+    public PlaceInfo(int prefCode, String subName, String name, String kana, Double lat, Double lon, double minLat, double maxLat, double minLon, double maxLon) {
         this.prefCode = prefCode;
         this.subName = subName;
         this.name = name;
+        this.kana = kana;
         this.lat = lat;
         this.lon = lon;
         this.minLat = minLat;
@@ -28,6 +30,7 @@ public class PlaceInfo implements Serializable {
     public int getPrefCode() { return prefCode; }
     public String getSubName() { return subName; }
     public String getName() { return name; }
+    public String getKana() { return kana; }
     public Double getLat() { return lat; }
     public Double getLon() { return lon; }
     public double getMinLat() { return minLat; }

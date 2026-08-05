@@ -38,13 +38,16 @@ public class AddressSearchEngine implements SearchEngine {
             boolean isPO = "post_office".equals(amenity) || "post_box".equals(amenity);
 
             String fullAddress = getFullAddress(poi);
-            if (fullAddress.equals(q)) {
+            String title = poi.getTag("name");
+            String kana = poi.getTag("kana");
+
+            if (fullAddress.equals(q) || (title != null && title.equals(q)) || (kana != null && q.equals(kana))) {
                 match = true;
                 weight = isPO ? 60.0 : 30.0;
-            } else if (fullAddress.startsWith(q)) {
+            } else if (fullAddress.startsWith(q) || (title != null && title.startsWith(q)) || (kana != null && kana.startsWith(q))) {
                 match = true;
                 weight = isPO ? 55.0 : 25.0;
-            } else if (fullAddress.contains(q)) {
+            } else if (fullAddress.contains(q) || (title != null && title.contains(q)) || (kana != null && kana.contains(q))) {
                 match = true;
                 weight = isPO ? 50.0 : 20.0;
             }
@@ -77,19 +80,19 @@ public class AddressSearchEngine implements SearchEngine {
                     weight += 1.0 / (1.0 + distanceKm);
                 }
 
-                String title = poi.getTag("name");
+                String resultTitle = title;
                 SearchResult.Type resultType = SearchResult.Type.ADDRESS;
                 // String amenity = poi.getTag("amenity"); // Moved up
 
-                if (title == null) {
+                if (resultTitle == null) {
                     if ("post_office".equals(amenity)) {
-                        title = "無名郵便局";
+                        resultTitle = "無名郵便局";
                         resultType = SearchResult.Type.POST_OFFICE;
                     } else if ("post_box".equals(amenity)) {
-                        title = "郵便ポスト";
+                        resultTitle = "郵便ポスト";
                         resultType = SearchResult.Type.POST_BOX;
                     } else {
-                        title = "POI (" + poi.getId() + ")";
+                        resultTitle = "POI (" + poi.getId() + ")";
                     }
                 } else {
                     if ("post_office".equals(amenity)) {
@@ -99,7 +102,7 @@ public class AddressSearchEngine implements SearchEngine {
                     }
                 }
                 String subTitle = getFullAddress(poi);
-                SearchResult result = new SearchResult(resultType, title, subTitle, poi.getLat(), poi.getLon(), weight, poi);
+                SearchResult result = new SearchResult(resultType, resultTitle, subTitle, poi.getLat(), poi.getLon(), weight, poi);
                 
                 if (resultType == SearchResult.Type.POST_OFFICE || resultType == SearchResult.Type.POST_BOX) {
                     SimpleScheduleParser parser = new SimpleScheduleParser();

@@ -530,6 +530,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                     }
 
                     String name = obj.has("city") ? obj.getString("city") : obj.getString("name");
+                    String kana = obj.optString("kana", "");
 
                     Double lat = null;
                     Double lon = null;
@@ -557,7 +558,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                     }
 
                     places.add(new PlaceInfo(
-                            prefCode, subName, name, lat, lon, minLat, maxLat, minLon, maxLon
+                            prefCode, subName, name, kana, lat, lon, minLat, maxLat, minLon, maxLon
                     ));
                 }
                 if (local != null) {
@@ -619,6 +620,9 @@ public class PoiRepositoryImpl implements PoiRepository {
                     Map<String, String> tags = new HashMap<>();
                     tags.put("name", name);
                     tags.put("amenity", "post_office");
+                    if (obj.has("kana")) {
+                        tags.put("kana", obj.getString("kana"));
+                    }
 
                     String prefName = prefCodeNameMap.get(prefCode);
                     if (prefName != null) {
@@ -679,7 +683,8 @@ public class PoiRepositoryImpl implements PoiRepository {
         synchronized (placeCache) {
             for (PlaceInfo place : placeCache) {
                 String normalizedName = Normalizer.normalize(place.getName(), Normalizer.Form.NFKC).toLowerCase();
-                if (normalizedName.contains(q)) {
+                String normalizedKana = place.getKana() != null ? Normalizer.normalize(place.getKana(), Normalizer.Form.NFKC).toLowerCase() : "";
+                if (normalizedName.contains(q) || normalizedKana.contains(q)) {
                     results.add(place);
                 }
             }
@@ -938,8 +943,8 @@ public class PoiRepositoryImpl implements PoiRepository {
         runOnExecutor("保存済みデータを読み込み中", () -> {
             if (local == null) return;
             
-            // v8 移行処理
-            local.migrateToV8();
+            // 最新のカラムへ移行
+            local.migrateToLatest();
             
             List<PrefMeta> saved = local.getAllPrefMeta();
             if (saved.isEmpty()) return;

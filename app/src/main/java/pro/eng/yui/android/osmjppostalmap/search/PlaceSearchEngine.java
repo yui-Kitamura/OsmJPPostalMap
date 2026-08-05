@@ -27,11 +27,14 @@ public class PlaceSearchEngine implements SearchEngine {
 
         for (PlaceInfo place : places) {
             double weight = 60.0;
-            if (place.getName().equals(trimmedQuery)) {
+            String name = place.getName();
+            String kana = place.getKana();
+
+            if (name.equals(trimmedQuery) || trimmedQuery.equals(kana)) {
                 weight = 100.0;
-            } else if (place.getName().startsWith(trimmedQuery)) {
+            } else if (name.startsWith(trimmedQuery) || (kana != null && kana.startsWith(trimmedQuery))) {
                 weight = 95.0;
-            } else if (place.getName().contains(trimmedQuery)) {
+            } else if (name.contains(trimmedQuery) || (kana != null && kana.contains(trimmedQuery))) {
                 weight = 90.0;
             }
 

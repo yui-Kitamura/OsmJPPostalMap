@@ -277,6 +277,10 @@ public class PoiLocalDataSource {
             selection.append(PoiDbHelper.COL_NAME).append(" LIKE ?");
             args.add("%" + q + "%");
 
+            // かな一致
+            selection.append(" OR ").append(PoiDbHelper.COL_KANA).append(" LIKE ?");
+            args.add("%" + q + "%");
+
             if (searchAddress) {
                 // 住所一致
                 selection.append(" OR ").append(PoiDbHelper.COL_ADDR_TEXT).append(" LIKE ?");
@@ -303,14 +307,14 @@ public class PoiLocalDataSource {
     }
 
     /**
-     * バージョン8で追加されたカラムを既存データに反映する。
+     * バージョン8, 9で追加されたカラムを既存データに反映する。
      */
-    public void migrateToV8() {
+    public void migrateToLatest() {
         SQLiteDatabase db = helper.getWritableDatabase();
         db.beginTransaction();
         try {
             try (Cursor c = db.query(PoiDbHelper.TABLE_POI, null,
-                    PoiDbHelper.COL_NAME + " IS NULL", null, null, null, null)) {
+                    PoiDbHelper.COL_NAME + " IS NULL OR " + PoiDbHelper.COL_KANA + " IS NULL", null, null, null, null)) {
                 while (c.moveToNext()) {
                     OsmPoi poi = fromCursor(c);
                     if (poi != null) {
@@ -319,6 +323,7 @@ public class PoiLocalDataSource {
                         v.put(PoiDbHelper.COL_NAME, tags.get("name"));
                         v.put(PoiDbHelper.COL_AMENITY, tags.get("amenity"));
                         v.put(PoiDbHelper.COL_ADDR_TEXT, JpPostalUtil.getAddressText(tags));
+                        v.put(PoiDbHelper.COL_KANA, tags.get("kana"));
                         db.update(PoiDbHelper.TABLE_POI, v,
                                 PoiDbHelper.COL_TYPE + " = ? AND " + PoiDbHelper.COL_ID + " = ?",
                                 new String[]{poi.getType(), String.valueOf(poi.getId())});
@@ -375,6 +380,7 @@ public class PoiLocalDataSource {
                 v.put(PoiDbHelper.COL_PLACE_MAX_LAT, place.getMaxLat());
                 v.put(PoiDbHelper.COL_PLACE_MIN_LON, place.getMinLon());
                 v.put(PoiDbHelper.COL_PLACE_MAX_LON, place.getMaxLon());
+                v.put(PoiDbHelper.COL_PLACE_KANA, place.getKana());
                 db.insert(PoiDbHelper.TABLE_PLACE, null, v);
             }
             db.setTransactionSuccessful();
@@ -386,8 +392,9 @@ public class PoiLocalDataSource {
     public List<PlaceInfo> searchPlaces(String query) {
         SQLiteDatabase db = helper.getReadableDatabase();
         List<PlaceInfo> result = new ArrayList<>();
-        String selection = PoiDbHelper.COL_PLACE_NAME + " LIKE ?";
-        String[] args = new String[]{"%" + query + "%"};
+        String selection = PoiDbHelper.COL_PLACE_NAME + " LIKE ? OR " + PoiDbHelper.COL_PLACE_KANA + " LIKE ?";
+        String q = "%" + query + "%";
+        String[] args = new String[]{q, q};
         try (Cursor c = db.query(PoiDbHelper.TABLE_PLACE, null, selection, args, null, null, null)) {
             while (c.moveToNext()) {
                 result.add(fromPlaceCursor(c));
@@ -419,6 +426,7 @@ public class PoiLocalDataSource {
                 c.getInt(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_PREF_CODE)),
                 subName,
                 c.getString(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_NAME)),
+                c.getString(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_KANA)),
                 lat,
                 lon,
                 c.getDouble(c.getColumnIndexOrThrow(PoiDbHelper.COL_PLACE_MIN_LAT)),
@@ -468,6 +476,7 @@ public class PoiLocalDataSource {
             v.put(PoiDbHelper.COL_NAME, tags.get("name"));
             v.put(PoiDbHelper.COL_AMENITY, tags.get("amenity"));
             v.put(PoiDbHelper.COL_ADDR_TEXT, JpPostalUtil.getAddressText(tags));
+            v.put(PoiDbHelper.COL_KANA, tags.get("kana"));
         }
         return v;
     }

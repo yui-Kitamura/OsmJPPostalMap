@@ -15,7 +15,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class PoiDbHelper extends SQLiteOpenHelper {
 
     public static final String DB_NAME = "poi_cache.db";
-    public static final int DB_VERSION = 8;
+    public static final int DB_VERSION = 9;
 
     /* poi table */
     public static final String TABLE_POI = "poi";
@@ -30,6 +30,7 @@ public class PoiDbHelper extends SQLiteOpenHelper {
     public static final String COL_NAME = "name";
     public static final String COL_AMENITY = "amenity";
     public static final String COL_ADDR_TEXT = "addr_text";
+    public static final String COL_KANA = "kana";
 
     /* pref_meta table */
     public static final String TABLE_PREF_META = "pref_meta";
@@ -54,6 +55,7 @@ public class PoiDbHelper extends SQLiteOpenHelper {
     public static final String COL_PLACE_MAX_LAT = "max_lat";
     public static final String COL_PLACE_MIN_LON = "min_lon";
     public static final String COL_PLACE_MAX_LON = "max_lon";
+    public static final String COL_PLACE_KANA = "kana";
 
     public PoiDbHelper(Context context) {
         super(context.getApplicationContext(), DB_NAME, null, DB_VERSION);
@@ -73,6 +75,7 @@ public class PoiDbHelper extends SQLiteOpenHelper {
                 + COL_NAME + " TEXT, "
                 + COL_AMENITY + " TEXT, "
                 + COL_ADDR_TEXT + " TEXT, "
+                + COL_KANA + " TEXT, "
                 + "PRIMARY KEY (" + COL_TYPE + ", " + COL_ID + ")"
                 + ")");
         db.execSQL("CREATE INDEX idx_poi_pref ON " + TABLE_POI + "(" + COL_PREF_CODE + ")");
@@ -105,9 +108,11 @@ public class PoiDbHelper extends SQLiteOpenHelper {
                 + COL_PLACE_MAX_LAT + " REAL NOT NULL, "
                 + COL_PLACE_MIN_LON + " REAL NOT NULL, "
                 + COL_PLACE_MAX_LON + " REAL NOT NULL, "
+                + COL_PLACE_KANA + " TEXT, "
                 + "PRIMARY KEY (" + COL_PLACE_PREF_CODE + ", " + COL_PLACE_NAME + ")"
                 + ")");
         db.execSQL("CREATE INDEX idx_place_name ON " + TABLE_PLACE + "(" + COL_PLACE_NAME + ")");
+        db.execSQL("CREATE INDEX idx_place_kana ON " + TABLE_PLACE + "(" + COL_PLACE_KANA + ")");
     }
 
     @Override
@@ -178,6 +183,11 @@ public class PoiDbHelper extends SQLiteOpenHelper {
             db.execSQL("CREATE INDEX idx_poi_name ON " + TABLE_POI + "(" + COL_NAME + ")");
             db.execSQL("CREATE INDEX idx_poi_amenity ON " + TABLE_POI + "(" + COL_AMENITY + ")");
             db.execSQL("CREATE INDEX idx_poi_addr ON " + TABLE_POI + "(" + COL_ADDR_TEXT + ")");
+        }
+        if (oldVersion < 9) {
+            db.execSQL("ALTER TABLE " + TABLE_POI + " ADD COLUMN " + COL_KANA + " TEXT");
+            db.execSQL("ALTER TABLE " + TABLE_PLACE + " ADD COLUMN " + COL_PLACE_KANA + " TEXT");
+            db.execSQL("CREATE INDEX idx_place_kana ON " + TABLE_PLACE + "(" + COL_PLACE_KANA + ")");
         }
     }
 }
