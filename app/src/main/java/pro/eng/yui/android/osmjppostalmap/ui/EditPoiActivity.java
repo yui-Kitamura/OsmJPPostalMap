@@ -768,11 +768,11 @@ public class EditPoiActivity extends AppCompatActivity {
 
             int maxDist = getMaxDistance();
             if (lastLocation == null || lastLocation.getAccuracy() > maxDist || distance > maxDist) {
-                String msg = getString(R.string.error_location_required);
+                String tooFarMsg = getString(R.string.error_location_required);
                 if (lastLocation != null) {
-                    msg += String.format("\n(現在の精度: %.1fm, 距離: %.1fm)", lastLocation.getAccuracy(), distance);
+                    tooFarMsg += String.format("\n(現在の精度: %.1fm, 距離: %.1fm)", lastLocation.getAccuracy(), distance);
                 }
-                showErrorBanner(msg);
+                showErrorBanner(tooFarMsg);
                 return;
             }
 
@@ -877,7 +877,7 @@ public class EditPoiActivity extends AppCompatActivity {
             new MaterialAlertDialogBuilder(this)
                 .setTitle(titleRes)
                 .setMessage(msgRes)
-                .setPositiveButton(btnRes, (dialog, which) -> {
+                .setPositiveButton(btnRes, (d, which) -> {
                     if (btnSave != null) {
                         btnSave.setEnabled(false);
                     }
@@ -1253,8 +1253,8 @@ public class EditPoiActivity extends AppCompatActivity {
 
             String status = getString(R.string.location_status_tracking, distance);
             if (location.getAccuracy() > getMaxDistance()) {
-                status += getString(R.string.location_status_low_accuracy);
-                textLocationStatus.setTextColor(getThemeColor(androidx.appcompat.R.attr.colorPrimary));
+                status += getString(R.string.location_status_low_accuracy, getMaxDistance());
+                textLocationStatus.setTextColor(ContextCompat.getColor(this, R.color.brand_red));
             } else {
                 textLocationStatus.setTextColor(getThemeColor(R.attr.colorEditable));
             }
