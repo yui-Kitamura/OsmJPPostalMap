@@ -108,6 +108,20 @@ public class EditPoiActivity extends AppCompatActivity {
         return typedValue.data;
     }
 
+    private int getMaxDistance() {
+        if (targetPoi != null) {
+            String amenity = targetPoi.getTag("amenity");
+            if ("post_office".equals(amenity)) {
+                if ("way".equals(poiType)) {
+                    return 100;
+                } else {
+                    return 75;
+                }
+            }
+        }
+        return 50;
+    }
+
     private class ReticleMarker extends Marker {
         private final android.graphics.Paint paint;
 
@@ -328,8 +342,9 @@ public class EditPoiActivity extends AppCompatActivity {
             if (lastLocation != null) {
                 float[] results = new float[1];
                 Location.distanceBetween(originalLat, originalLon, lastLocation.getLatitude(), lastLocation.getLongitude(), results);
-                if (!isNew && results[0] > 50) {
-                    Toast.makeText(this, "現在地が初期位置から50m以上離れているため移動できません", Toast.LENGTH_SHORT).show();
+                int maxDist = getMaxDistance();
+                if (!isNew && results[0] > maxDist) {
+                    Toast.makeText(this, "現在地が初期位置から" + maxDist + "m以上離れているため移動できません", Toast.LENGTH_SHORT).show();
                     return;
                 }
                 GeoPoint gp = new GeoPoint(lastLocation);
@@ -751,12 +766,13 @@ public class EditPoiActivity extends AppCompatActivity {
             }
             float distance = lastLocation != null ? results[0] : Float.MAX_VALUE;
 
-            if (lastLocation == null || lastLocation.getAccuracy() > 50 || distance > 50) {
-                String msg = getString(R.string.error_location_required);
+            int maxDist = getMaxDistance();
+            if (lastLocation == null || lastLocation.getAccuracy() > maxDist || distance > maxDist) {
+                String tooFarMsg = getString(R.string.error_location_required);
                 if (lastLocation != null) {
-                    msg += String.format("\n(現在の精度: %.1fm, 距離: %.1fm)", lastLocation.getAccuracy(), distance);
+                    tooFarMsg += String.format("\n(現在の精度: %.1fm, 距離: %.1fm)", lastLocation.getAccuracy(), distance);
                 }
-                showErrorBanner(msg);
+                showErrorBanner(tooFarMsg);
                 return;
             }
 
@@ -861,7 +877,7 @@ public class EditPoiActivity extends AppCompatActivity {
             new MaterialAlertDialogBuilder(this)
                 .setTitle(titleRes)
                 .setMessage(msgRes)
-                .setPositiveButton(btnRes, (dialog, which) -> {
+                .setPositiveButton(btnRes, (d, which) -> {
                     if (btnSave != null) {
                         btnSave.setEnabled(false);
                     }
@@ -1215,11 +1231,12 @@ public class EditPoiActivity extends AppCompatActivity {
         GeoPoint center = (GeoPoint) map.getMapCenter();
         float[] results = new float[1];
         Location.distanceBetween(originalLat, originalLon, center.getLatitude(), center.getLongitude(), results);
-        if (results[0] > 50) {
+        int maxDist = getMaxDistance();
+        if (results[0] > maxDist) {
             isResettingCenter = true;
             map.getController().setCenter(new GeoPoint(originalLat, originalLon));
             isResettingCenter = false;
-            Toast.makeText(EditPoiActivity.this, "50m以上の移動は認められません", Toast.LENGTH_SHORT).show();
+            Toast.makeText(EditPoiActivity.this, maxDist + "m以上の移動は認められません", Toast.LENGTH_SHORT).show();
             return true;
         }
         marker.setPosition(center);
@@ -1234,10 +1251,19 @@ public class EditPoiActivity extends AppCompatActivity {
             Location.distanceBetween(markerPos.getLatitude(), markerPos.getLongitude(), location.getLatitude(), location.getLongitude(), results);
             float distance = results[0];
 
+            int maxDist = getMaxDistance();
             String status = getString(R.string.location_status_tracking, distance);
-            if (location.getAccuracy() > 50) {
-                status += getString(R.string.location_status_low_accuracy);
-                textLocationStatus.setTextColor(getThemeColor(androidx.appcompat.R.attr.colorPrimary));
+            boolean isAccuracyNg = location.getAccuracy() > maxDist;
+            boolean isDistanceNg = distance > maxDist;
+
+            if (isAccuracyNg || isDistanceNg) {
+                if (isAccuracyNg) {
+                    status += getString(R.string.location_status_low_accuracy, maxDist);
+                }
+                if (isDistanceNg) {
+                    status += getString(R.string.location_status_too_far, maxDist);
+                }
+                textLocationStatus.setTextColor(ContextCompat.getColor(this, R.color.brand_red));
             } else {
                 textLocationStatus.setTextColor(getThemeColor(R.attr.colorEditable));
             }

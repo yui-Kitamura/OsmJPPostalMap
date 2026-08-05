@@ -39,7 +39,8 @@
     <string name="label_special_note">特殊パターン (note)</string>
     <string name="label_special_note_postoffice">特殊営業時間パターン (note)</string>
     <string name="label_special_note_postbox">特殊収集時刻パターン (note)</string>
-    <string name="location_status_low_accuracy"> (精度不足: 50m以内が必要)</string>
+    <string name="location_status_low_accuracy"> (精度不足: %1$dm以内が必要)</string>
+    <string name="location_status_too_far"> (距離超過: %1$dm以内が必要)</string>
     <string name="location_status_fetching">位置情報を取得中...</string>
     <string name="error_location_not_found">現在地を取得できていません</string>
     <string name="data_none">データなし</string>
