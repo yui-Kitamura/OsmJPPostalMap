@@ -891,21 +891,26 @@ public class MainActivity extends AppCompatActivity {
         if (firstLocation && !initialLocationSet) {
             performInitialGpsZoom(location);
         } else if (firstLocation && initialLocationSet) {
-            // すでに前回の位置が復旧されている場合、アニメーションさせずにGPS位置へ即時移動してPOIを更新する
-            if (gpsProgress != null) gpsProgress.setVisibility(View.VISIBLE);
-            gpsZoomCenter = mapTargetFor(location);
-            gpsZoomBase = map.getZoomLevelDouble();
-            // 現在のズームが広域すぎる場合は、GPS位置への移動後の最低ズームを制限する
-            gpsZoomLimit = Math.max(15.0, map.getZoomLevelDouble());
-            gpsZoomAdjustmentPending = true;
+            // すでに前回の位置が復旧されている場合
+            GeoPoint restoredCenter = new GeoPoint(map.getMapCenter().getLatitude(), map.getMapCenter().getLongitude());
+            GeoPoint gpsPoint = new GeoPoint(location);
+            double dist = restoredCenter.distanceToAsDouble(gpsPoint);
 
-            map.getController().setCenter(gpsZoomCenter);
-            updatePois(true, UpdateMode.GPS_OR_INITIAL);
+            // ズームレベルに応じたしきい値（onResume/onScrollと同様）
+            double threshold = 100.0 * Math.pow(2, 18 - map.getZoomLevelDouble());
 
-            // 保存された位置と現在地が非常に近い（たとえば1km以内）なら追従を開始する
-            GeoPoint currentCenter = new GeoPoint(map.getMapCenter().getLatitude(), map.getMapCenter().getLongitude());
-            if (new GeoPoint(location).distanceToAsDouble(currentCenter) < 1000) {
+            // 追従モードだったか、あるいは現在地に非常に近い場合は追従を（再）開始する
+            if (isFollowingGps || dist < threshold) {
                 isFollowingGps = true;
+                if (gpsProgress != null) gpsProgress.setVisibility(View.VISIBLE);
+                gpsZoomCenter = mapTargetFor(location);
+                gpsZoomBase = map.getZoomLevelDouble();
+                // 現在のズームが広域すぎる場合は、GPS位置への移動後の最低ズームを制限する
+                gpsZoomLimit = Math.max(15.0, map.getZoomLevelDouble());
+                gpsZoomAdjustmentPending = true;
+
+                map.getController().setCenter(gpsZoomCenter);
+                updatePois(true, UpdateMode.GPS_OR_INITIAL);
             }
         } else if (isFollowingGps) {
             map.getController().animateTo(new GeoPoint(location));
