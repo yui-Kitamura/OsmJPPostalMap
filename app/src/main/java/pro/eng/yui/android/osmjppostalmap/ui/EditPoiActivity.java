@@ -1251,9 +1251,18 @@ public class EditPoiActivity extends AppCompatActivity {
             Location.distanceBetween(markerPos.getLatitude(), markerPos.getLongitude(), location.getLatitude(), location.getLongitude(), results);
             float distance = results[0];
 
+            int maxDist = getMaxDistance();
             String status = getString(R.string.location_status_tracking, distance);
-            if (location.getAccuracy() > getMaxDistance()) {
-                status += getString(R.string.location_status_low_accuracy, getMaxDistance());
+            boolean isAccuracyNg = location.getAccuracy() > maxDist;
+            boolean isDistanceNg = distance > maxDist;
+
+            if (isAccuracyNg || isDistanceNg) {
+                if (isAccuracyNg) {
+                    status += getString(R.string.location_status_low_accuracy, maxDist);
+                }
+                if (isDistanceNg) {
+                    status += getString(R.string.location_status_too_far, maxDist);
+                }
                 textLocationStatus.setTextColor(ContextCompat.getColor(this, R.color.brand_red));
             } else {
                 textLocationStatus.setTextColor(getThemeColor(R.attr.colorEditable));
