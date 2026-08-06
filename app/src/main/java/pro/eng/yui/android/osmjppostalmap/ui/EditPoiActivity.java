@@ -1,6 +1,7 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -86,6 +87,8 @@ public class EditPoiActivity extends AppCompatActivity {
     private OsmPoi targetPoi;
     private Button btnSave;
     private TextView addressValue;
+    private TextView kanaValue;
+    private View layoutKanaEdit;
     private TextView textLocationStatus;
     private TextView topBanner;
     private TextInputEditText editSpecialNote;
@@ -320,6 +323,18 @@ public class EditPoiActivity extends AppCompatActivity {
         }
         addressValue = findViewById(R.id.edit_address_value);
         View btnAddressEdit = findViewById(R.id.btn_address_edit);
+
+        kanaValue = findViewById(R.id.edit_kana_value);
+        layoutKanaEdit = findViewById(R.id.layout_kana_edit);
+        View btnKanaEdit = findViewById(R.id.btn_kana_edit);
+
+        if ("post_office".equals(targetPoi.getTag("amenity"))) {
+            layoutKanaEdit.setVisibility(View.VISIBLE);
+            updateKanaDisplay();
+            btnKanaEdit.setOnClickListener(v -> showKanaEditDialog());
+        } else {
+            layoutKanaEdit.setVisibility(View.GONE);
+        }
 
         editSpecialNote = findViewById(R.id.edit_special_note_value);
         Util.addNumberFilter(editSpecialNote);
@@ -893,6 +908,42 @@ public class EditPoiActivity extends AppCompatActivity {
     private void showAddress() {
         String text = JpPostalUtil.getAddressText(targetPoi.getTags());
         addressValue.setText(text.isEmpty() ? getString(R.string.data_none) : text);
+    }
+
+    private void updateKanaDisplay() {
+        String reading = Util.getKana(targetPoi);
+        if (reading != null && !reading.isEmpty()) {
+            kanaValue.setText("(" + reading + ")");
+        } else {
+            kanaValue.setText("(読み仮名なし)");
+        }
+    }
+
+    private void showKanaEditDialog() {
+        String currentReading = Util.getKana(targetPoi);
+        if (currentReading == null) currentReading = "";
+
+        EditText input = new EditText(this);
+        input.setText(currentReading);
+        input.setHint("例: とうきょうちゅうおうゆうびんきょく");
+        input.setSingleLine();
+
+        new AlertDialog.Builder(this)
+                .setTitle("読み仮名の編集")
+                .setView(input)
+                .setPositiveButton(R.string.save, (dialog, which) -> {
+                    String newReading = input.getText().toString().trim();
+                    if (newReading.isEmpty()) {
+                        targetPoi.getTags().remove(Util.TAG_NAME_KANA);
+                    } else {
+                        targetPoi.getTags().put(Util.TAG_NAME_KANA, newReading);
+                    }
+                    // 存在しないものとして扱うため、旧タグがあれば削除
+                    targetPoi.getTags().remove("kana");
+                    updateKanaDisplay();
+                })
+                .setNegativeButton(R.string.btn_close, null)
+                .show();
     }
 
     private void saveChanges() {

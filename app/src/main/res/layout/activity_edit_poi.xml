@@ -54,6 +54,32 @@
             android:textStyle="bold"
             android:layout_marginBottom="8dp" />
 
+        <LinearLayout
+            android:id="@+id/layout_kana_edit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/edit_kana_value"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="14sp"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <ImageButton
+                android:id="@+id/btn_kana_edit"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="読み仮名を編集"
+                android:src="@android:drawable/ic_menu_edit" />
+        </LinearLayout>
+
         <TextView
             android:id="@+id/text_location_status"
             android:layout_width="match_parent"

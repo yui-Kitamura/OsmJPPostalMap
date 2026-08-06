@@ -35,6 +35,7 @@ import java.util.concurrent.Executors;
 
 import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
+import pro.eng.yui.android.osmjppostalmap.domain.Util;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
@@ -267,11 +268,19 @@ public class SearchDialog extends DialogFragment {
 
             void bind(final SearchResult result) {
                 String q = currentQuery != null ? currentQuery.trim() : "";
+                
+                CharSequence displayTitle;
+                if (result.getType() == SearchResult.Type.POST_OFFICE && result.getNameJaHira() != null) {
+                    displayTitle = Util.getRubySpannable(result.getTitle(), result.getNameJaHira(), title.getTextSize());
+                } else {
+                    displayTitle = result.getTitle();
+                }
+
                 if (!q.isEmpty()) {
-                    title.setText(highlightText(result.getTitle(), q));
+                    title.setText(highlightText(displayTitle, q));
                     subtitle.setText(highlightText(result.getSubTitle(), q));
                 } else {
-                    title.setText(result.getTitle());
+                    title.setText(displayTitle);
                     subtitle.setText(result.getSubTitle());
                 }
 

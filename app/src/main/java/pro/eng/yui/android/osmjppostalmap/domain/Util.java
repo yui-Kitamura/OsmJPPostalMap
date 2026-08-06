@@ -1,19 +1,28 @@
 package pro.eng.yui.android.osmjppostalmap.domain;
 
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.text.Editable;
 import android.text.InputFilter;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
+import android.text.style.AbsoluteSizeSpan;
+import android.text.style.StyleSpan;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.EditText;
 import androidx.core.content.ContextCompat;
 import pro.eng.yui.android.osmjppostalmap.R;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
 /**
  * 共通ユーティリティクラス。
  */
 public class Util {
+
+    public static final String TAG_NAME_KANA = "name:ja-Hira";
+
 
     /** 全角数字を半角数字に変換するフィルタ。 */
     public static final InputFilter NUMBER_CONVERSION_FILTER = (source, start, end, dest, dstart, dend) -> {
@@ -152,8 +161,14 @@ public class Util {
         };
 
         et.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
             @Override
             public void afterTextChanged(Editable s) {
                 String text = s.toString();
@@ -188,7 +203,41 @@ public class Util {
             }
             return false;
         });
+    }
+    
+    /**
+     * ルビ（読み仮名）付きの Spannable を作成する。
+     * HTML の <ruby> っぽく表示するため、読み仮名を上に小さく表示しようとするが、
+     * 標準の TextView では難しいため、"漢字(かんじ)" 形式で読み仮名を小さく表示する Spannable を返す。
+     * @param base 漢字などのベース文字列
+     * @param ruby 読み仮名
+     * @param baseTextSize ベース文字列のサイズ(px)
+     * @return Spannable
+     */
+    public static CharSequence getRubySpannable(String base, String ruby, float baseTextSize) {
+        if (ruby == null || ruby.isEmpty()) return base;
+        SpannableStringBuilder ssb = new SpannableStringBuilder();
+        ssb.append(base);
+        int start = ssb.length();
+        ssb.append("(").append(ruby).append(")");
+        int end = ssb.length();
+        
+        // 読み仮名部分を小さくする (ベースの 60% 程度)
+        ssb.setSpan(new AbsoluteSizeSpan((int)(baseTextSize * 0.6f)), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        // 読み仮名部分を細字にする
+        ssb.setSpan(new StyleSpan(Typeface.NORMAL), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        
+        return ssb;
+    }
 
-        updateIcon.run();
+    /**
+     * OsmPoi から読み仮名を取得する。
+     * name:ja-Hira タグを優先し、存在しない場合はキャッシュ用の kana タグをフォールバックとして使用する。
+     * @param poi 対象の POI
+     * @return 読み仮名。存在しない場合は null。
+     */
+    public static String getKana(OsmPoi poi) {
+        if (poi == null) return null;
+        return poi.getTag(TAG_NAME_KANA);
     }
 }
