@@ -3,6 +3,8 @@ package pro.eng.yui.android.osmjppostalmap.search;
 import android.location.Location;
 import java.util.ArrayList;
 import java.util.List;
+
+import pro.eng.yui.android.osmjppostalmap.domain.Util;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
 import pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser;

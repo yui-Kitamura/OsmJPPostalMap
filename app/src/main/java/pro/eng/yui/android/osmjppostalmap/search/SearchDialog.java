@@ -269,9 +269,9 @@ public class SearchDialog extends DialogFragment {
             void bind(final SearchResult result) {
                 String q = currentQuery != null ? currentQuery.trim() : "";
                 
-                CharSequence displayTitle;
+                String displayTitle;
                 if (result.getType() == SearchResult.Type.POST_OFFICE && result.getNameJaHira() != null) {
-                    displayTitle = Util.getRubySpannable(result.getTitle(), result.getNameJaHira(), title.getTextSize());
+                    displayTitle = Util.getRubySpannable(result.getTitle(), result.getNameJaHira(), title.getTextSize()).toString();
                 } else {
                     displayTitle = result.getTitle();
                 }
