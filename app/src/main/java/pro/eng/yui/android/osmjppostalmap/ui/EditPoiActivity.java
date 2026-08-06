@@ -19,6 +19,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -928,20 +929,29 @@ public class EditPoiActivity extends AppCompatActivity {
         String currentReading = Util.getKana(targetPoi);
         if (currentReading == null) currentReading = "";
 
+        int margin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16, getResources().getDisplayMetrics());
+        
+        FrameLayout container = new FrameLayout(this);
         TextInputLayout layout = new TextInputLayout(this);
-        layout.setHint("例: たとみゆうびんきょく");
+        layout.setHint("例: とうきょうちゅうおうゆうびんきょく");
         layout.setErrorEnabled(true);
-        int padding = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16, getResources().getDisplayMetrics());
-        layout.setPadding(padding, padding / 2, padding, 0);
 
         TextInputEditText input = new TextInputEditText(this);
         input.setText(currentReading);
         input.setSingleLine();
         layout.addView(input);
 
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+        lp.setMargins(margin, margin / 2, margin, 0);
+        layout.setLayoutParams(lp);
+        container.addView(layout);
+
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle("読み仮名の編集")
-                .setView(layout)
+                .setView(container)
                 .setPositiveButton(R.string.save, null)
                 .setNegativeButton(R.string.cancel, null)
                 .create();
