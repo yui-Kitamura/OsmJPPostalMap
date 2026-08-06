@@ -484,7 +484,12 @@ public class EditPoiActivity extends AppCompatActivity {
             targetPoi.getTags().remove("ref");
         }
 
-        title.setText(isPostBox ? (isNew ? getString(R.string.title_add_postbox) : getString(R.string.title_edit_postbox)) : getString(R.string.title_edit_postoffice));
+        String name = targetPoi.getTag("name");
+        if (name != null && !name.isEmpty()) {
+            title.setText(name + "の編集");
+        } else {
+            title.setText(isPostBox ? (isNew ? getString(R.string.title_add_postbox) : getString(R.string.title_edit_postbox)) : getString(R.string.title_edit_postoffice));
+        }
 
         // 住所は addr:* の集合なので専用ダイアログで編集し、結果を targetPoi のタグへ直接書き戻す。
         // saveChanges() は targetPoi.getTags() を写して送信するため、これで保存対象に乗る
@@ -913,9 +918,9 @@ public class EditPoiActivity extends AppCompatActivity {
     private void updateKanaDisplay() {
         String reading = Util.getKana(targetPoi);
         if (reading != null && !reading.isEmpty()) {
-            kanaValue.setText("(" + reading + ")");
+            kanaValue.setText(reading);
         } else {
-            kanaValue.setText("(読み仮名なし)");
+            kanaValue.setText("読み仮名なし");
         }
     }
 
