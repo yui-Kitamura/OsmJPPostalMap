@@ -236,7 +236,7 @@ public class AddressEditDialog {
         Button collapseButton = view.findViewById(R.id.address_collapse_hierarchy);
         LinearLayout hierarchy = view.findViewById(R.id.address_hierarchy);
         Util.addNumberFilter(fullInput);
-        applyPlaceholderStyle(context, fullInput);
+        Util.applyPlaceholderStyle(context, fullInput);
 
         String currentLabel = current.toString();
         currentText.setText(currentLabel.isEmpty() ? "データなし" : currentLabel);
@@ -375,7 +375,7 @@ public class AddressEditDialog {
         EditText input = new EditText(context);
         input.setHint(field.tagKey);
         Util.addNumberFilter(input);
-        applyPlaceholderStyle(context, input);
+        Util.applyPlaceholderStyle(context, input);
         input.setTextSize(14f);
         input.setSingleLine(true);
         input.setText(Util.normalizeNumber(field.getter.apply(current)));
@@ -387,22 +387,6 @@ public class AddressEditDialog {
         row.addView(labelView);
         row.addView(input);
         return row;
-    }
-
-    /**
-     * placeholder を斜体＋淡色にして、入力済みの値と視覚的に区別する。
-     *
-     * <p>{@code android:textStyle="italic"} は入力済みの文字まで斜体にしてしまうため、
-     * ヒント文字列に {@link StyleSpan} を張って placeholder だけを斜体にする。</p>
-     */
-    private static void applyPlaceholderStyle(Context context, EditText input) {
-        CharSequence hint = input.getHint();
-        if (hint == null) { return; }
-        SpannableString styled = new SpannableString(hint.toString());
-        styled.setSpan(new StyleSpan(Typeface.ITALIC), 0, styled.length(),
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        input.setHint(styled);
-        input.setHintTextColor(ContextCompat.getColor(context, R.color.input_placeholder));
     }
 
     /** 階層の入力欄から JpAddress を組み立てる。検証にも保存にも使う。 */

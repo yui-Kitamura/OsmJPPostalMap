@@ -10,8 +10,11 @@ import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.TypedValue;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.GradientDrawable;
 import pro.eng.yui.android.osmjppostalmap.domain.Util;
@@ -21,6 +24,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TableLayout;
@@ -929,25 +933,36 @@ public class EditPoiActivity extends AppCompatActivity {
         String currentReading = Util.getKana(targetPoi);
         if (currentReading == null) currentReading = "";
 
-        int margin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16, getResources().getDisplayMetrics());
+        // AddressEditDialog と同じスタイルで構築
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        int padding = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16, getResources().getDisplayMetrics());
+        container.setPadding(padding, padding / 2, padding, 0);
+
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
         
-        FrameLayout container = new FrameLayout(this);
-        TextInputLayout layout = new TextInputLayout(this);
-        layout.setHint("例: とうきょうちゅうおうゆうびんきょく");
-        layout.setErrorEnabled(true);
+        TextView labelView = new TextView(this);
+        labelView.setText("読み仮名");
+        labelView.setTextSize(13f);
+        labelView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        TextInputEditText input = new TextInputEditText(this);
+        EditText input = new EditText(this);
+        // 「例: 」を外してプレースホルダーにする
+        input.setHint("とうきょうちゅうおうゆうびんきょく");
+        Util.applyPlaceholderStyle(this, input);
+        input.setTextSize(14f);
+        input.setSingleLine(true);
         input.setText(currentReading);
-        input.setSingleLine();
-        layout.addView(input);
+        input.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 2f));
 
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-        );
-        lp.setMargins(margin, margin / 2, margin, 0);
-        layout.setLayoutParams(lp);
-        container.addView(layout);
+        row.addView(labelView);
+        row.addView(input);
+        container.addView(row);
+
+        // バリデーション用にデフォルトの背景色を保持
+        ColorStateList defaultTint = input.getBackgroundTintList();
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle("読み仮名の編集")
@@ -964,10 +979,10 @@ public class EditPoiActivity extends AppCompatActivity {
             String text = input.getText().toString().trim();
             boolean isValid = Util.isValidReading(text);
             if (isValid) {
-                layout.setError(null);
+                input.setBackgroundTintList(defaultTint);
                 saveButton.setEnabled(true);
             } else {
-                layout.setError(getString(R.string.error_kana_format));
+                input.setBackgroundTintList(ColorStateList.valueOf(Color.RED));
                 saveButton.setEnabled(false);
             }
         };

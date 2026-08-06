@@ -1,11 +1,14 @@
 package pro.eng.yui.android.osmjppostalmap.domain;
 
+import android.content.Context;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.Spannable;
+import android.text.SpannableString;
 import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.TextWatcher;
 import android.text.style.AbsoluteSizeSpan;
 import android.text.style.StyleSpan;
@@ -247,5 +250,23 @@ public class Util {
     public static boolean isValidReading(String s) {
         if (s == null || s.isEmpty()) return true;
         return s.matches("^[\\u3041-\\u309F\\u30FC]*$");
+    }
+
+    /**
+     * placeholder を斜体＋淡色にして、入力済みの値と視覚的に区別する。
+     *
+     * <p>{@code android:textStyle="italic"} は入力済みの文字まで斜体にしてしまうため、
+     * ヒント文字列に {@link StyleSpan} を張って placeholder だけを斜体にする。</p>
+     * @param context  コンテキスト
+     * @param input    対象の EditText
+     */
+    public static void applyPlaceholderStyle(Context context, EditText input) {
+        CharSequence hint = input.getHint();
+        if (hint == null) { return; }
+        SpannableString styled = new SpannableString(hint.toString());
+        styled.setSpan(new StyleSpan(Typeface.ITALIC), 0, styled.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        input.setHint(styled);
+        input.setHintTextColor(ContextCompat.getColor(context, R.color.input_placeholder));
     }
 }
