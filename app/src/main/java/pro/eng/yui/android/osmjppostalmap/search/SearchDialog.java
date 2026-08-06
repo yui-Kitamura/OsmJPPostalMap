@@ -35,6 +35,7 @@ import java.util.concurrent.Executors;
 
 import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
+import pro.eng.yui.android.osmjppostalmap.domain.Util;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
@@ -267,11 +268,19 @@ public class SearchDialog extends DialogFragment {
 
             void bind(final SearchResult result) {
                 String q = currentQuery != null ? currentQuery.trim() : "";
+                
+                String displayTitle;
+                if (result.getType() == SearchResult.Type.POST_OFFICE && result.getNameJaHira() != null) {
+                    displayTitle = Util.getRubySpannable(result.getTitle(), result.getNameJaHira(), title.getTextSize()).toString();
+                } else {
+                    displayTitle = result.getTitle();
+                }
+
                 if (!q.isEmpty()) {
-                    title.setText(highlightText(result.getTitle(), q));
+                    title.setText(highlightText(displayTitle, q));
                     subtitle.setText(highlightText(result.getSubTitle(), q));
                 } else {
-                    title.setText(result.getTitle());
+                    title.setText(displayTitle);
                     subtitle.setText(result.getSubTitle());
                 }
 
@@ -319,13 +328,15 @@ public class SearchDialog extends DialogFragment {
                     });
                 }
             }
-            private CharSequence highlightText(String text, String query) {
+            private CharSequence highlightText(CharSequence text, String query) {
                 if (text == null || query == null || query.isEmpty()) return text;
                 SpannableString spannable = new SpannableString(text);
-                int start = text.toLowerCase().indexOf(query.toLowerCase());
+                String str = text.toString().toLowerCase();
+                String q = query.toLowerCase();
+                int start = str.indexOf(q);
                 while (start >= 0) {
                     spannable.setSpan(new StyleSpan(Typeface.BOLD), start, start + query.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    start = text.toLowerCase().indexOf(query.toLowerCase(), start + query.length());
+                    start = str.indexOf(q, start + query.length());
                 }
                 return spannable;
             }

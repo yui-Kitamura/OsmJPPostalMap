@@ -1,19 +1,31 @@
 package pro.eng.yui.android.osmjppostalmap.domain;
 
+import android.content.Context;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.text.Editable;
 import android.text.InputFilter;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 import android.text.TextWatcher;
+import android.text.style.AbsoluteSizeSpan;
+import android.text.style.StyleSpan;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.EditText;
 import androidx.core.content.ContextCompat;
 import pro.eng.yui.android.osmjppostalmap.R;
+import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
 /**
  * 共通ユーティリティクラス。
  */
 public class Util {
+
+    public static final String TAG_NAME_KANA = "name:ja-Hira";
+
 
     /** 全角数字を半角数字に変換するフィルタ。 */
     public static final InputFilter NUMBER_CONVERSION_FILTER = (source, start, end, dest, dstart, dend) -> {
@@ -152,8 +164,14 @@ public class Util {
         };
 
         et.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
             @Override
             public void afterTextChanged(Editable s) {
                 String text = s.toString();
@@ -188,7 +206,67 @@ public class Util {
             }
             return false;
         });
+    }
+    
+    /**
+     * ルビ（読み仮名）付きの Spannable を作成する。
+     * HTML の <ruby> っぽく表示するため、読み仮名を上に小さく表示する 2 行組みの Spannable を返す。
+     * @param base 漢字などのベース文字列
+     * @param ruby 読み仮名
+     * @param baseTextSize ベース文字列のサイズ(px)
+     * @return Spannable
+     */
+    public static CharSequence getRubySpannable(String base, String ruby, float baseTextSize) {
+        if (ruby == null || ruby.isEmpty()) return base;
+        SpannableStringBuilder ssb = new SpannableStringBuilder();
+        ssb.append(ruby).append("\n").append(base);
+        
+        int rubyEnd = ruby.length();
+        
+        // 読み仮名部分を小さくする (ベースの 60% 程度)
+        ssb.setSpan(new AbsoluteSizeSpan((int)(baseTextSize * 0.6f)), 0, rubyEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        // 読み仮名部分を細字にする
+        ssb.setSpan(new StyleSpan(Typeface.NORMAL), 0, rubyEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        
+        return ssb;
+    }
 
-        updateIcon.run();
+    /**
+     * OsmPoi から読み仮名を取得する。
+     * name:ja-Hira タグを優先し、存在しない場合はキャッシュ用の kana タグをフォールバックとして使用する。
+     * @param poi 対象の POI
+     * @return 読み仮名。存在しない場合は null。
+     */
+    public static String getKana(OsmPoi poi) {
+        if (poi == null) return null;
+        return poi.getTag(TAG_NAME_KANA);
+    }
+
+    /**
+     * 読み仮名が有効かどうかを判定する（ひらがなと長音符のみ）。
+     * @param s 判定対象文字列
+     * @return 有効な場合は true
+     */
+    public static boolean isValidReading(String s) {
+        if (s == null || s.isEmpty()) return true;
+        return s.matches("^[\\u3041-\\u309F\\u30FC]*$");
+    }
+
+    /**
+     * placeholder を斜体＋淡色にして、入力済みの値と視覚的に区別する。
+     *
+     * <p>{@code android:textStyle="italic"} は入力済みの文字まで斜体にしてしまうため、
+     * ヒント文字列に {@link StyleSpan} を張って placeholder だけを斜体にする。</p>
+     * @param context  コンテキスト
+     * @param input    対象の EditText
+     */
+    public static void applyPlaceholderStyle(Context context, EditText input) {
+        CharSequence hint = input.getHint();
+        if (hint == null) { return; }
+        SpannableString styled = new SpannableString(hint.toString());
+        styled.setSpan(new StyleSpan(Typeface.ITALIC), 0, styled.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        input.setHint(styled);
+        input.setHintTextColor(ContextCompat.getColor(context, R.color.input_placeholder));
     }
 }

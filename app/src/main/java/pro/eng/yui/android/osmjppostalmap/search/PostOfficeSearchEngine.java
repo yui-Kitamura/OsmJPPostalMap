@@ -3,6 +3,8 @@ package pro.eng.yui.android.osmjppostalmap.search;
 import android.location.Location;
 import java.util.ArrayList;
 import java.util.List;
+
+import pro.eng.yui.android.osmjppostalmap.domain.Util;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
 import pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser;
@@ -79,8 +81,9 @@ public class PostOfficeSearchEngine implements SearchEngine {
             SearchResult.Type type = "post_box".equals(amenity) ? SearchResult.Type.POST_BOX : SearchResult.Type.POST_OFFICE;
             String displayTitle = (name != null) ? name : ("post_box".equals(amenity) ? "郵便ポスト" : "無名郵便局");
             String subTitle = !address.isEmpty() ? address : ("post_box".equals(amenity) ? "郵便ポスト" : "郵便局");
+            String reading = Util.getKana(poi);
 
-            SearchResult result = new SearchResult(type, displayTitle, subTitle, poi.getLat(), poi.getLon(), weight, poi);
+            SearchResult result = new SearchResult(type, displayTitle, subTitle, reading, poi.getLat(), poi.getLon(), weight, poi);
             
             SimpleScheduleParser parser = new SimpleScheduleParser();
             long now = System.currentTimeMillis();

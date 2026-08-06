@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Locale;
 
 import pro.eng.yui.android.osmjppostalmap.R;
+import pro.eng.yui.android.osmjppostalmap.domain.Util;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
 import pro.eng.yui.android.osmjppostalmap.ui.EditPoiActivity;
 import pro.eng.yui.android.osmjppostalmap.ui.MainActivity;
@@ -81,7 +82,17 @@ public class PoiDetailsDialog {
         
         View titleView = LayoutInflater.from(context).inflate(R.layout.dialog_poi_details_title, null);
         TextView titleText = titleView.findViewById(R.id.dialog_title_text);
-        titleText.setText(isPostBox ? context.getString(R.string.amenity_postbox) : poi.getTag("name"));
+        
+        String name = poi.getTag("name");
+        String reading = Util.getKana(poi);
+        if (isPostBox) {
+            titleText.setText(R.string.amenity_postbox);
+        } else if (reading != null && !reading.isEmpty()) {
+            titleText.setText(Util.getRubySpannable(name, reading, titleText.getTextSize()));
+        } else {
+            titleText.setText(name);
+        }
+        
         ImageButton openOsmButton = titleView.findViewById(R.id.dialog_open_osm);
 
         openOsmButton.setOnClickListener(v -> {

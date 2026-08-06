@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteDatabase;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import pro.eng.yui.android.osmjppostalmap.domain.Util;
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -323,7 +324,7 @@ public class PoiLocalDataSource {
                         v.put(PoiDbHelper.COL_NAME, tags.get("name"));
                         v.put(PoiDbHelper.COL_AMENITY, tags.get("amenity"));
                         v.put(PoiDbHelper.COL_ADDR_TEXT, JpPostalUtil.getAddressText(tags));
-                        v.put(PoiDbHelper.COL_KANA, tags.get("kana"));
+                        v.put(PoiDbHelper.COL_KANA, Util.getKana(poi));
                         db.update(PoiDbHelper.TABLE_POI, v,
                                 PoiDbHelper.COL_TYPE + " = ? AND " + PoiDbHelper.COL_ID + " = ?",
                                 new String[]{poi.getType(), String.valueOf(poi.getId())});
@@ -476,7 +477,7 @@ public class PoiLocalDataSource {
             v.put(PoiDbHelper.COL_NAME, tags.get("name"));
             v.put(PoiDbHelper.COL_AMENITY, tags.get("amenity"));
             v.put(PoiDbHelper.COL_ADDR_TEXT, JpPostalUtil.getAddressText(tags));
-            v.put(PoiDbHelper.COL_KANA, tags.get("kana"));
+            v.put(PoiDbHelper.COL_KANA, Util.getKana(poi));
         }
         return v;
     }

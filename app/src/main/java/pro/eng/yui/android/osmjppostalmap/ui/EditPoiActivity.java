@@ -1,6 +1,7 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
 import android.Manifest;
+import androidx.appcompat.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -9,8 +10,11 @@ import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.TypedValue;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.GradientDrawable;
 import pro.eng.yui.android.osmjppostalmap.domain.Util;
@@ -18,7 +22,9 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TableLayout;
@@ -86,6 +92,8 @@ public class EditPoiActivity extends AppCompatActivity {
     private OsmPoi targetPoi;
     private Button btnSave;
     private TextView addressValue;
+    private TextView kanaValue;
+    private View layoutKanaEdit;
     private TextView textLocationStatus;
     private TextView topBanner;
     private TextInputEditText editSpecialNote;
@@ -321,6 +329,18 @@ public class EditPoiActivity extends AppCompatActivity {
         addressValue = findViewById(R.id.edit_address_value);
         View btnAddressEdit = findViewById(R.id.btn_address_edit);
 
+        kanaValue = findViewById(R.id.edit_kana_value);
+        layoutKanaEdit = findViewById(R.id.layout_kana_edit);
+        View btnKanaEdit = findViewById(R.id.btn_kana_edit);
+
+        if ("post_office".equals(targetPoi.getTag("amenity"))) {
+            layoutKanaEdit.setVisibility(View.VISIBLE);
+            updateKanaDisplay();
+            btnKanaEdit.setOnClickListener(v -> showKanaEditDialog());
+        } else {
+            layoutKanaEdit.setVisibility(View.GONE);
+        }
+
         editSpecialNote = findViewById(R.id.edit_special_note_value);
         Util.addNumberFilter(editSpecialNote);
         TextInputLayout specialNoteLayout = findViewById(R.id.edit_special_note_layout);
@@ -469,7 +489,12 @@ public class EditPoiActivity extends AppCompatActivity {
             targetPoi.getTags().remove("ref");
         }
 
-        title.setText(isPostBox ? (isNew ? getString(R.string.title_add_postbox) : getString(R.string.title_edit_postbox)) : getString(R.string.title_edit_postoffice));
+        String name = targetPoi.getTag("name");
+        if (name != null && !name.isEmpty()) {
+            title.setText(name + "の編集");
+        } else {
+            title.setText(isPostBox ? (isNew ? getString(R.string.title_add_postbox) : getString(R.string.title_edit_postbox)) : getString(R.string.title_edit_postoffice));
+        }
 
         // 住所は addr:* の集合なので専用ダイアログで編集し、結果を targetPoi のタグへ直接書き戻す。
         // saveChanges() は targetPoi.getTags() を写して送信するため、これで保存対象に乗る
@@ -893,6 +918,89 @@ public class EditPoiActivity extends AppCompatActivity {
     private void showAddress() {
         String text = JpPostalUtil.getAddressText(targetPoi.getTags());
         addressValue.setText(text.isEmpty() ? getString(R.string.data_none) : text);
+    }
+
+    private void updateKanaDisplay() {
+        String reading = Util.getKana(targetPoi);
+        if (reading != null && !reading.isEmpty()) {
+            kanaValue.setText(reading);
+        } else {
+            kanaValue.setText("読み仮名なし");
+        }
+    }
+
+    private void showKanaEditDialog() {
+        String currentReading = Util.getKana(targetPoi);
+        if (currentReading == null) currentReading = "";
+
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        int padding = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16, getResources().getDisplayMetrics());
+        container.setPadding(padding, padding / 2, padding, 0);
+
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+
+        EditText input = new EditText(this);
+        input.setHint("とうきょうちゅうおうゆうびんきょく");
+        Util.applyPlaceholderStyle(this, input);
+        input.setTextSize(14f);
+        input.setSingleLine(true);
+        input.setText(currentReading);
+        input.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 2f));
+
+        row.addView(input);
+        container.addView(row);
+
+        // バリデーション用にデフォルトの背景色を保持
+        ColorStateList defaultTint = input.getBackgroundTintList();
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+                .setTitle("読み仮名の編集")
+                .setView(container)
+                .setPositiveButton(R.string.save, null)
+                .setNegativeButton(R.string.cancel, null)
+                .create();
+
+        dialog.show();
+
+        Button saveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+
+        Runnable validate = () -> {
+            String text = input.getText().toString().trim();
+            boolean isValid = Util.isValidReading(text);
+            if (isValid) {
+                input.setBackgroundTintList(defaultTint);
+                saveButton.setEnabled(true);
+            } else {
+                input.setBackgroundTintList(ColorStateList.valueOf(Color.RED));
+                saveButton.setEnabled(false);
+            }
+        };
+
+        input.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(Editable s) {
+                validate.run();
+            }
+        });
+
+        // 初期検証
+        validate.run();
+
+        saveButton.setOnClickListener(v -> {
+            String newReading = input.getText().toString().trim();
+            if (newReading.isEmpty()) {
+                targetPoi.getTags().remove(Util.TAG_NAME_KANA);
+            } else {
+                targetPoi.getTags().put(Util.TAG_NAME_KANA, newReading);
+            }
+            targetPoi.getTags().remove("kana");
+            updateKanaDisplay();
+            dialog.dismiss();
+        });
     }
 
     private void saveChanges() {
