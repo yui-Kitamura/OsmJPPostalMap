@@ -103,4 +103,5 @@
     <string name="label_limited_service">ゆうゆう窓口</string>
     <string name="available">あり</string>
     <string name="msg_no_holiday_times">祝日の時刻情報がありません</string>
+    <string name="error_kana_format">ひらがなのみ入力可能です</string>
 </resources>

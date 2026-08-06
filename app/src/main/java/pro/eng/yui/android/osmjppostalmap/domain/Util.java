@@ -238,4 +238,14 @@ public class Util {
         if (poi == null) return null;
         return poi.getTag(TAG_NAME_KANA);
     }
+
+    /**
+     * 読み仮名が有効かどうかを判定する（ひらがなと長音符のみ）。
+     * @param s 判定対象文字列
+     * @return 有効な場合は true
+     */
+    public static boolean isValidReading(String s) {
+        if (s == null || s.isEmpty()) return true;
+        return s.matches("^[\\u3041-\\u309F\\u30FC]*$");
+    }
 }

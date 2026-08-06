@@ -1,7 +1,7 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
 import android.Manifest;
-import android.app.AlertDialog;
+import androidx.appcompat.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -928,27 +928,62 @@ public class EditPoiActivity extends AppCompatActivity {
         String currentReading = Util.getKana(targetPoi);
         if (currentReading == null) currentReading = "";
 
-        EditText input = new EditText(this);
-        input.setText(currentReading);
-        input.setHint("例: とうきょうちゅうおうゆうびんきょく");
-        input.setSingleLine();
+        TextInputLayout layout = new TextInputLayout(this);
+        layout.setHint("例: たとみゆうびんきょく");
+        layout.setErrorEnabled(true);
+        int padding = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16, getResources().getDisplayMetrics());
+        layout.setPadding(padding, padding / 2, padding, 0);
 
-        new AlertDialog.Builder(this)
+        TextInputEditText input = new TextInputEditText(this);
+        input.setText(currentReading);
+        input.setSingleLine();
+        layout.addView(input);
+
+        AlertDialog dialog = new MaterialAlertDialogBuilder(this)
                 .setTitle("読み仮名の編集")
-                .setView(input)
-                .setPositiveButton(R.string.save, (dialog, which) -> {
-                    String newReading = input.getText().toString().trim();
-                    if (newReading.isEmpty()) {
-                        targetPoi.getTags().remove(Util.TAG_NAME_KANA);
-                    } else {
-                        targetPoi.getTags().put(Util.TAG_NAME_KANA, newReading);
-                    }
-                    // 存在しないものとして扱うため、旧タグがあれば削除
-                    targetPoi.getTags().remove("kana");
-                    updateKanaDisplay();
-                })
-                .setNegativeButton(R.string.btn_close, null)
-                .show();
+                .setView(layout)
+                .setPositiveButton(R.string.save, null)
+                .setNegativeButton(R.string.cancel, null)
+                .create();
+
+        dialog.show();
+
+        Button saveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+
+        Runnable validate = () -> {
+            String text = input.getText().toString().trim();
+            boolean isValid = Util.isValidReading(text);
+            if (isValid) {
+                layout.setError(null);
+                saveButton.setEnabled(true);
+            } else {
+                layout.setError(getString(R.string.error_kana_format));
+                saveButton.setEnabled(false);
+            }
+        };
+
+        input.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(Editable s) {
+                validate.run();
+            }
+        });
+
+        // 初期検証
+        validate.run();
+
+        saveButton.setOnClickListener(v -> {
+            String newReading = input.getText().toString().trim();
+            if (newReading.isEmpty()) {
+                targetPoi.getTags().remove(Util.TAG_NAME_KANA);
+            } else {
+                targetPoi.getTags().put(Util.TAG_NAME_KANA, newReading);
+            }
+            targetPoi.getTags().remove("kana");
+            updateKanaDisplay();
+            dialog.dismiss();
+        });
     }
 
     private void saveChanges() {
