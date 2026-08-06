@@ -14,14 +14,31 @@
         android:textStyle="bold"
         android:layout_marginBottom="16dp" />
 
-    <EditText
-        android:id="@+id/search_input"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/search_hint"
-        android:inputType="text"
-        android:maxLines="1"
-        android:imeOptions="actionSearch" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <EditText
+            android:id="@+id/search_input"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="@string/search_hint"
+            android:inputType="text"
+            android:maxLines="1"
+            android:imeOptions="actionSearch" />
+
+        <pro.eng.yui.android.osmjppostalmap.ui.ClockFilterButton
+            android:id="@+id/filter_button"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/search_filter_open_only" />
+
+    </LinearLayout>
 
     <com.google.android.material.chip.ChipGroup
         android:layout_width="match_parent"

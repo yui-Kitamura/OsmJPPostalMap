@@ -37,6 +37,9 @@ import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
 import pro.eng.yui.android.osmjppostalmap.domain.Util;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
+import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleResult;
+import pro.eng.yui.android.osmjppostalmap.schedule.SimpleScheduleParser;
+import pro.eng.yui.android.osmjppostalmap.ui.ClockFilterButton;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
 
 public class SearchDialog extends DialogFragment {
@@ -58,6 +61,8 @@ public class SearchDialog extends DialogFragment {
     private CompoundButton checkPostOffice;
     private CompoundButton checkAddress;
     private CompoundButton checkPlace;
+    private ClockFilterButton filterButton;
+    private boolean isFilterOpenOnly = false;
     private ProgressBar searchProgress;
 
     public void setOnResultSelectedListener(OnResultSelectedListener listener) {
@@ -92,6 +97,7 @@ public class SearchDialog extends DialogFragment {
         checkPostOffice = view.findViewById(R.id.check_post_office);
         checkAddress = view.findViewById(R.id.check_address);
         checkPlace = view.findViewById(R.id.check_place);
+        filterButton = view.findViewById(R.id.filter_button);
         searchProgress = view.findViewById(R.id.search_progress);
         RecyclerView resultsList = view.findViewById(R.id.search_results);
 
@@ -116,6 +122,11 @@ public class SearchDialog extends DialogFragment {
         checkPostOffice.setOnCheckedChangeListener((buttonView, isChecked) -> performSearch(currentQuery));
         checkAddress.setOnCheckedChangeListener((buttonView, isChecked) -> performSearch(currentQuery));
         checkPlace.setOnCheckedChangeListener((buttonView, isChecked) -> performSearch(currentQuery));
+        filterButton.setOnClickListener(v -> {
+            isFilterOpenOnly = !isFilterOpenOnly;
+            filterButton.setFilterActive(isFilterOpenOnly);
+            performSearch(currentQuery);
+        });
 
         view.findViewById(R.id.btn_close_dialog).setOnClickListener(v -> dismiss());
 
@@ -165,7 +176,27 @@ public class SearchDialog extends DialogFragment {
                 }
             }
 
-            final List<SearchResult> phase1Results = new ArrayList<>(resultMap.values());
+            final List<SearchResult> phase1Results = new ArrayList<>();
+            for (SearchResult res : resultMap.values()) {
+                // Apply prefix match filtering for Phase 1
+                boolean isPrefixMatch = false;
+                if (res.getType() == SearchResult.Type.POST_OFFICE || res.getType() == SearchResult.Type.POST_BOX) {
+                    if (res.getTitle().startsWith(query)) isPrefixMatch = true;
+                } else if (res.getType() == SearchResult.Type.PLACE) {
+                    if (res.getTitle().startsWith(query)) isPrefixMatch = true;
+                }
+                
+                if (isPrefixMatch) {
+                    // Apply open-only filter if active
+                    if (isFilterOpenOnly) {
+                        if (isOpen(res)) {
+                            phase1Results.add(res);
+                        }
+                    } else {
+                        phase1Results.add(res);
+                    }
+                }
+            }
             Collections.sort(phase1Results);
 
             mainHandler.post(() -> {
@@ -187,6 +218,12 @@ public class SearchDialog extends DialogFragment {
             }
 
             final List<SearchResult> allResults = new ArrayList<>(resultMap.values());
+            
+            // Apply open-only filter if active
+            if (isFilterOpenOnly) {
+                allResults.removeIf(res -> !isOpen(res));
+            }
+
             Collections.sort(allResults);
 
             mainHandler.post(() -> {
@@ -196,6 +233,30 @@ public class SearchDialog extends DialogFragment {
                 }
             });
         });
+    }
+
+    private boolean isOpen(SearchResult res) {
+        if (res.getType() != SearchResult.Type.POST_OFFICE && res.getType() != SearchResult.Type.POST_BOX) {
+            return true; // Skip for non-POI results (always "open" or rather N/A)
+        }
+        ScheduleResult schedule = res.getSchedule();
+        ScheduleResult limited = res.getLimitedServiceSchedule();
+
+        // Logic from MainActivity: Opening or opening but event soon
+        boolean isOpen = false;
+        if (schedule != null) {
+            if (schedule.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
+                    schedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
+                isOpen = true;
+            }
+        }
+        if (!isOpen && limited != null) {
+            if (limited.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
+                    limited.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
+                isOpen = true;
+            }
+        }
+        return isOpen;
     }
 
     private void addToResultMap(Map<String, SearchResult> resultMap, SearchResult res) {

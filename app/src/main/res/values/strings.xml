@@ -72,6 +72,7 @@
     <string name="search_filter_post_office">郵便局名</string>
     <string name="search_filter_address">住所（キャッシュ済み）</string>
     <string name="search_filter_place">市区町村名</string>
+    <string name="search_filter_open_only">営業中のみ表示</string>
     <string name="unknown">不明</string>
     <string name="day_weekday">平日</string>
     <string name="day_saturday">土曜</string>
