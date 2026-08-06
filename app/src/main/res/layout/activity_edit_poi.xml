@@ -69,7 +69,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:textSize="14sp"
-                android:textColor="?attr/colorOnSurfaceVariant" />
+                android:textColor="?android:attr/textColorSecondary" />
 
             <ImageButton
                 android:id="@+id/btn_kana_edit"

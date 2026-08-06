@@ -207,8 +207,7 @@ public class Util {
     
     /**
      * ルビ（読み仮名）付きの Spannable を作成する。
-     * HTML の <ruby> っぽく表示するため、読み仮名を上に小さく表示しようとするが、
-     * 標準の TextView では難しいため、"漢字(かんじ)" 形式で読み仮名を小さく表示する Spannable を返す。
+     * HTML の <ruby> っぽく表示するため、読み仮名を上に小さく表示する 2 行組みの Spannable を返す。
      * @param base 漢字などのベース文字列
      * @param ruby 読み仮名
      * @param baseTextSize ベース文字列のサイズ(px)
@@ -217,15 +216,14 @@ public class Util {
     public static CharSequence getRubySpannable(String base, String ruby, float baseTextSize) {
         if (ruby == null || ruby.isEmpty()) return base;
         SpannableStringBuilder ssb = new SpannableStringBuilder();
-        ssb.append(base);
-        int start = ssb.length();
-        ssb.append("(").append(ruby).append(")");
-        int end = ssb.length();
+        ssb.append(ruby).append("\n").append(base);
+        
+        int rubyEnd = ruby.length();
         
         // 読み仮名部分を小さくする (ベースの 60% 程度)
-        ssb.setSpan(new AbsoluteSizeSpan((int)(baseTextSize * 0.6f)), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        ssb.setSpan(new AbsoluteSizeSpan((int)(baseTextSize * 0.6f)), 0, rubyEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         // 読み仮名部分を細字にする
-        ssb.setSpan(new StyleSpan(Typeface.NORMAL), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        ssb.setSpan(new StyleSpan(Typeface.NORMAL), 0, rubyEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         
         return ssb;
     }

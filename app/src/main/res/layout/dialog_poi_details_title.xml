@@ -15,7 +15,7 @@
         android:layout_centerVertical="true"
         android:layout_toStartOf="@id/dialog_open_osm"
         android:ellipsize="end"
-        android:maxLines="1"
+        android:maxLines="3"
         android:textAppearance="?attr/textAppearanceHeadline6"
         android:textSize="20sp"
         android:textStyle="bold" />
