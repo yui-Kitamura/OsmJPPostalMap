@@ -933,7 +933,6 @@ public class EditPoiActivity extends AppCompatActivity {
         String currentReading = Util.getKana(targetPoi);
         if (currentReading == null) currentReading = "";
 
-        // AddressEditDialog と同じスタイルで構築
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
         int padding = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16, getResources().getDisplayMetrics());
@@ -942,14 +941,8 @@ public class EditPoiActivity extends AppCompatActivity {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        
-        TextView labelView = new TextView(this);
-        labelView.setText("読み仮名");
-        labelView.setTextSize(13f);
-        labelView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         EditText input = new EditText(this);
-        // 「例: 」を外してプレースホルダーにする
         input.setHint("とうきょうちゅうおうゆうびんきょく");
         Util.applyPlaceholderStyle(this, input);
         input.setTextSize(14f);
@@ -957,7 +950,6 @@ public class EditPoiActivity extends AppCompatActivity {
         input.setText(currentReading);
         input.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 2f));
 
-        row.addView(labelView);
         row.addView(input);
         container.addView(row);
 
