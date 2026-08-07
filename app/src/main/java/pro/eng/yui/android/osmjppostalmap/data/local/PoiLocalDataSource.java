@@ -155,19 +155,16 @@ public class PoiLocalDataSource {
         SQLiteDatabase db = helper.getWritableDatabase();
         db.beginTransaction();
         try {
-            // 既存の全郵便局の座標をマップに読み込む
-            Map<String, double[]> existingCoords = new HashMap<>();
-            try (Cursor c = db.query(PoiDbHelper.TABLE_POI,
-                    new String[]{PoiDbHelper.COL_TYPE, PoiDbHelper.COL_ID, PoiDbHelper.COL_LAT, PoiDbHelper.COL_LON},
+            // 既存の全郵便局の情報を読み込む
+            Map<String, OsmPoi> existingPois = new HashMap<>();
+            try (Cursor c = db.query(PoiDbHelper.TABLE_POI, null,
                     PoiDbHelper.COL_AMENITY + " = ?", new String[]{"post_office"},
                     null, null, null)) {
-                int iType = c.getColumnIndexOrThrow(PoiDbHelper.COL_TYPE);
-                int iId = c.getColumnIndexOrThrow(PoiDbHelper.COL_ID);
-                int iLat = c.getColumnIndexOrThrow(PoiDbHelper.COL_LAT);
-                int iLon = c.getColumnIndexOrThrow(PoiDbHelper.COL_LON);
                 while (c.moveToNext()) {
-                    String key = c.getString(iType) + ":" + c.getLong(iId);
-                    existingCoords.put(key, new double[]{c.getDouble(iLat), c.getDouble(iLon)});
+                    OsmPoi poi = fromCursor(c);
+                    if (poi != null) {
+                        existingPois.put(poi.getType() + ":" + poi.getId(), poi);
+                    }
                 }
             }
 
@@ -183,21 +180,29 @@ public class PoiLocalDataSource {
                         String key = poi.getType() + ":" + poi.getId();
                         newKeys.add(key);
 
-                        // 座標が0.0またはOSM未取得の代表点（fallback）かつ既存データがある場合は既存の座標を使用
-                        double lat = poi.getLat();
-                        double lon = poi.getLon();
-                        if (existingCoords.containsKey(key)) {
-                            double[] coords = existingCoords.get(key);
+                        // 既存データがある場合は、座標を保持しつつタグをマージする
+                        if (existingPois.containsKey(key)) {
+                            OsmPoi existing = existingPois.get(key);
+                            double lat = poi.getLat();
+                            double lon = poi.getLon();
+
                             // 既存座標があり、かつ新しい座標が 0.0 もしくは fallback と思われる場合に既存を優先
-                            // （厳密な fallback 判定は難しいが、既存座標が 0,0 でないなら既存を信じる）
-                            if (coords[0] != 0.0 || coords[1] != 0.0) {
-                                // もし新座標が 0.0 または 既存と大きく異なる（＝代表点に上書きされようとしている）なら既存維持
-                                // ここではシンプルに「既存があれば既存を維持」でも実用上は問題ない
-                                // (OSMで移動された場合は loadArea で上書きされるため)
-                                lat = coords[0];
-                                lon = coords[1];
-                                poi = new OsmPoi(poi.getId(), lat, lon, poi.getType(), poi.getTags(), poi.getVer());
+                            if (existing.getLat() != 0.0 || existing.getLon() != 0.0) {
+                                lat = existing.getLat();
+                                lon = existing.getLon();
                             }
+
+                            // タグをマージ（既存のタグをベースに、新しいタグで上書き）
+                            Map<String, String> mergedTags = new HashMap<>();
+                            if (existing.getTags() != null) {
+                                mergedTags.putAll(existing.getTags());
+                            }
+                            if (poi.getTags() != null) {
+                                mergedTags.putAll(poi.getTags());
+                            }
+
+                            // バージョンも既存を優先（office.jsonは常に0なので）
+                            poi = new OsmPoi(poi.getId(), lat, lon, poi.getType(), mergedTags, existing.getVer());
                         }
 
                         db.insertWithOnConflict(PoiDbHelper.TABLE_POI, null,
@@ -207,7 +212,7 @@ public class PoiLocalDataSource {
             }
 
             // リストに含まれない既存の郵便局を削除
-            for (String oldKey : existingCoords.keySet()) {
+            for (String oldKey : existingPois.keySet()) {
                 if (!newKeys.contains(oldKey)) {
                     String[] parts = oldKey.split(":");
                     db.delete(PoiDbHelper.TABLE_POI,
