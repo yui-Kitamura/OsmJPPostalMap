@@ -632,19 +632,28 @@ public class PoiRepositoryImpl implements PoiRepository {
                     // v0 data as requested. lat/lon might not be present in raw json.
                     double lat = obj.optDouble("lat", 0.0);
                     double lon = obj.optDouble("lon", 0.0);
+                    boolean hasCoord = (lat != 0.0 || lon != 0.0);
 
-                    // 座標がない場合は都道府県またはサブエリアの代表点をセットする
-                    if (lat == 0.0 && lon == 0.0) {
+                    // 座標がない場合は、一旦 0.0 のまま OsmPoi を作成する。
+                    // PoiLocalDataSource.upsertOfficePois 内で、DBに既存データがあればその座標が優先され、
+                    // なければ以下の都道府県/サブエリア代表点が使用される。
+                    double fallbackLat = 0.0;
+                    double fallbackLon = 0.0;
+                    if (!hasCoord) {
                         String boundaryKey = (subName == null) ? prefName : prefName + ":" + subName;
                         if (boundaryKey != null) {
                             BBox bbox = prefBoundaryCache.get(boundaryKey);
                             if (bbox != null) {
-                                lat = (bbox.getMinLat() + bbox.getMaxLat()) / 2.0;
-                                lon = (bbox.getMinLon() + bbox.getMaxLon()) / 2.0;
+                                fallbackLat = (bbox.getMinLat() + bbox.getMaxLat()) / 2.0;
+                                fallbackLon = (bbox.getMinLon() + bbox.getMaxLon()) / 2.0;
                             }
                         }
                     }
-                    OsmPoi poi = new OsmPoi(poiId, lat, lon, poiType, tags, 0);
+                    // 元々座標がなかった場合のみ、upsertOfficePois で既存座標へのフォールバックを許可する
+                    // （lat/lon が 0.0 のままであればフォールバックされる）
+                    OsmPoi poi = new OsmPoi(poiId, hasCoord ? lat : fallbackLat, hasCoord ? lon : fallbackLon, poiType, tags, 0);
+                    // upsertOfficePois 内で、lat/lon が 代表点 (fallbackLat/Lon) と一致する場合は
+                    // DBに既存データがあればその座標を優先するようにする
 
                     if (!groupedPois.containsKey(prefCode)) {
                         groupedPois.put(prefCode, new HashMap<>());
