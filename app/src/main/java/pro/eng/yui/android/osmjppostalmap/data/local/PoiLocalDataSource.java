@@ -146,6 +146,35 @@ public class PoiLocalDataSource {
         }
     }
 
+    /**
+     * 郵便局データを一括で更新する。既存の郵便局データを削除してから新規データを挿入する。
+     * @param groupedPois Map<PrefCode, Map<SubNameKey, List<OsmPoi>>>
+     */
+    public void upsertOfficePois(Map<Integer, Map<String, List<OsmPoi>>> groupedPois) {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        db.beginTransaction();
+        try {
+            // すべての郵便局データを削除
+            db.delete(PoiDbHelper.TABLE_POI, PoiDbHelper.COL_AMENITY + " = ?", new String[]{"post_office"});
+
+            // 新規データを挿入
+            for (Map.Entry<Integer, Map<String, List<OsmPoi>>> prefEntry : groupedPois.entrySet()) {
+                int prefCode = prefEntry.getKey();
+                for (Map.Entry<String, List<OsmPoi>> subEntry : prefEntry.getValue().entrySet()) {
+                    String subName = subEntry.getKey();
+                    if (subName.isEmpty()) subName = null;
+                    for (OsmPoi poi : subEntry.getValue()) {
+                        db.insertWithOnConflict(PoiDbHelper.TABLE_POI, null,
+                                toValues(prefCode, subName, poi), SQLiteDatabase.CONFLICT_REPLACE);
+                    }
+                }
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+        }
+    }
+
     /* ---------- 読み込み ---------- */
 
     public boolean hasArea(int prefCode, String subName) {

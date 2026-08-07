@@ -658,14 +658,8 @@ public class PoiRepositoryImpl implements PoiRepository {
                 }
 
                 if (local != null) {
-                    for (Map.Entry<Integer, Map<String, List<OsmPoi>>> prefEntry : groupedPois.entrySet()) {
-                        int prefCode = prefEntry.getKey();
-                        for (Map.Entry<String, List<OsmPoi>> subEntry : prefEntry.getValue().entrySet()) {
-                            String subName = subEntry.getKey();
-                            if (subName.isEmpty()) subName = null;
-                            local.insertPoisIfNotExist(prefCode, subName, subEntry.getValue());
-                        }
-                    }
+                    local.upsertOfficePois(groupedPois);
+                    postCombined();
                 }
             } catch (Exception e) {
                 Log.e("PoiRepository", "Failed to fetch office data", e);
