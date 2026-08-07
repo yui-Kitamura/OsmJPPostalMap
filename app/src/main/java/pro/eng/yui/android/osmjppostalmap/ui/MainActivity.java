@@ -76,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
     private final android.os.Handler debounceHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable debounceRunnable = null;
     private boolean initialLocationSet = false;
+    private boolean mapStateRestored = false;
     private boolean locationPermissionResolved = false;
     private boolean gpsZoomAdjustmentPending = false;
     private GeoPoint gpsZoomCenter;
@@ -207,6 +208,7 @@ public class MainActivity extends AppCompatActivity {
 
         android.content.SharedPreferences mapPrefs = getSharedPreferences(PREF_MAP_STATE, MODE_PRIVATE);
         if (mapPrefs.getBoolean(KEY_HAS_SAVED_STATE, false)) {
+            mapStateRestored = true;
             double lat = Double.longBitsToDouble(mapPrefs.getLong(KEY_LAST_LAT, Double.doubleToRawLongBits(TOKYO_CENTRAL_POST_OFFICE.getLatitude())));
             double lon = Double.longBitsToDouble(mapPrefs.getLong(KEY_LAST_LON, Double.doubleToRawLongBits(TOKYO_CENTRAL_POST_OFFICE.getLongitude())));
             double zoom = (double) mapPrefs.getFloat(KEY_LAST_ZOOM, 18.0f);
@@ -888,9 +890,9 @@ public class MainActivity extends AppCompatActivity {
         if (locationOverlay != null) {
             map.invalidate();
         }
-        if (firstLocation && !initialLocationSet) {
+        if (firstLocation && !mapStateRestored) {
             performInitialGpsZoom(location);
-        } else if (firstLocation && initialLocationSet) {
+        } else if (firstLocation) {
             // すでに前回の位置が復旧されている場合
             GeoPoint restoredCenter = new GeoPoint(map.getMapCenter().getLatitude(), map.getMapCenter().getLongitude());
             GeoPoint gpsPoint = new GeoPoint(location);
