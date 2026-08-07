@@ -776,8 +776,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void navigateToPlaceArea(SearchResult result) {
-        if (result.getOriginalData() instanceof pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo) {
-            pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo info = (pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo) result.getOriginalData();
+        if (result.getOriginalData() instanceof PlaceInfo) {
+            PlaceInfo info = (PlaceInfo) result.getOriginalData();
             BoundingBox bb = new BoundingBox(info.getMaxLat(), info.getMaxLon(), info.getMinLat(), info.getMinLon());
             map.zoomToBoundingBox(bb, true);
         } else {
