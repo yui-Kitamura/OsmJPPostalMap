@@ -330,19 +330,19 @@ public class SearchDialog extends DialogFragment {
             void bind(final SearchResult result) {
                 String q = currentQuery != null ? currentQuery.trim() : "";
                 
-                String displayTitle;
+                CharSequence displayTitle;
                 if (result.getType() == SearchResult.Type.POST_OFFICE && result.getNameJaHira() != null) {
-                    displayTitle = Util.getRubySpannable(result.getTitle(), result.getNameJaHira(), title.getTextSize()).toString();
+                    displayTitle = Util.getRubySpannable(result.getTitle(), result.getNameJaHira(), title.getTextSize());
                 } else {
-                    displayTitle = result.getTitle();
+                    displayTitle = result.getTitle() != null ? result.getTitle() : "";
                 }
 
                 if (!q.isEmpty()) {
-                    title.setText(highlightText(displayTitle, q));
-                    subtitle.setText(highlightText(result.getSubTitle(), q));
+                    title.setText(highlightText(displayTitle, q), TextView.BufferType.SPANNABLE);
+                    subtitle.setText(highlightText(result.getSubTitle(), q), TextView.BufferType.SPANNABLE);
                 } else {
-                    title.setText(displayTitle);
-                    subtitle.setText(result.getSubTitle());
+                    title.setText(displayTitle, TextView.BufferType.SPANNABLE);
+                    subtitle.setText(result.getSubTitle() != null ? result.getSubTitle() : "", TextView.BufferType.SPANNABLE);
                 }
 
                 // Set icon
@@ -391,15 +391,15 @@ public class SearchDialog extends DialogFragment {
             }
             private CharSequence highlightText(CharSequence text, String query) {
                 if (text == null || query == null || query.isEmpty()) return text;
-                SpannableString spannable = new SpannableString(text);
+                SpannableStringBuilder ssb = new SpannableStringBuilder(text);
                 String str = text.toString().toLowerCase();
                 String q = query.toLowerCase();
                 int start = str.indexOf(q);
                 while (start >= 0) {
-                    spannable.setSpan(new StyleSpan(Typeface.BOLD), start, start + query.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    ssb.setSpan(new StyleSpan(Typeface.BOLD), start, start + query.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     start = str.indexOf(q, start + query.length());
                 }
-                return spannable;
+                return ssb;
             }
         }
     }

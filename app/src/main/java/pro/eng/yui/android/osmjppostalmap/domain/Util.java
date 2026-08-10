@@ -217,14 +217,16 @@ public class Util {
      * @return Spannable
      */
     public static CharSequence getRubySpannable(String base, String ruby, float baseTextSize) {
-        if (ruby == null || ruby.isEmpty()) return base;
+        if (ruby == null || ruby.isEmpty()) return base != null ? base : "";
         SpannableStringBuilder ssb = new SpannableStringBuilder();
-        ssb.append(ruby).append("\n").append(base);
+        ssb.append(ruby).append("\n").append(base != null ? base : "");
         
         int rubyEnd = ruby.length();
         
-        // 読み仮名部分を小さくする (ベースの 60% 程度)
-        ssb.setSpan(new AbsoluteSizeSpan((int)(baseTextSize * 0.6f)), 0, rubyEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        // 読み仮名部分を小さくする (ベースの 50% 程度)
+        int rubySize = (int)(baseTextSize * 0.5f);
+        if (rubySize <= 0) rubySize = 1; // 0px以下にならないように
+        ssb.setSpan(new AbsoluteSizeSpan(rubySize), 0, rubyEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         // 読み仮名部分を細字にする
         ssb.setSpan(new StyleSpan(Typeface.NORMAL), 0, rubyEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         
