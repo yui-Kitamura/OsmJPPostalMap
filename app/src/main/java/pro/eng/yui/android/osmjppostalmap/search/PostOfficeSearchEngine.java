@@ -33,6 +33,7 @@ public class PostOfficeSearchEngine implements SearchEngine {
             if (!"post_office".equals(amenity) && !"post_box".equals(amenity)) continue;
 
             String name = poi.getTag("name");
+            String kana = Util.getKana(poi);
             String address = JpPostalUtil.getAddressText(poi.getTags());
             if (address.isEmpty()) {
                 String pref = poi.getTag("addr:prefecture");
@@ -54,6 +55,19 @@ public class PostOfficeSearchEngine implements SearchEngine {
                 } else if (name.contains(q)) {
                     match = true;
                     weight = 70.0;
+                }
+            }
+
+            if (!match && kana != null) {
+                if (kana.equals(q)) {
+                    match = true;
+                    weight = 78.0;
+                } else if (kana.startsWith(q)) {
+                    match = true;
+                    weight = 73.0;
+                } else if (kana.contains(q)) {
+                    match = true;
+                    weight = 68.0;
                 }
             }
             

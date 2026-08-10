@@ -38,18 +38,16 @@ public class AddressSearchEngine implements SearchEngine {
             boolean isPO = "post_office".equals(amenity) || "post_box".equals(amenity);
 
             String fullAddress = getFullAddress(poi);
-            String title = poi.getTag("name");
-            String kana = poi.getTag("kana");
 
-            if (fullAddress.equals(q) || (title != null && title.equals(q)) || (kana != null && q.equals(kana))) {
+            if (fullAddress.equals(q)) {
                 match = true;
-                weight = isPO ? 60.0 : 30.0;
-            } else if (fullAddress.startsWith(q) || (title != null && title.startsWith(q)) || (kana != null && kana.startsWith(q))) {
+                weight = 30.0;
+            } else if (fullAddress.startsWith(q)) {
                 match = true;
-                weight = isPO ? 55.0 : 25.0;
-            } else if (fullAddress.contains(q) || (title != null && title.contains(q)) || (kana != null && kana.contains(q))) {
+                weight = 25.0;
+            } else if (fullAddress.contains(q)) {
                 match = true;
-                weight = isPO ? 50.0 : 20.0;
+                weight = 20.0;
             }
 
             if (!match) {
@@ -59,13 +57,13 @@ public class AddressSearchEngine implements SearchEngine {
                         if (value == null) continue;
                         if (value.equals(q)) {
                             match = true;
-                            weight = Math.max(weight, isPO ? 60.0 : 30.0);
+                            weight = Math.max(weight, 30.0);
                         } else if (value.startsWith(q)) {
                             match = true;
-                            weight = Math.max(weight, isPO ? 55.0 : 25.0);
+                            weight = Math.max(weight, 25.0);
                         } else if (value.contains(q)) {
                             match = true;
-                            weight = Math.max(weight, isPO ? 50.0 : 20.0);
+                            weight = Math.max(weight, 20.0);
                         }
                     }
                 }
@@ -80,13 +78,13 @@ public class AddressSearchEngine implements SearchEngine {
                     weight += 1.0 / (1.0 + distanceKm);
                 }
 
-                String resultTitle = title;
+                String resultTitle = poi.getTag("name");
                 SearchResult.Type resultType = SearchResult.Type.ADDRESS;
                 // String amenity = poi.getTag("amenity"); // Moved up
 
                 if (resultTitle == null) {
                     if ("post_office".equals(amenity)) {
-                        resultTitle = "無名郵便局";
+                        resultTitle = "〔無名郵便局〕";
                         resultType = SearchResult.Type.POST_OFFICE;
                     } else if ("post_box".equals(amenity)) {
                         resultTitle = "郵便ポスト";

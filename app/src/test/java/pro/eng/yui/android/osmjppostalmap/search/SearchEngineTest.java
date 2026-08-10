@@ -4,10 +4,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
+
+import pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo;
 import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
@@ -23,6 +23,7 @@ class SearchEngineTest {
         public void setMockPlaces(List<pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo> places) { this.mockPlaces = places; }
 
         @Override public List<OsmPoi> getAllCachedPois() { return mockPois; }
+        @Override public List<OsmPoi> searchPois(String query, boolean postOnly, boolean searchAddress) { return Collections.emptyList(); }
         @Override public void fetchCityData() {}
         @Override public void fetchOfficeData() {}
         @Override public List<pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo> searchPlaces(String query) {
@@ -90,16 +91,37 @@ class SearchEngineTest {
         // Exact match
         List<SearchResult> results = engine.search("甲府郵便局", null);
         assertEquals(1, results.size());
-        assertEquals(100.0, results.get(0).getWeight(), 1.0);
+        assertEquals(80.0, results.get(0).getWeight(), 1.0);
         
         // Partial match
         results = engine.search("甲府", null);
         assertEquals(1, results.size());
-        assertEquals(80.0, results.get(0).getWeight(), 1.0);
+        assertEquals(75.0, results.get(0).getWeight(), 1.0);
         
         // No match
         results = engine.search("東京", null);
         assertEquals(0, results.size());
+    }
+
+    @Test
+    void testPostOfficeSearchKana() {
+        PostOfficeSearchEngine engine = new PostOfficeSearchEngine(repository);
+        
+        Map<String, String> tags = new HashMap<>();
+        tags.put("amenity", "post_office");
+        tags.put("name", "甲府郵便局");
+        tags.put("name:ja-Hira", "こうふゆうびんきょく");
+        mockPois.add(new OsmPoi(100L, 35.666, 138.568, "node", tags, 1L));
+
+        // Exact match on kana
+        List<SearchResult> results = engine.search("こうふゆうびんきょく", null);
+        assertEquals(1, results.size());
+        assertEquals(78.0, results.get(0).getWeight(), 1.0);
+
+        // Start match on kana
+        results = engine.search("こうふ", null);
+        assertEquals(1, results.size());
+        assertEquals(73.0, results.get(0).getWeight(), 1.0);
     }
 
     @Test
@@ -115,6 +137,20 @@ class SearchEngineTest {
         results = engine.search("中央", null);
         assertEquals(1, results.size());
         assertEquals(20.0, results.get(0).getWeight(), 1.0);
+
+        // Name match (Should NOT match in AddressSearchEngine anymore)
+        results = engine.search("甲府郵便局", null);
+        assertEquals(0, results.size());
+
+        // Kana match (Should NOT match in AddressSearchEngine anymore)
+        Map<String, String> tags = new HashMap<>();
+        tags.put("amenity", "post_office");
+        tags.put("name", "甲府郵便局");
+        tags.put("name:ja-Hira", "こうふゆうびんきょく");
+        mockPois.add(new OsmPoi(100L, 35.666, 138.568, "node", tags, 1L));
+
+        results = engine.search("こうふ", null);
+        assertEquals(0, results.size());
     }
 
     @Test
@@ -202,8 +238,8 @@ class SearchEngineTest {
     @Test
     void testPlaceSearch() {
         List<pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo> mockPlaces = new ArrayList<>();
-        mockPlaces.add(new pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo(
-                19, null, "甲府市", 35.65, 138.55, 35.6, 35.7, 138.5, 138.6
+        mockPlaces.add(new PlaceInfo(
+                19, null, "甲府市", null, 35.65, 138.55, 35.6, 35.7, 138.5, 138.6
         ));
         ((TestPoiRepository)repository).setMockPlaces(mockPlaces);
 
@@ -232,9 +268,9 @@ class SearchEngineTest {
         mockPois.add(new OsmPoi(1L, 35.0, 138.0, "node", tags1, 1L));
         
         // 2. Place Name Match (Exact)
-        List<pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo> mockPlaces = new ArrayList<>();
-        mockPlaces.add(new pro.eng.yui.android.osmjppostalmap.domain.model.PlaceInfo(
-                19, null, "甲府市", 35.0, 138.0, 35.0, 35.0, 138.0, 138.0
+        List<PlaceInfo> mockPlaces = new ArrayList<>();
+        mockPlaces.add(new PlaceInfo(
+                19, null, "甲府市", null, 35.0, 138.0, 35.0, 35.0, 138.0, 138.0
         ));
         ((TestPoiRepository)repository).setMockPlaces(mockPlaces);
         
@@ -253,13 +289,13 @@ class SearchEngineTest {
         
         java.util.Collections.sort(allResults);
         
-        // Hierarchy: PO Name (80.0) > Place Name (60.0) > PO Address (20.0)
+        // Hierarchy: PO Name (80.0) > Place Name (100.0) > PO Address (30.0)
         assertEquals("甲府市", allResults.get(0).getTitle());
-        assertEquals(60.0, allResults.get(0).getWeight(), 1.0);
+        assertEquals(100.0, allResults.get(0).getWeight(), 1.0);
         
         assertEquals("甲府郵便局", allResults.get(1).getTitle());
         assertEquals(SearchResult.Type.POST_OFFICE, allResults.get(1).getType());
-        assertEquals(30.0, allResults.get(1).getWeight(), 1.0);
+        assertEquals(80.0, allResults.get(1).getWeight(), 1.0);
         
         assertEquals("竜王郵便局", allResults.get(2).getTitle());
         assertEquals(30.0, allResults.get(2).getWeight(), 1.0);
