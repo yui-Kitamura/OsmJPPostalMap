@@ -24,7 +24,7 @@ import pro.eng.yui.oss.osm.lib.jppostalcore.types.OsmPoi;
  */
 public class Util {
 
-    public static final String TAG_NAME_KANA = "name:ja-Hira";
+    public static final String TAG_NAME_HIRA = "name:ja-Hira";
 
 
     /** 全角数字を半角数字に変換するフィルタ。 */
@@ -234,14 +234,13 @@ public class Util {
     }
 
     /**
-     * OsmPoi から読み仮名を取得する。
-     * name:ja-Hira タグを優先し、存在しない場合はキャッシュ用の kana タグをフォールバックとして使用する。
+     * OsmPoi から読み仮名を取得する
      * @param poi 対象の POI
      * @return 読み仮名。存在しない場合は null。
      */
     public static String getKana(OsmPoi poi) {
         if (poi == null) return null;
-        return poi.getTag(TAG_NAME_KANA);
+        return poi.getTag(TAG_NAME_HIRA);
     }
 
     /**
