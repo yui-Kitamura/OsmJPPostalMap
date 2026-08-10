@@ -993,9 +993,9 @@ public class EditPoiActivity extends AppCompatActivity {
         saveButton.setOnClickListener(v -> {
             String newReading = input.getText().toString().trim();
             if (newReading.isEmpty()) {
-                targetPoi.getTags().remove(Util.TAG_NAME_KANA);
+                targetPoi.getTags().remove(Util.TAG_NAME_HIRA);
             } else {
-                targetPoi.getTags().put(Util.TAG_NAME_KANA, newReading);
+                targetPoi.getTags().put(Util.TAG_NAME_HIRA, newReading);
             }
             targetPoi.getTags().remove("kana");
             updateKanaDisplay();
