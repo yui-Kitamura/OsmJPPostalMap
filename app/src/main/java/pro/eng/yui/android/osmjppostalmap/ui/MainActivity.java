@@ -194,7 +194,8 @@ public class MainActivity extends AppCompatActivity {
         
         locationOverlay.setPersonIcon(personBitmap);
         locationOverlay.setDirectionIcon(personBitmap);
-        locationOverlay.setPersonHotspot(24, 24);
+        locationOverlay.setPersonAnchor(0.5f, 0.5f);
+        locationOverlay.setDirectionAnchor(0.5f, 0.5f);
 
         locationOverlay.enableMyLocation();
         map.getOverlays().add(locationOverlay);

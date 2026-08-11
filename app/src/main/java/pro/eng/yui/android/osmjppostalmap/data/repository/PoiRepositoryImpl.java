@@ -1055,6 +1055,24 @@ public class PoiRepositoryImpl implements PoiRepository {
     @Override
     public void savePoi(OsmPoi poi, String comment, PoiSaveCallback callback) {
         runOnExecutor("修正を送信中", () -> {
+            // 編集対象がポストまたは郵便局で、operatorが未設定なら「日本郵便」を補完する
+            OsmPoi targetPoi = poi;
+            String amenity = poi.getTag("amenity");
+            if (("post_box".equals(amenity) || "post_office".equals(amenity))
+                    && (poi.getTag("operator") == null || poi.getTag("operator").isEmpty())) {
+                Map<String, String> newTags = new HashMap<>(poi.getTags());
+                newTags.put("operator", "日本郵便");
+                newTags.put("operator:wikidata", "Q11509260");
+                targetPoi = new OsmPoi(
+                        poi.getId(),
+                        poi.getLat(),
+                        poi.getLon(),
+                        poi.getType(),
+                        newTags,
+                        poi.getVer()
+                );
+            }
+
             // 1. Create Changeset
             postProgress(callback, "Changesetを作成中…");
             ChangeSetInfo csInfo = new ChangeSetInfo(0, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, new HashMap<>());
@@ -1064,7 +1082,7 @@ public class PoiRepositoryImpl implements PoiRepository {
             try {
                 // 編集処理
                 postProgress(callback, "入力内容を送信中…");
-                JpPostalUtil.callOsmCreateOrModifyElement(accessToken, csInfoActive, poi).join();
+                JpPostalUtil.callOsmCreateOrModifyElement(accessToken, csInfoActive, targetPoi).join();
                 // CS close
                 postProgress(callback, "Changesetを確定中…");
                 JpPostalUtil.callOsmCloseChangeset(accessToken, csInfoActive).join();
@@ -1075,14 +1093,15 @@ public class PoiRepositoryImpl implements PoiRepository {
             }
             postSuccess(callback);
             // 2. ローカルSQLiteへ即時反映。送信成功後はOSM側のバージョンが上がっているのでインクリメントして保存する
+            final OsmPoi finalPoi = targetPoi;
             executor.execute(() -> {
                 OsmPoi cachePoi = new OsmPoi(
-                        poi.getId(),
-                        poi.getLat(),
-                        poi.getLon(),
-                        poi.getType(),
-                        poi.getTags(),
-                        poi.getVer() + 1
+                        finalPoi.getId(),
+                        finalPoi.getLat(),
+                        finalPoi.getLon(),
+                        finalPoi.getType(),
+                        finalPoi.getTags(),
+                        finalPoi.getVer() + 1
                 );
                 cacheEditedPoi(cachePoi);
             });
@@ -1107,6 +1126,7 @@ public class PoiRepositoryImpl implements PoiRepository {
                 }
                 poiTags.put("amenity", "post_box");
                 poiTags.put("operator", "日本郵便");
+                poiTags.put("operator:wikidata", "Q11509260");
                 if ("柱上箱型".equals(shape)) {
                     poiTags.put("support", "pole");
                     poiTags.put("post_box:type", "lamp");
