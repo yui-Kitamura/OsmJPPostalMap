@@ -728,6 +728,7 @@ public class EditPoiActivity extends AppCompatActivity {
         myLocationOverlay.setPersonIcon(personBitmap);
         myLocationOverlay.setDirectionIcon(personBitmap);
         myLocationOverlay.setPersonHotspot(24, 24);
+        myLocationOverlay.setDirectionHotspot(24, 24);
 
         myLocationOverlay.enableMyLocation();
         map.getOverlays().add(myLocationOverlay);
