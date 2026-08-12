@@ -74,14 +74,28 @@ public class EditPoiActivity extends AppCompatActivity {
     private View layoutFallback;
     private final List<EditText[]> timeRows = new ArrayList<>();
     private EditText editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd;
+    private EditText editOhMoOpen, editOhMoClose, editOhMoBreakStart, editOhMoBreakEnd;
+    private EditText editOhTuOpen, editOhTuClose, editOhTuBreakStart, editOhTuBreakEnd;
+    private EditText editOhWeOpen, editOhWeClose, editOhWeBreakStart, editOhWeBreakEnd;
+    private EditText editOhThOpen, editOhThClose, editOhThBreakStart, editOhThBreakEnd;
+    private EditText editOhFrOpen, editOhFrClose, editOhFrBreakStart, editOhFrBreakEnd;
     private EditText editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd;
     private EditText editOhPhOpen, editOhPhClose, editOhPhBreakStart, editOhPhBreakEnd;
     private EditText editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd;
+    private EditText editLsMoOpen, editLsMoClose, editLsMoBreakStart, editLsMoBreakEnd;
+    private EditText editLsTuOpen, editLsTuClose, editLsTuBreakStart, editLsTuBreakEnd;
+    private EditText editLsWeOpen, editLsWeClose, editLsWeBreakStart, editLsWeBreakEnd;
+    private EditText editLsThOpen, editLsThClose, editLsThBreakStart, editLsThBreakEnd;
+    private EditText editLsFrOpen, editLsFrClose, editLsFrBreakStart, editLsFrBreakEnd;
     private EditText editLsSaOpen, editLsSaClose, editLsSaBreakStart, editLsSaBreakEnd;
     private EditText editLsPhOpen, editLsPhClose, editLsPhBreakStart, editLsPhBreakEnd;
-    private android.widget.CheckBox checkOhWdOff, checkOhSaOff, checkOhPhOff;
-    private android.widget.CheckBox checkLsWdOff, checkLsSaOff, checkLsPhOff;
-    private android.widget.CheckBox checkColWdOff, checkColSaOff, checkColPhOff;
+    private android.widget.CheckBox checkOhWdOff, checkOhMoOff, checkOhTuOff, checkOhWeOff, checkOhThOff, checkOhFrOff, checkOhSaOff, checkOhPhOff;
+    private android.widget.CheckBox checkLsWdOff, checkLsMoOff, checkLsTuOff, checkLsWeOff, checkLsThOff, checkLsFrOff, checkLsSaOff, checkLsPhOff;
+    private android.widget.CheckBox checkColWdOff, checkColMoOff, checkColTuOff, checkColWeOff, checkColThOff, checkColFrOff, checkColSaOff, checkColPhOff;
+    private Button btnToggleColExpansion;
+    private boolean isOhExpanded = false;
+    private boolean isLsExpanded = false;
+    private boolean isColExpanded = false;
     private RadioGroup radioLimitedService;
     private View layoutLimitedServiceEditRoot;
     private TableLayout tableLimitedService;
@@ -110,10 +124,379 @@ public class EditPoiActivity extends AppCompatActivity {
     private boolean isResettingCenter = false;
     private static final double MIN_ZOOM = 15.0;
 
+    private void setupCollectionTableHeaders() {
+        if (tableCollection == null) return;
+        tableCollection.removeAllViews();
+
+        if (btnToggleColExpansion != null) {
+            btnToggleColExpansion.setText(isColExpanded ? "平日をまとめる" : "平日を詳細入力する");
+        }
+        
+        int margin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 0.5f, getResources().getDisplayMetrics());
+        int padding = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1f, getResources().getDisplayMetrics());
+
+        // 1行目: 大分類 (平日, 土曜, 日祝)
+        TableRow row1 = new TableRow(this);
+        row1.setLayoutParams(new TableLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        
+        int colWidth = getColUnitWidth();
+        TextView tvWd = new TextView(this);
+        tvWd.setText("平日");
+        tvWd.setGravity(Gravity.CENTER);
+        tvWd.setTypeface(null, android.graphics.Typeface.BOLD);
+        tvWd.setPadding(padding, padding, padding, padding);
+        tvWd.setTextSize(11);
+        tvWd.setBackgroundResource(R.drawable.bg_cell_header);
+        TableRow.LayoutParams paramsWd = new TableRow.LayoutParams(colWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
+        paramsWd.setMargins(margin, margin, margin, margin);
+        paramsWd.span = isColExpanded ? 5 : 1;
+        tvWd.setLayoutParams(paramsWd);
+        row1.addView(tvWd);
+
+        TextView tvSa = new TextView(this);
+        tvSa.setText("土曜");
+        tvSa.setGravity(Gravity.CENTER);
+        tvSa.setTypeface(null, android.graphics.Typeface.BOLD);
+        tvSa.setPadding(padding, padding, padding, padding);
+        tvSa.setTextSize(11);
+        tvSa.setBackgroundResource(R.drawable.bg_cell_header);
+        TableRow.LayoutParams paramsSa = new TableRow.LayoutParams(colWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
+        paramsSa.setMargins(margin, margin, margin, margin);
+        tvSa.setLayoutParams(paramsSa);
+        row1.addView(tvSa);
+
+        TextView tvPh = new TextView(this);
+        tvPh.setText("日祝");
+        tvPh.setId(R.id.header_sun_ph);
+        tvPh.setGravity(Gravity.CENTER);
+        tvPh.setTypeface(null, android.graphics.Typeface.BOLD);
+        tvPh.setPadding(padding, padding, padding, padding);
+        tvPh.setTextSize(11);
+        tvPh.setBackgroundResource(R.drawable.bg_cell_header);
+        TableRow.LayoutParams paramsPh = new TableRow.LayoutParams(colWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
+        paramsPh.setMargins(margin, margin, margin, margin);
+        tvPh.setLayoutParams(paramsPh);
+        row1.addView(tvPh);
+
+        tableCollection.addView(row1);
+
+        // 2行目: 詳細分類 (月火水木金, 土, 日祝) - 展開時のみ表示
+        if (isColExpanded) {
+            TableRow row2 = new TableRow(this);
+            row2.setLayoutParams(new TableLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            String[] days = {"月", "火", "水", "木", "金", "土", "日祝"};
+            for (String day : days) {
+                TextView tv = new TextView(this);
+                tv.setText(day);
+                tv.setGravity(Gravity.CENTER);
+                tv.setTypeface(null, android.graphics.Typeface.BOLD);
+                tv.setPadding(padding, padding, padding, padding);
+                tv.setTextSize(10);
+                tv.setBackgroundResource(R.drawable.bg_cell_header);
+                TableRow.LayoutParams params = new TableRow.LayoutParams(colWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
+                params.setMargins(margin, margin, margin, margin);
+                tv.setLayoutParams(params);
+                row2.addView(tv);
+            }
+            tableCollection.addView(row2);
+        }
+
+        // 3行目: コピーボタン
+        TableRow rowButtons = new TableRow(this);
+        rowButtons.setLayoutParams(new TableLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        
+        // 0列目 (月曜 または 平日) の下は常に空セル (コピー元なので)
+        View v0 = new View(this);
+        TableRow.LayoutParams p0 = new TableRow.LayoutParams(colWidth, ViewGroup.LayoutParams.MATCH_PARENT);
+        p0.setMargins(margin, margin, margin, margin);
+        v0.setLayoutParams(p0);
+        rowButtons.addView(v0);
+        
+        if (isColExpanded) {
+            // 月->火, 火->水, 水->木, 木->金
+            String[] targetDays = {"月→火", "火→水", "水→木", "木→金"};
+            for (int i = 0; i < 4; i++) {
+                Button btn = createSmallButton(targetDays[i]);
+                final int fromIdx = i;
+                btn.setOnClickListener(v -> copyColColumn(fromIdx, fromIdx + 1));
+                rowButtons.addView(btn);
+            }
+            // 金->土曜
+            Button btnFrToSa = createSmallButton("金→土");
+            btnFrToSa.setOnClickListener(v -> copyColColumn(4, 5));
+            rowButtons.addView(btnFrToSa);
+        } else {
+            // 平日->土曜
+            Button btnWdToSa = createSmallButton("平日→土曜");
+            btnWdToSa.setOnClickListener(v -> copyColColumn(0, 1)); // 内部的には0が月/平日, 1が土曜
+            rowButtons.addView(btnWdToSa);
+        }
+        
+        // 土曜->日祝
+        Button btnSaToPh = createSmallButton("土曜→日祝");
+        btnSaToPh.setOnClickListener(v -> copyColColumn(isColExpanded ? 5 : 1, isColExpanded ? 6 : 2)); // 5が土曜, 6が日祝
+        rowButtons.addView(btnSaToPh);
+        
+        tableCollection.addView(rowButtons);
+
+        // 4行目: オフチェックボックス
+        TableRow rowOff = new TableRow(this);
+        rowOff.setLayoutParams(new TableLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        if (isColExpanded) {
+            checkColMoOff = createColCheckBox();
+            checkColTuOff = createColCheckBox();
+            checkColWeOff = createColCheckBox();
+            checkColThOff = createColCheckBox();
+            checkColFrOff = createColCheckBox();
+            rowOff.addView(checkColMoOff);
+            rowOff.addView(checkColTuOff);
+            rowOff.addView(checkColWeOff);
+            rowOff.addView(checkColThOff);
+            rowOff.addView(checkColFrOff);
+        } else {
+            checkColWdOff = createColCheckBox();
+            rowOff.addView(checkColWdOff);
+        }
+        checkColSaOff = createColCheckBox();
+        checkColPhOff = createColCheckBox();
+        rowOff.addView(checkColSaOff);
+        rowOff.addView(checkColPhOff);
+        tableCollection.addView(rowOff);
+        
+        // リスナーの再設定が必要
+        setupColOffListeners();
+    }
+
+    private Button createSmallButton(String text) {
+        Button btn = new Button(this, null, androidx.appcompat.R.attr.borderlessButtonStyle);
+        btn.setText(text);
+        btn.setTextSize(10);
+        btn.setPadding(0, 0, 0, 0);
+        btn.setMinimumWidth(0);
+        btn.setMinimumHeight(0);
+        btn.setBackgroundResource(R.drawable.bg_cell_header);
+        TableRow.LayoutParams params = new TableRow.LayoutParams(getColUnitWidth(), ViewGroup.LayoutParams.MATCH_PARENT);
+        int margin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 0.5f, getResources().getDisplayMetrics());
+        params.setMargins(margin, margin, margin, margin);
+        btn.setLayoutParams(params);
+        return btn;
+    }
+
+    private android.widget.CheckBox createColCheckBox() {
+        android.widget.CheckBox cb = new android.widget.CheckBox(this);
+        cb.setText(R.string.postbox_no_collection);
+        cb.setTextSize(9);
+        cb.setGravity(Gravity.CENTER);
+        cb.setPadding(0, 0, 0, 0);
+        cb.setMinimumWidth(0);
+        cb.setMinimumHeight(0);
+        cb.setBackgroundResource(R.drawable.bg_cell_header);
+        TableRow.LayoutParams params = new TableRow.LayoutParams(getColUnitWidth(), ViewGroup.LayoutParams.MATCH_PARENT);
+        int margin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 0.5f, getResources().getDisplayMetrics());
+        params.setMargins(margin, margin, margin, margin);
+        cb.setLayoutParams(params);
+        return cb;
+    }
+
+    private void setupColOffListeners() {
+        android.widget.CompoundButton.OnCheckedChangeListener colOffListener = (buttonView, isChecked) -> {
+            int col = -1;
+            if (buttonView == checkColWdOff) col = 0;
+            else if (buttonView == checkColMoOff) col = 0;
+            else if (buttonView == checkColTuOff) col = 1;
+            else if (buttonView == checkColWeOff) col = 2;
+            else if (buttonView == checkColThOff) col = 3;
+            else if (buttonView == checkColFrOff) col = 4;
+            else if (buttonView == checkColSaOff) col = isColExpanded ? 5 : 1;
+            else if (buttonView == checkColPhOff) col = isColExpanded ? 6 : 2;
+
+            if (col != -1) {
+                for (EditText[] row : timeRows) {
+                    if (row.length > col) {
+                        row[col].setEnabled(!isChecked);
+                        row[col].setAlpha(isChecked ? 0.5f : 1.0f);
+                    }
+                }
+            }
+        };
+        if (checkColWdOff != null) checkColWdOff.setOnCheckedChangeListener(colOffListener);
+        if (checkColMoOff != null) checkColMoOff.setOnCheckedChangeListener(colOffListener);
+        if (checkColTuOff != null) checkColTuOff.setOnCheckedChangeListener(colOffListener);
+        if (checkColWeOff != null) checkColWeOff.setOnCheckedChangeListener(colOffListener);
+        if (checkColThOff != null) checkColThOff.setOnCheckedChangeListener(colOffListener);
+        if (checkColFrOff != null) checkColFrOff.setOnCheckedChangeListener(colOffListener);
+        checkColSaOff.setOnCheckedChangeListener(colOffListener);
+        checkColPhOff.setOnCheckedChangeListener(colOffListener);
+    }
+
+    private void toggleColExpansion() {
+        if (isColExpanded) {
+            if (canSummarizeCollection()) {
+                isColExpanded = false;
+                refreshCollectionTable();
+            } else {
+                new AlertDialog.Builder(this)
+                    .setTitle("まとめられません")
+                    .setMessage("平日の入力内容が曜日ごとに異なります。内容を一致させてからまとめてください。")
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
+            }
+        } else {
+            isColExpanded = true;
+            refreshCollectionTable();
+        }
+    }
+
+    private boolean canSummarizeCollection() {
+        if (!isColExpanded) return true;
+        
+        // チェックボックスの一致確認
+        boolean moChecked = checkColMoOff != null && checkColMoOff.isChecked();
+        boolean tuChecked = checkColTuOff != null && checkColTuOff.isChecked();
+        boolean weChecked = checkColWeOff != null && checkColWeOff.isChecked();
+        boolean thChecked = checkColThOff != null && checkColThOff.isChecked();
+        boolean frChecked = checkColFrOff != null && checkColFrOff.isChecked();
+        
+        if (moChecked != tuChecked || moChecked != weChecked || moChecked != thChecked || moChecked != frChecked) {
+            return false;
+        }
+        
+        // 各行の入力値一致確認
+        for (EditText[] row : timeRows) {
+            String mo = row[0].getText().toString();
+            String tu = row[1].getText().toString();
+            String we = row[2].getText().toString();
+            String th = row[3].getText().toString();
+            String fr = row[4].getText().toString();
+            if (!mo.equals(tu) || !mo.equals(we) || !mo.equals(th) || !mo.equals(fr)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void refreshCollectionTable() {
+        // 状態変更前の状態（isColExpandedは既に反転済み）
+        boolean wasExpanded = !isColExpanded;
+        
+        // 現在のデータを退避
+        List<String[]> data = new ArrayList<>();
+        for (EditText[] row : timeRows) {
+            String[] values = new String[7];
+            if (wasExpanded) {
+                // 展開時(7列)のデータを取得
+                for (int i = 0; i < 7; i++) {
+                    values[i] = row[i].getText().toString();
+                }
+            } else {
+                // 折り畳み時(3列)のデータを取得
+                String wd = row[0].getText().toString();
+                String sa = row[1].getText().toString();
+                String ph = row[2].getText().toString();
+                for (int i = 0; i < 5; i++) values[i] = wd;
+                values[5] = sa;
+                values[6] = ph;
+            }
+            data.add(values);
+        }
+
+        timeRows.clear();
+        setupCollectionTableHeaders();
+        for (String[] rowData : data) {
+            if (isColExpanded) {
+                addNewRow(rowData[0], rowData[1], rowData[2], rowData[3], rowData[4], rowData[5], rowData[6]);
+            } else {
+                addNewRow(rowData[0], rowData[5], rowData[6]);
+            }
+        }
+    }
+
+    private void copyColColumn(int from, int to) {
+        for (EditText[] row : timeRows) {
+            Util.applyTimeFormat(row[from]);
+            row[to].setText(row[from].getText());
+        }
+    }
+
     private int getThemeColor(int attr) {
         TypedValue typedValue = new TypedValue();
         getTheme().resolveAttribute(attr, typedValue, true);
         return typedValue.data;
+    }
+
+    private int getColUnitWidth() {
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        float density = getResources().getDisplayMetrics().density;
+        // HorizontalScrollView padding is 16dp * 2 = 32dp
+        // TableLayout padding is 0.5dp * 2 = 1dp
+        int totalPadding = (int) ((16 * 2 + 0.5 * 2) * density);
+        return (screenWidth - totalPadding) / 3;
+    }
+
+    private void toggleOhExpansion() {
+        isOhExpanded = !isOhExpanded;
+        int visibility = isOhExpanded ? View.VISIBLE : View.GONE;
+        findViewById(R.id.row_oh_mo).setVisibility(visibility);
+        findViewById(R.id.row_oh_tu).setVisibility(visibility);
+        findViewById(R.id.row_oh_we).setVisibility(visibility);
+        findViewById(R.id.row_oh_th).setVisibility(visibility);
+        findViewById(R.id.row_oh_fr).setVisibility(visibility);
+        
+        // 展開時は「平日」行を隠すか、グレーアウトするか、そのままにするか。
+        // 要求は「平日(1行目、セル結合) 各曜日(2行/列目)」なので、縦並びの場合は
+        // 平日が親で、子が月〜金という見栄えにする。
+        findViewById(R.id.row_oh_wd).setAlpha(isOhExpanded ? 0.5f : 1.0f);
+        // 値の同期は行わない（ユーザーが個別に編集するため）。
+        // ただし、展開した瞬間に平日の値を月〜金にコピーするのは親切かもしれない。
+        if (isOhExpanded) {
+            copyOhRow(editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd, checkOhWdOff,
+                      editOhMoOpen, editOhMoClose, editOhMoBreakStart, editOhMoBreakEnd, checkOhMoOff);
+            copyOhRow(editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd, checkOhWdOff,
+                      editOhTuOpen, editOhTuClose, editOhTuBreakStart, editOhTuBreakEnd, checkOhTuOff);
+            copyOhRow(editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd, checkOhWdOff,
+                      editOhWeOpen, editOhWeClose, editOhWeBreakStart, editOhWeBreakEnd, checkOhWeOff);
+            copyOhRow(editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd, checkOhWdOff,
+                      editOhThOpen, editOhThClose, editOhThBreakStart, editOhThBreakEnd, checkOhThOff);
+            copyOhRow(editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd, checkOhWdOff,
+                      editOhFrOpen, editOhFrClose, editOhFrBreakStart, editOhFrBreakEnd, checkOhFrOff);
+        }
+    }
+
+    private void toggleLsExpansion() {
+        isLsExpanded = !isLsExpanded;
+        int visibility = isLsExpanded ? View.VISIBLE : View.GONE;
+        findViewById(R.id.row_ls_mo).setVisibility(visibility);
+        findViewById(R.id.row_ls_tu).setVisibility(visibility);
+        findViewById(R.id.row_ls_we).setVisibility(visibility);
+        findViewById(R.id.row_ls_th).setVisibility(visibility);
+        findViewById(R.id.row_ls_fr).setVisibility(visibility);
+        findViewById(R.id.row_ls_wd).setAlpha(isLsExpanded ? 0.5f : 1.0f);
+        if (isLsExpanded) {
+            copyOhRow(editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd, checkLsWdOff,
+                      editLsMoOpen, editLsMoClose, editLsMoBreakStart, editLsMoBreakEnd, checkLsMoOff);
+            copyOhRow(editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd, checkLsWdOff,
+                      editLsTuOpen, editLsTuClose, editLsTuBreakStart, editLsTuBreakEnd, checkLsTuOff);
+            copyOhRow(editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd, checkLsWdOff,
+                      editLsWeOpen, editLsWeClose, editLsWeBreakStart, editLsWeBreakEnd, checkLsWeOff);
+            copyOhRow(editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd, checkLsWdOff,
+                      editLsThOpen, editLsThClose, editLsThBreakStart, editLsThBreakEnd, checkLsThOff);
+            copyOhRow(editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd, checkLsWdOff,
+                      editLsFrOpen, editLsFrClose, editLsFrBreakStart, editLsFrBreakEnd, checkLsFrOff);
+        }
+    }
+
+    private void copyOhRow(EditText fromO, EditText fromC, EditText fromBS, EditText fromBE, android.widget.CheckBox fromOff,
+                           EditText toO, EditText toC, EditText toBS, EditText toBE, android.widget.CheckBox toOff) {
+        if (fromO == null || toO == null) return;
+        Util.applyTimeFormat(fromO);
+        Util.applyTimeFormat(fromC);
+        Util.applyTimeFormat(fromBS);
+        Util.applyTimeFormat(fromBE);
+        toO.setText(fromO.getText());
+        toC.setText(fromC.getText());
+        toBS.setText(fromBS.getText());
+        toBE.setText(fromBE.getText());
+        toOff.setChecked(fromOff.isChecked());
     }
 
     private int getMaxDistance() {
@@ -291,12 +674,18 @@ public class EditPoiActivity extends AppCompatActivity {
         View shapeLayout = findViewById(R.id.layout_shape_edit);
         RadioGroup radioShape = findViewById(R.id.edit_radio_shape);
         tableCollection = findViewById(R.id.table_collection);
+        btnToggleColExpansion = findViewById(R.id.btn_toggle_col_expansion);
+        if (btnToggleColExpansion != null) {
+            btnToggleColExpansion.setOnClickListener(v -> toggleColExpansion());
+        }
+        setupCollectionTableHeaders();
         layoutFallback = findViewById(R.id.layout_fallback);
         textFallback = findViewById(R.id.text_fallback_value);
         View btnForceEdit = findViewById(R.id.btn_force_edit);
         Button btnAddRow = findViewById(R.id.btn_add_row);
-        Button btnCopyToSat = findViewById(R.id.btn_copy_to_sat);
-        Button btnCopyToSun = findViewById(R.id.btn_copy_to_sun);
+        // コピーボタンは setupCollectionTableHeaders 内で処理するか、別途取得する
+        // 既存のボタンIDはXMLから削除されたので、後ほど動的生成に対応させるかXMLに戻す
+        // ここでは一旦コメントアウトまたは削除し、setupCollectionTableHeaders 内で管理する
         ImageButton btnLockMap = findViewById(R.id.btn_lock_map);
         updateLockButtonStyle(btnLockMap);
         btnLockMap.setOnClickListener(v -> {
@@ -386,6 +775,28 @@ public class EditPoiActivity extends AppCompatActivity {
         editOhWdClose = findViewById(R.id.edit_oh_wd_close);
         editOhWdBreakStart = findViewById(R.id.edit_oh_wd_break_start);
         editOhWdBreakEnd = findViewById(R.id.edit_oh_wd_break_end);
+        
+        editOhMoOpen = findViewById(R.id.edit_oh_mo_open);
+        editOhMoClose = findViewById(R.id.edit_oh_mo_close);
+        editOhMoBreakStart = findViewById(R.id.edit_oh_mo_break_start);
+        editOhMoBreakEnd = findViewById(R.id.edit_oh_mo_break_end);
+        editOhTuOpen = findViewById(R.id.edit_oh_tu_open);
+        editOhTuClose = findViewById(R.id.edit_oh_tu_close);
+        editOhTuBreakStart = findViewById(R.id.edit_oh_tu_break_start);
+        editOhTuBreakEnd = findViewById(R.id.edit_oh_tu_break_end);
+        editOhWeOpen = findViewById(R.id.edit_oh_we_open);
+        editOhWeClose = findViewById(R.id.edit_oh_we_close);
+        editOhWeBreakStart = findViewById(R.id.edit_oh_we_break_start);
+        editOhWeBreakEnd = findViewById(R.id.edit_oh_we_break_end);
+        editOhThOpen = findViewById(R.id.edit_oh_th_open);
+        editOhThClose = findViewById(R.id.edit_oh_th_close);
+        editOhThBreakStart = findViewById(R.id.edit_oh_th_break_start);
+        editOhThBreakEnd = findViewById(R.id.edit_oh_th_break_end);
+        editOhFrOpen = findViewById(R.id.edit_oh_fr_open);
+        editOhFrClose = findViewById(R.id.edit_oh_fr_close);
+        editOhFrBreakStart = findViewById(R.id.edit_oh_fr_break_start);
+        editOhFrBreakEnd = findViewById(R.id.edit_oh_fr_break_end);
+
         editOhSaOpen = findViewById(R.id.edit_oh_sa_open);
         editOhSaClose = findViewById(R.id.edit_oh_sa_close);
         editOhSaBreakStart = findViewById(R.id.edit_oh_sa_break_start);
@@ -394,12 +805,21 @@ public class EditPoiActivity extends AppCompatActivity {
         editOhPhClose = findViewById(R.id.edit_oh_ph_close);
         editOhPhBreakStart = findViewById(R.id.edit_oh_ph_break_start);
         editOhPhBreakEnd = findViewById(R.id.edit_oh_ph_break_end);
+        
         checkOhWdOff = findViewById(R.id.check_oh_wd_off);
+        checkOhMoOff = findViewById(R.id.check_oh_mo_off);
+        checkOhTuOff = findViewById(R.id.check_oh_tu_off);
+        checkOhWeOff = findViewById(R.id.check_oh_we_off);
+        checkOhThOff = findViewById(R.id.check_oh_th_off);
+        checkOhFrOff = findViewById(R.id.check_oh_fr_off);
         checkOhSaOff = findViewById(R.id.check_oh_sa_off);
         checkOhPhOff = findViewById(R.id.check_oh_ph_off);
-        checkColWdOff = findViewById(R.id.check_col_wd_off);
-        checkColSaOff = findViewById(R.id.check_col_sa_off);
-        checkColPhOff = findViewById(R.id.check_col_ph_off);
+
+        findViewById(R.id.label_oh_wd).setOnClickListener(v -> toggleOhExpansion());
+        findViewById(R.id.btn_oh_mo_to_tu).setOnClickListener(v -> copyOhRow(editOhMoOpen, editOhMoClose, editOhMoBreakStart, editOhMoBreakEnd, checkOhMoOff, editOhTuOpen, editOhTuClose, editOhTuBreakStart, editOhTuBreakEnd, checkOhTuOff));
+        findViewById(R.id.btn_oh_tu_to_we).setOnClickListener(v -> copyOhRow(editOhTuOpen, editOhTuClose, editOhTuBreakStart, editOhTuBreakEnd, checkOhTuOff, editOhWeOpen, editOhWeClose, editOhWeBreakStart, editOhWeBreakEnd, checkOhWeOff));
+        findViewById(R.id.btn_oh_we_to_th).setOnClickListener(v -> copyOhRow(editOhWeOpen, editOhWeClose, editOhWeBreakStart, editOhWeBreakEnd, checkOhWeOff, editOhThOpen, editOhThClose, editOhThBreakStart, editOhThBreakEnd, checkOhThOff));
+        findViewById(R.id.btn_oh_th_to_fr).setOnClickListener(v -> copyOhRow(editOhThOpen, editOhThClose, editOhThBreakStart, editOhThBreakEnd, checkOhThOff, editOhFrOpen, editOhFrClose, editOhFrBreakStart, editOhFrBreakEnd, checkOhFrOff));
 
         layoutLimitedServiceEditRoot = findViewById(R.id.layout_limited_service_edit_root);
         radioLimitedService = findViewById(R.id.radio_limited_service);
@@ -408,6 +828,28 @@ public class EditPoiActivity extends AppCompatActivity {
         editLsWdClose = findViewById(R.id.edit_ls_wd_close);
         editLsWdBreakStart = findViewById(R.id.edit_ls_wd_break_start);
         editLsWdBreakEnd = findViewById(R.id.edit_ls_wd_break_end);
+        
+        editLsMoOpen = findViewById(R.id.edit_ls_mo_open);
+        editLsMoClose = findViewById(R.id.edit_ls_mo_close);
+        editLsMoBreakStart = findViewById(R.id.edit_ls_mo_break_start);
+        editLsMoBreakEnd = findViewById(R.id.edit_ls_mo_break_end);
+        editLsTuOpen = findViewById(R.id.edit_ls_tu_open);
+        editLsTuClose = findViewById(R.id.edit_ls_tu_close);
+        editLsTuBreakStart = findViewById(R.id.edit_ls_tu_break_start);
+        editLsTuBreakEnd = findViewById(R.id.edit_ls_tu_break_end);
+        editLsWeOpen = findViewById(R.id.edit_ls_we_open);
+        editLsWeClose = findViewById(R.id.edit_ls_we_close);
+        editLsWeBreakStart = findViewById(R.id.edit_ls_we_break_start);
+        editLsWeBreakEnd = findViewById(R.id.edit_ls_we_break_end);
+        editLsThOpen = findViewById(R.id.edit_ls_th_open);
+        editLsThClose = findViewById(R.id.edit_ls_th_close);
+        editLsThBreakStart = findViewById(R.id.edit_ls_th_break_start);
+        editLsThBreakEnd = findViewById(R.id.edit_ls_th_break_end);
+        editLsFrOpen = findViewById(R.id.edit_ls_fr_open);
+        editLsFrClose = findViewById(R.id.edit_ls_fr_close);
+        editLsFrBreakStart = findViewById(R.id.edit_ls_fr_break_start);
+        editLsFrBreakEnd = findViewById(R.id.edit_ls_fr_break_end);
+        
         editLsSaOpen = findViewById(R.id.edit_ls_sa_open);
         editLsSaClose = findViewById(R.id.edit_ls_sa_close);
         editLsSaBreakStart = findViewById(R.id.edit_ls_sa_break_start);
@@ -416,10 +858,22 @@ public class EditPoiActivity extends AppCompatActivity {
         editLsPhClose = findViewById(R.id.edit_ls_ph_close);
         editLsPhBreakStart = findViewById(R.id.edit_ls_ph_break_start);
         editLsPhBreakEnd = findViewById(R.id.edit_ls_ph_break_end);
+        
         checkLsWdOff = findViewById(R.id.check_ls_wd_off);
+        checkLsMoOff = findViewById(R.id.check_ls_mo_off);
+        checkLsTuOff = findViewById(R.id.check_ls_tu_off);
+        checkLsWeOff = findViewById(R.id.check_ls_we_off);
+        checkLsThOff = findViewById(R.id.check_ls_th_off);
+        checkLsFrOff = findViewById(R.id.check_ls_fr_off);
         checkLsSaOff = findViewById(R.id.check_ls_sa_off);
         checkLsPhOff = findViewById(R.id.check_ls_ph_off);
 
+        findViewById(R.id.label_ls_wd).setOnClickListener(v -> toggleLsExpansion());
+        findViewById(R.id.btn_ls_mo_to_tu).setOnClickListener(v -> copyOhRow(editLsMoOpen, editLsMoClose, editLsMoBreakStart, editLsMoBreakEnd, checkLsMoOff, editLsTuOpen, editLsTuClose, editLsTuBreakStart, editLsTuBreakEnd, checkLsTuOff));
+        findViewById(R.id.btn_ls_tu_to_we).setOnClickListener(v -> copyOhRow(editLsTuOpen, editLsTuClose, editLsTuBreakStart, editLsTuBreakEnd, checkLsTuOff, editLsWeOpen, editLsWeClose, editLsWeBreakStart, editLsWeBreakEnd, checkLsWeOff));
+        findViewById(R.id.btn_ls_we_to_th).setOnClickListener(v -> copyOhRow(editLsWeOpen, editLsWeClose, editLsWeBreakStart, editLsWeBreakEnd, checkLsWeOff, editLsThOpen, editLsThClose, editLsThBreakStart, editLsThBreakEnd, checkLsThOff));
+        findViewById(R.id.btn_ls_th_to_fr).setOnClickListener(v -> copyOhRow(editLsThOpen, editLsThClose, editLsThBreakStart, editLsThBreakEnd, checkLsThOff, editLsFrOpen, editLsFrClose, editLsFrBreakStart, editLsFrBreakEnd, checkLsFrOff));
+        
         radioLimitedService.setOnCheckedChangeListener((group, checkedId) -> {
             tableLimitedService.setVisibility(checkedId == R.id.radio_ls_yes ? View.VISIBLE : View.GONE);
         });
@@ -428,12 +882,32 @@ public class EditPoiActivity extends AppCompatActivity {
             EditText[] rowEditors;
             if (buttonView == checkOhWdOff) {
                 rowEditors = new EditText[]{editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd};
+            } else if (buttonView == checkOhMoOff) {
+                rowEditors = new EditText[]{editOhMoOpen, editOhMoClose, editOhMoBreakStart, editOhMoBreakEnd};
+            } else if (buttonView == checkOhTuOff) {
+                rowEditors = new EditText[]{editOhTuOpen, editOhTuClose, editOhTuBreakStart, editOhTuBreakEnd};
+            } else if (buttonView == checkOhWeOff) {
+                rowEditors = new EditText[]{editOhWeOpen, editOhWeClose, editOhWeBreakStart, editOhWeBreakEnd};
+            } else if (buttonView == checkOhThOff) {
+                rowEditors = new EditText[]{editOhThOpen, editOhThClose, editOhThBreakStart, editOhThBreakEnd};
+            } else if (buttonView == checkOhFrOff) {
+                rowEditors = new EditText[]{editOhFrOpen, editOhFrClose, editOhFrBreakStart, editOhFrBreakEnd};
             } else if (buttonView == checkOhSaOff) {
                 rowEditors = new EditText[]{editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd};
             } else if (buttonView == checkOhPhOff) {
                 rowEditors = new EditText[]{editOhPhOpen, editOhPhClose, editOhPhBreakStart, editOhPhBreakEnd};
             } else if (buttonView == checkLsWdOff) {
                 rowEditors = new EditText[]{editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd};
+            } else if (buttonView == checkLsMoOff) {
+                rowEditors = new EditText[]{editLsMoOpen, editLsMoClose, editLsMoBreakStart, editLsMoBreakEnd};
+            } else if (buttonView == checkLsTuOff) {
+                rowEditors = new EditText[]{editLsTuOpen, editLsTuClose, editLsTuBreakStart, editLsTuBreakEnd};
+            } else if (buttonView == checkLsWeOff) {
+                rowEditors = new EditText[]{editLsWeOpen, editLsWeClose, editLsWeBreakStart, editLsWeBreakEnd};
+            } else if (buttonView == checkLsThOff) {
+                rowEditors = new EditText[]{editLsThOpen, editLsThClose, editLsThBreakStart, editLsThBreakEnd};
+            } else if (buttonView == checkLsFrOff) {
+                rowEditors = new EditText[]{editLsFrOpen, editLsFrClose, editLsFrBreakStart, editLsFrBreakEnd};
             } else if (buttonView == checkLsSaOff) {
                 rowEditors = new EditText[]{editLsSaOpen, editLsSaClose, editLsSaBreakStart, editLsSaBreakEnd};
             } else {
@@ -445,32 +919,21 @@ public class EditPoiActivity extends AppCompatActivity {
             }
         };
         checkOhWdOff.setOnCheckedChangeListener(ohOffListener);
+        checkOhMoOff.setOnCheckedChangeListener(ohOffListener);
+        checkOhTuOff.setOnCheckedChangeListener(ohOffListener);
+        checkOhWeOff.setOnCheckedChangeListener(ohOffListener);
+        checkOhThOff.setOnCheckedChangeListener(ohOffListener);
+        checkOhFrOff.setOnCheckedChangeListener(ohOffListener);
         checkOhSaOff.setOnCheckedChangeListener(ohOffListener);
         checkOhPhOff.setOnCheckedChangeListener(ohOffListener);
         checkLsWdOff.setOnCheckedChangeListener(ohOffListener);
+        checkLsMoOff.setOnCheckedChangeListener(ohOffListener);
+        checkLsTuOff.setOnCheckedChangeListener(ohOffListener);
+        checkLsWeOff.setOnCheckedChangeListener(ohOffListener);
+        checkLsThOff.setOnCheckedChangeListener(ohOffListener);
+        checkLsFrOff.setOnCheckedChangeListener(ohOffListener);
         checkLsSaOff.setOnCheckedChangeListener(ohOffListener);
         checkLsPhOff.setOnCheckedChangeListener(ohOffListener);
-
-        android.widget.CompoundButton.OnCheckedChangeListener colOffListener = (buttonView, isChecked) -> {
-            int col;
-            if (buttonView == checkColWdOff) {
-                col = 0;
-            } else if (buttonView == checkColSaOff) {
-                col = 1;
-            } else {
-                col = 2;
-            }
-            for (EditText[] row : timeRows) {
-                row[col].setEnabled(!isChecked);
-                row[col].setAlpha(isChecked ? 0.5f : 1.0f);
-            }
-        };
-        checkColWdOff.setOnCheckedChangeListener(colOffListener);
-        checkColSaOff.setOnCheckedChangeListener(colOffListener);
-        checkColPhOff.setOnCheckedChangeListener(colOffListener);
-        
-        Button btnOhCopyToSa = findViewById(R.id.btn_oh_copy_to_sa);
-        Button btnOhCopyToPh = findViewById(R.id.btn_oh_copy_to_ph);
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
@@ -581,18 +1044,6 @@ public class EditPoiActivity extends AppCompatActivity {
             }
             
             btnAddRow.setOnClickListener(v -> addNewRow());
-            btnCopyToSat.setOnClickListener(v -> {
-                for (EditText[] row : timeRows) {
-                    Util.applyTimeFormat(row[0]);
-                    row[1].setText(row[0].getText());
-                }
-            });
-            btnCopyToSun.setOnClickListener(v -> {
-                for (EditText[] row : timeRows) {
-                    Util.applyTimeFormat(row[1]);
-                    row[2].setText(row[1].getText());
-                }
-            });
         } else {
             String hours = targetPoi.getTag("opening_hours");
             if (hours != null && !hours.isEmpty()) {
@@ -644,29 +1095,6 @@ public class EditPoiActivity extends AppCompatActivity {
                 tagLayout.setVisibility(View.VISIBLE);
             });
 
-            btnOhCopyToSa.setOnClickListener(v -> {
-                Util.applyTimeFormat(editOhWdOpen);
-                Util.applyTimeFormat(editOhWdClose);
-                Util.applyTimeFormat(editOhWdBreakStart);
-                Util.applyTimeFormat(editOhWdBreakEnd);
-                editOhSaOpen.setText(editOhWdOpen.getText());
-                editOhSaClose.setText(editOhWdClose.getText());
-                editOhSaBreakStart.setText(editOhWdBreakStart.getText());
-                editOhSaBreakEnd.setText(editOhWdBreakEnd.getText());
-                checkOhSaOff.setChecked(checkOhWdOff.isChecked());
-            });
-            btnOhCopyToPh.setOnClickListener(v -> {
-                Util.applyTimeFormat(editOhSaOpen);
-                Util.applyTimeFormat(editOhSaClose);
-                Util.applyTimeFormat(editOhSaBreakStart);
-                Util.applyTimeFormat(editOhSaBreakEnd);
-                editOhPhOpen.setText(editOhSaOpen.getText());
-                editOhPhClose.setText(editOhSaClose.getText());
-                editOhPhBreakStart.setText(editOhSaBreakStart.getText());
-                editOhPhBreakEnd.setText(editOhSaBreakEnd.getText());
-                checkOhPhOff.setChecked(checkOhSaOff.isChecked());
-            });
-
             // 変更監視用
             class OhTextWatcher implements TextWatcher {
                 private final EditText editText;
@@ -691,9 +1119,19 @@ public class EditPoiActivity extends AppCompatActivity {
 
             EditText[] ohEditors = {
                 editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd,
+                editOhMoOpen, editOhMoClose, editOhMoBreakStart, editOhMoBreakEnd,
+                editOhTuOpen, editOhTuClose, editOhTuBreakStart, editOhTuBreakEnd,
+                editOhWeOpen, editOhWeClose, editOhWeBreakStart, editOhWeBreakEnd,
+                editOhThOpen, editOhThClose, editOhThBreakStart, editOhThBreakEnd,
+                editOhFrOpen, editOhFrClose, editOhFrBreakStart, editOhFrBreakEnd,
                 editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd,
                 editOhPhOpen, editOhPhClose, editOhPhBreakStart, editOhPhBreakEnd,
                 editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd,
+                editLsMoOpen, editLsMoClose, editLsMoBreakStart, editLsMoBreakEnd,
+                editLsTuOpen, editLsTuClose, editLsTuBreakStart, editLsTuBreakEnd,
+                editLsWeOpen, editLsWeClose, editLsWeBreakStart, editLsWeBreakEnd,
+                editLsThOpen, editLsThClose, editLsThBreakStart, editLsThBreakEnd,
+                editLsFrOpen, editLsFrClose, editLsFrBreakStart, editLsFrBreakEnd,
                 editLsSaOpen, editLsSaClose, editLsSaBreakStart, editLsSaBreakEnd,
                 editLsPhOpen, editLsPhClose, editLsPhBreakStart, editLsPhBreakEnd
             };
@@ -809,16 +1247,29 @@ public class EditPoiActivity extends AppCompatActivity {
                 String aTag = targetPoi.getTag("amenity");
                 boolean isPostBoxLocal = isNew || "post_box".equals(aTag);
 
-                if (isPostBoxLocal) {
+            if (isPostBoxLocal) {
                     if (layoutFallback.getVisibility() == View.VISIBLE) {
                         collection = targetPoi.getTag("collection_times");
                     } else {
                         Map<Days, List<? extends ITagPart>> weeklyTable = new HashMap<>();
-                        for (int col = 0; col < 3; col++) {
-                            android.widget.CheckBox checkColOff = (col == 0) ? checkColWdOff : (col == 1 ? checkColSaOff : checkColPhOff);
+                        int maxCol = isColExpanded ? 7 : 3;
+                        for (int col = 0; col < maxCol; col++) {
+                            android.widget.CheckBox checkColOff;
+                            if (isColExpanded) {
+                                if (col == 0) checkColOff = checkColMoOff;
+                                else if (col == 1) checkColOff = checkColTuOff;
+                                else if (col == 2) checkColOff = checkColWeOff;
+                                else if (col == 3) checkColOff = checkColThOff;
+                                else if (col == 4) checkColOff = checkColFrOff;
+                                else if (col == 5) checkColOff = checkColSaOff;
+                                else checkColOff = checkColPhOff;
+                            } else {
+                                checkColOff = (col == 0) ? checkColWdOff : (col == 1 ? checkColSaOff : checkColPhOff);
+                            }
+                            
                             List<CollectionTime> targetList = null;
 
-                            if (checkColOff.isChecked()) {
+                            if (checkColOff != null && checkColOff.isChecked()) {
                                 targetList = new ArrayList<>(); // off;
                             } else {
                                 int lastMinutes = -1;
@@ -843,17 +1294,20 @@ public class EditPoiActivity extends AppCompatActivity {
                             }
 
                             if (targetList != null) {
-                                if (col == 0) {
-                                    weeklyTable.put(Days.MONDAY, targetList);
-                                    weeklyTable.put(Days.TUESDAY, targetList);
-                                    weeklyTable.put(Days.WEDNESDAY, targetList);
-                                    weeklyTable.put(Days.THURSDAY, targetList);
-                                    weeklyTable.put(Days.FRIDAY, targetList);
-                                } else if (col == 1) {
-                                    weeklyTable.put(Days.SATURDAY, targetList);
+                                if (isColExpanded) {
+                                    Days[] mapping = {Days.MONDAY, Days.TUESDAY, Days.WEDNESDAY, Days.THURSDAY, Days.FRIDAY, Days.SATURDAY, Days.SUNDAY};
+                                    weeklyTable.put(mapping[col], targetList);
+                                    if (col == 6) weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
                                 } else {
-                                    weeklyTable.put(Days.SUNDAY, targetList);
-                                    weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
+                                    if (col == 0) {
+                                        for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) 
+                                            weeklyTable.put(Days.valueOf(d), targetList);
+                                    } else if (col == 1) {
+                                        weeklyTable.put(Days.SATURDAY, targetList);
+                                    } else {
+                                        weeklyTable.put(Days.SUNDAY, targetList);
+                                        weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
+                                    }
                                 }
                             }
                         }
@@ -1058,11 +1512,24 @@ public class EditPoiActivity extends AppCompatActivity {
                 collection = currentTags.get("collection_times");
             } else {
                 Map<Days, List<? extends ITagPart>> weeklyTable = new HashMap<>();
-                for (int col = 0; col < 3; col++) {
-                    android.widget.CheckBox checkColOff = (col == 0) ? checkColWdOff : (col == 1 ? checkColSaOff : checkColPhOff);
+                int maxCol = isColExpanded ? 7 : 3;
+                for (int col = 0; col < maxCol; col++) {
+                    android.widget.CheckBox checkColOff;
+                    if (isColExpanded) {
+                        if (col == 0) checkColOff = checkColMoOff;
+                        else if (col == 1) checkColOff = checkColTuOff;
+                        else if (col == 2) checkColOff = checkColWeOff;
+                        else if (col == 3) checkColOff = checkColThOff;
+                        else if (col == 4) checkColOff = checkColFrOff;
+                        else if (col == 5) checkColOff = checkColSaOff;
+                        else checkColOff = checkColPhOff;
+                    } else {
+                        checkColOff = (col == 0) ? checkColWdOff : (col == 1 ? checkColSaOff : checkColPhOff);
+                    }
+                    
                     List<CollectionTime> targetList = null;
 
-                    if (checkColOff.isChecked()) {
+                    if (checkColOff != null && checkColOff.isChecked()) {
                         targetList = new ArrayList<>(); // off;
                     } else {
                         int lastMinutes = -1;
@@ -1093,17 +1560,20 @@ public class EditPoiActivity extends AppCompatActivity {
                     }
 
                     if (targetList != null) {
-                        if (col == 0) {
-                            weeklyTable.put(Days.MONDAY, targetList);
-                            weeklyTable.put(Days.TUESDAY, targetList);
-                            weeklyTable.put(Days.WEDNESDAY, targetList);
-                            weeklyTable.put(Days.THURSDAY, targetList);
-                            weeklyTable.put(Days.FRIDAY, targetList);
-                        } else if (col == 1) {
-                            weeklyTable.put(Days.SATURDAY, targetList);
+                        if (isColExpanded) {
+                            Days[] mapping = {Days.MONDAY, Days.TUESDAY, Days.WEDNESDAY, Days.THURSDAY, Days.FRIDAY, Days.SATURDAY, Days.SUNDAY};
+                            weeklyTable.put(mapping[col], targetList);
+                            if (col == 6) weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
                         } else {
-                            weeklyTable.put(Days.SUNDAY, targetList);
-                            weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
+                            if (col == 0) {
+                                for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) 
+                                    weeklyTable.put(Days.valueOf(d), targetList);
+                            } else if (col == 1) {
+                                weeklyTable.put(Days.SATURDAY, targetList);
+                            } else {
+                                weeklyTable.put(Days.SUNDAY, targetList);
+                                weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
+                            }
                         }
                     }
                 }
@@ -1129,21 +1599,47 @@ public class EditPoiActivity extends AppCompatActivity {
             } else {
                 Map<Days, List<? extends ITagPart>> weeklyTable = new HashMap<>();
                 
-                // 平日
-                List<ITagPart> wdTimes = new ArrayList<>();
-                if (!checkOhWdOff.isChecked()) {
-                    Util.applyTimeFormat(editOhWdOpen);
-                    Util.applyTimeFormat(editOhWdClose);
-                    Util.applyTimeFormat(editOhWdBreakStart);
-                    Util.applyTimeFormat(editOhWdBreakEnd);
-                    String wdOpen = Util.normalizeNumber(editOhWdOpen.getText().toString().trim());
-                    String wdClose = Util.normalizeNumber(editOhWdClose.getText().toString().trim());
-                    String wdBreakStart = Util.normalizeNumber(editOhWdBreakStart.getText().toString().trim());
-                    String wdBreakEnd = Util.normalizeNumber(editOhWdBreakEnd.getText().toString().trim());
-                    wdTimes.addAll(formatOpeningTimeRange(wdOpen, wdClose, wdBreakStart, wdBreakEnd));
-                }
-                for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
-                    weeklyTable.put(Days.valueOf(d), wdTimes);
+                // 平日/各曜日
+                if (isOhExpanded) {
+                    Days[] days = {Days.MONDAY, Days.TUESDAY, Days.WEDNESDAY, Days.THURSDAY, Days.FRIDAY};
+                    EditText[][] editors = {
+                        {editOhMoOpen, editOhMoClose, editOhMoBreakStart, editOhMoBreakEnd},
+                        {editOhTuOpen, editOhTuClose, editOhTuBreakStart, editOhTuBreakEnd},
+                        {editOhWeOpen, editOhWeClose, editOhWeBreakStart, editOhWeBreakEnd},
+                        {editOhThOpen, editOhThClose, editOhThBreakStart, editOhThBreakEnd},
+                        {editOhFrOpen, editOhFrClose, editOhFrBreakStart, editOhFrBreakEnd}
+                    };
+                    android.widget.CheckBox[] checks = {checkOhMoOff, checkOhTuOff, checkOhWeOff, checkOhThOff, checkOhFrOff};
+                    
+                    for (int i = 0; i < 5; i++) {
+                        List<ITagPart> times = new ArrayList<>();
+                        if (!checks[i].isChecked()) {
+                            for (EditText et : editors[i]) Util.applyTimeFormat(et);
+                            times.addAll(formatOpeningTimeRange(
+                                Util.normalizeNumber(editors[i][0].getText().toString().trim()),
+                                Util.normalizeNumber(editors[i][1].getText().toString().trim()),
+                                Util.normalizeNumber(editors[i][2].getText().toString().trim()),
+                                Util.normalizeNumber(editors[i][3].getText().toString().trim())
+                            ));
+                        }
+                        weeklyTable.put(days[i], times);
+                    }
+                } else {
+                    List<ITagPart> wdTimes = new ArrayList<>();
+                    if (!checkOhWdOff.isChecked()) {
+                        Util.applyTimeFormat(editOhWdOpen);
+                        Util.applyTimeFormat(editOhWdClose);
+                        Util.applyTimeFormat(editOhWdBreakStart);
+                        Util.applyTimeFormat(editOhWdBreakEnd);
+                        String wdOpen = Util.normalizeNumber(editOhWdOpen.getText().toString().trim());
+                        String wdClose = Util.normalizeNumber(editOhWdClose.getText().toString().trim());
+                        String wdBreakStart = Util.normalizeNumber(editOhWdBreakStart.getText().toString().trim());
+                        String wdBreakEnd = Util.normalizeNumber(editOhWdBreakEnd.getText().toString().trim());
+                        wdTimes.addAll(formatOpeningTimeRange(wdOpen, wdClose, wdBreakStart, wdBreakEnd));
+                    }
+                    for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
+                        weeklyTable.put(Days.valueOf(d), wdTimes);
+                    }
                 }
                 
                 // 土曜
@@ -1187,22 +1683,48 @@ public class EditPoiActivity extends AppCompatActivity {
                 currentTags.put("limited_service:mail", "yes");
                 Map<Days, List<? extends ITagPart>> lsWeeklyTable = new HashMap<>();
                 
-                // 平日
-                List<ITagPart> wdTimes = new ArrayList<>();
-                if (!checkLsWdOff.isChecked()) {
-                    Util.applyTimeFormat(editLsWdOpen);
-                    Util.applyTimeFormat(editLsWdClose);
-                    Util.applyTimeFormat(editLsWdBreakStart);
-                    Util.applyTimeFormat(editLsWdBreakEnd);
-                    wdTimes.addAll(formatOpeningTimeRange(
-                        Util.normalizeNumber(editLsWdOpen.getText().toString().trim()),
-                        Util.normalizeNumber(editLsWdClose.getText().toString().trim()),
-                        Util.normalizeNumber(editLsWdBreakStart.getText().toString().trim()),
-                        Util.normalizeNumber(editLsWdBreakEnd.getText().toString().trim())
-                    ));
-                }
-                for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
-                    lsWeeklyTable.put(Days.valueOf(d), wdTimes);
+                // 平日/各曜日
+                if (isLsExpanded) {
+                    Days[] days = {Days.MONDAY, Days.TUESDAY, Days.WEDNESDAY, Days.THURSDAY, Days.FRIDAY};
+                    EditText[][] editors = {
+                        {editLsMoOpen, editLsMoClose, editLsMoBreakStart, editLsMoBreakEnd},
+                        {editLsTuOpen, editLsTuClose, editLsTuBreakStart, editLsTuBreakEnd},
+                        {editLsWeOpen, editLsWeClose, editLsWeBreakStart, editLsWeBreakEnd},
+                        {editLsThOpen, editLsThClose, editLsThBreakStart, editLsThBreakEnd},
+                        {editLsFrOpen, editLsFrClose, editLsFrBreakStart, editLsFrBreakEnd}
+                    };
+                    android.widget.CheckBox[] checks = {checkLsMoOff, checkLsTuOff, checkLsWeOff, checkLsThOff, checkLsFrOff};
+                    
+                    for (int i = 0; i < 5; i++) {
+                        List<ITagPart> times = new ArrayList<>();
+                        if (!checks[i].isChecked()) {
+                            for (EditText et : editors[i]) Util.applyTimeFormat(et);
+                            times.addAll(formatOpeningTimeRange(
+                                Util.normalizeNumber(editors[i][0].getText().toString().trim()),
+                                Util.normalizeNumber(editors[i][1].getText().toString().trim()),
+                                Util.normalizeNumber(editors[i][2].getText().toString().trim()),
+                                Util.normalizeNumber(editors[i][3].getText().toString().trim())
+                            ));
+                        }
+                        lsWeeklyTable.put(days[i], times);
+                    }
+                } else {
+                    List<ITagPart> wdTimes = new ArrayList<>();
+                    if (!checkLsWdOff.isChecked()) {
+                        Util.applyTimeFormat(editLsWdOpen);
+                        Util.applyTimeFormat(editLsWdClose);
+                        Util.applyTimeFormat(editLsWdBreakStart);
+                        Util.applyTimeFormat(editLsWdBreakEnd);
+                        wdTimes.addAll(formatOpeningTimeRange(
+                            Util.normalizeNumber(editLsWdOpen.getText().toString().trim()),
+                            Util.normalizeNumber(editLsWdClose.getText().toString().trim()),
+                            Util.normalizeNumber(editLsWdBreakStart.getText().toString().trim()),
+                            Util.normalizeNumber(editLsWdBreakEnd.getText().toString().trim())
+                        ));
+                    }
+                    for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
+                        lsWeeklyTable.put(Days.valueOf(d), wdTimes);
+                    }
                 }
                 
                 // 土曜
@@ -1425,11 +1947,13 @@ public class EditPoiActivity extends AppCompatActivity {
         }, 5000);
     }
 
-    private void addNewRow(String initialValue1, String initialValue2, String initialValue3) {
+    private void addNewRow(String... initialValues) {
         TableRow row = new TableRow(this);
-        EditText[] rowEditors = new EditText[3];
-        String[] initialValues = {initialValue1, initialValue2, initialValue3};
-        for (int i = 0; i < 3; i++) {
+        row.setLayoutParams(new TableLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        int colCount = isColExpanded ? 7 : 3;
+        EditText[] rowEditors = new EditText[colCount];
+        
+        for (int i = 0; i < colCount; i++) {
             EditText et = new EditText(this);
             et.setHint("--:--");
             et.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
@@ -1437,22 +1961,24 @@ public class EditPoiActivity extends AppCompatActivity {
             Util.addTimeParseHandler(et);
             Util.addClearRestoreHandler(et);
             et.setGravity(Gravity.CENTER);
-            et.setText(Util.normalizeNumber(initialValues[i]));
+            String val = (initialValues != null && i < initialValues.length) ? initialValues[i] : "";
+            et.setText(Util.normalizeNumber(val));
             et.setPadding((int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics()),
                          (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics()),
                          (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics()),
                          (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics()));
             et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+            et.setMinimumWidth((int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 65, getResources().getDisplayMetrics()));
             
-            TableRow.LayoutParams params = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1.0f);
+            TableRow.LayoutParams params = new TableRow.LayoutParams(getColUnitWidth(), TableRow.LayoutParams.WRAP_CONTENT);
             int margin = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 0.5f, getResources().getDisplayMetrics());
             params.setMargins(margin, margin, margin, margin);
             et.setLayoutParams(params);
             
             // 初期の見た目設定
-            applyCellStyles(et, initialValues[i], false);
+            applyCellStyles(et, et.getText().toString(), false);
 
-            final String finalInitialValue = initialValues[i];
+            final String finalInitialValue = et.getText().toString();
             et.addTextChangedListener(new TextWatcher() {
                 private final String originalValue = finalInitialValue;
                 @Override
@@ -1470,7 +1996,20 @@ public class EditPoiActivity extends AppCompatActivity {
             rowEditors[i] = et;
 
             // 収集なしチェックボックスの状態を反映
-            android.widget.CheckBox checkColOff = (i == 0) ? checkColWdOff : (i == 1 ? checkColSaOff : checkColPhOff);
+            android.widget.CheckBox checkColOff = null;
+            if (isColExpanded) {
+                if (i == 0) checkColOff = checkColMoOff;
+                else if (i == 1) checkColOff = checkColTuOff;
+                else if (i == 2) checkColOff = checkColWeOff;
+                else if (i == 3) checkColOff = checkColThOff;
+                else if (i == 4) checkColOff = checkColFrOff;
+                else if (i == 5) checkColOff = checkColSaOff;
+                else if (i == 6) checkColOff = checkColPhOff;
+            } else {
+                if (i == 0) checkColOff = checkColWdOff;
+                else if (i == 1) checkColOff = checkColSaOff;
+                else if (i == 2) checkColOff = checkColPhOff;
+            }
             if (checkColOff != null && checkColOff.isChecked()) {
                 et.setEnabled(false);
                 et.setAlpha(0.5f);
@@ -1481,7 +2020,11 @@ public class EditPoiActivity extends AppCompatActivity {
     }
 
     private void addNewRow() {
-        addNewRow("", "", "");
+        if (isColExpanded) {
+            addNewRow("", "", "", "", "", "", "");
+        } else {
+            addNewRow("", "", "");
+        }
     }
 
     private List<OpenCloseTime> formatOpeningTimeRange(String open, String close, String bStart, String bEnd) {
@@ -1529,56 +2072,92 @@ public class EditPoiActivity extends AppCompatActivity {
             Map<Days, ? extends IDaySchedule> weeklyTable = result.getWeeklyTable();
             if (weeklyTable.isEmpty() && !tag.isEmpty()) return false;
 
+            // 月〜金の差異チェック
+            IDaySchedule moSched = weeklyTable.get(Days.MONDAY);
+            boolean isSame = true;
+            for (Days d : new Days[]{Days.TUESDAY, Days.WEDNESDAY, Days.THURSDAY, Days.FRIDAY}) {
+                IDaySchedule dSched = weeklyTable.get(d);
+                if (!isSchedulesEqual(moSched, dSched)) {
+                    isSame = false;
+                    break;
+                }
+            }
+
+            if (!isSame) {
+                isOhExpanded = true;
+                toggleOhExpansion();
+            }
+
             Days[] dayGroups = {
-                Days.MONDAY,
+                Days.MONDAY, Days.TUESDAY, Days.WEDNESDAY, Days.THURSDAY, Days.FRIDAY,
                 Days.SATURDAY,
                 Days.SUNDAY
             };
             EditText[][] editors = {
-                {editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd},
+                {editOhMoOpen, editOhMoClose, editOhMoBreakStart, editOhMoBreakEnd},
+                {editOhTuOpen, editOhTuClose, editOhTuBreakStart, editOhTuBreakEnd},
+                {editOhWeOpen, editOhWeClose, editOhWeBreakStart, editOhWeBreakEnd},
+                {editOhThOpen, editOhThClose, editOhThBreakStart, editOhThBreakEnd},
+                {editOhFrOpen, editOhFrClose, editOhFrBreakStart, editOhFrBreakEnd},
                 {editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd},
                 {editOhPhOpen, editOhPhClose, editOhPhBreakStart, editOhPhBreakEnd}
+            };
+            android.widget.CheckBox[] checks = {
+                checkOhMoOff, checkOhTuOff, checkOhWeOff, checkOhThOff, checkOhFrOff,
+                checkOhSaOff,
+                checkOhPhOff
             };
 
             for (int i = 0; i < dayGroups.length; i++) {
                 IDaySchedule daySchedule = weeklyTable.get(dayGroups[i]);
-                android.widget.CheckBox checkOff = (i == 0) ? checkOhWdOff : (i == 1 ? checkOhSaOff : checkOhPhOff);
-                
                 if ((daySchedule == null || daySchedule.schedule().isEmpty()) && !tag.isEmpty()) {
-                    checkOff.setChecked(true);
-                    editors[i][0].setText("");
-                    editors[i][1].setText("");
-                    editors[i][2].setText("");
-                    editors[i][3].setText("");
+                    checks[i].setChecked(true);
                 } else {
-                    checkOff.setChecked(false);
-                    String open = "", close = "", bStart = "", bEnd = "";
-                    if (daySchedule != null) {
-                        List<? extends ITagPart> times = daySchedule.schedule();
-                        if (times.size() == 1) {
-                            OpenCloseTime oct = (OpenCloseTime) times.get(0);
-                            open = oct.openAt.value;
-                            close = oct.closeAt.value;
-                        } else if (times.size() >= 2) {
-                            OpenCloseTime oct1 = (OpenCloseTime) times.get(0);
-                            OpenCloseTime oct2 = (OpenCloseTime) times.get(1);
-                            open = oct1.openAt.value;
-                            bStart = oct1.closeAt.value;
-                            bEnd = oct2.openAt.value;
-                            close = oct2.closeAt.value;
-                        }
-                    }
-                    editors[i][0].setText(Util.normalizeNumber(open));
-                    editors[i][1].setText(Util.normalizeNumber(close));
-                    editors[i][2].setText(Util.normalizeNumber(bStart));
-                    editors[i][3].setText(Util.normalizeNumber(bEnd));
+                    checks[i].setChecked(false);
+                    fillEditors(editors[i], daySchedule);
                 }
                 for (EditText et : editors[i]) applyCellStyles(et, et.getText().toString(), false);
             }
+
+            // 平日(Wd)用のEditTextにも値をセットしておく
+            fillEditors(new EditText[]{editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd}, moSched);
+            checkOhWdOff.setChecked(moSched == null || moSched.schedule().isEmpty());
+            for (EditText et : new EditText[]{editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd}) applyCellStyles(et, et.getText().toString(), false);
+
             return true;
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private boolean isSchedulesEqual(IDaySchedule s1, IDaySchedule s2) {
+        if (s1 == s2) return true;
+        if (s1 == null || s2 == null) return false;
+        if (s1.status() != s2.status()) return false;
+        return schedToList(s1).equals(schedToList(s2));
+    }
+
+    private void fillEditors(EditText[] row, IDaySchedule daySchedule) {
+        String open = "", close = "", bStart = "", bEnd = "";
+        if (daySchedule != null) {
+            List<? extends ITagPart> times = daySchedule.schedule();
+            if (times.size() == 1) {
+                OpenCloseTime oct = (OpenCloseTime) times.get(0);
+                open = oct.openAt.value;
+                close = oct.closeAt.value;
+            } else if (times.size() >= 2) {
+                OpenCloseTime oct1 = (OpenCloseTime) times.get(0);
+                OpenCloseTime oct2 = (OpenCloseTime) times.get(1);
+                open = oct1.openAt.value;
+                bStart = oct1.closeAt.value;
+                bEnd = oct2.openAt.value;
+                close = oct2.closeAt.value;
+            }
+        }
+        row[0].setText(Util.normalizeNumber(open));
+        row[1].setText(Util.normalizeNumber(close));
+        row[2].setText(Util.normalizeNumber(bStart));
+        row[3].setText(Util.normalizeNumber(bEnd));
     }
 
     private boolean parseAndFillLimitedService(String tag) {
@@ -1587,52 +2166,58 @@ public class EditPoiActivity extends AppCompatActivity {
             Map<Days, ? extends IDaySchedule> weeklyTable = result.getWeeklyTable();
             if (weeklyTable.isEmpty() && !tag.isEmpty()) return false;
 
+            // 月〜金の差異チェック
+            IDaySchedule moSched = weeklyTable.get(Days.MONDAY);
+            boolean isSame = true;
+            for (Days d : new Days[]{Days.TUESDAY, Days.WEDNESDAY, Days.THURSDAY, Days.FRIDAY}) {
+                IDaySchedule dSched = weeklyTable.get(d);
+                if (!isSchedulesEqual(moSched, dSched)) {
+                    isSame = false;
+                    break;
+                }
+            }
+
+            if (!isSame) {
+                isLsExpanded = true;
+                toggleLsExpansion();
+            }
+
             Days[] dayGroups = {
-                Days.MONDAY,
+                Days.MONDAY, Days.TUESDAY, Days.WEDNESDAY, Days.THURSDAY, Days.FRIDAY,
                 Days.SATURDAY,
                 Days.SUNDAY
             };
             EditText[][] editors = {
-                {editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd},
+                {editLsMoOpen, editLsMoClose, editLsMoBreakStart, editLsMoBreakEnd},
+                {editLsTuOpen, editLsTuClose, editLsTuBreakStart, editLsTuBreakEnd},
+                {editLsWeOpen, editLsWeClose, editLsWeBreakStart, editLsWeBreakEnd},
+                {editLsThOpen, editLsThClose, editLsThBreakStart, editLsThBreakEnd},
+                {editLsFrOpen, editLsFrClose, editLsFrBreakStart, editLsFrBreakEnd},
                 {editLsSaOpen, editLsSaClose, editLsSaBreakStart, editLsSaBreakEnd},
                 {editLsPhOpen, editLsPhClose, editLsPhBreakStart, editLsPhBreakEnd}
+            };
+            android.widget.CheckBox[] checks = {
+                checkLsMoOff, checkLsTuOff, checkLsWeOff, checkLsThOff, checkLsFrOff,
+                checkLsSaOff,
+                checkLsPhOff
             };
 
             for (int i = 0; i < dayGroups.length; i++) {
                 IDaySchedule daySchedule = weeklyTable.get(dayGroups[i]);
-                android.widget.CheckBox checkOff = (i == 0) ? checkLsWdOff : (i == 1 ? checkLsSaOff : checkLsPhOff);
-                
                 if ((daySchedule == null || daySchedule.schedule().isEmpty()) && !tag.isEmpty()) {
-                    checkOff.setChecked(true);
-                    editors[i][0].setText("");
-                    editors[i][1].setText("");
-                    editors[i][2].setText("");
-                    editors[i][3].setText("");
+                    checks[i].setChecked(true);
                 } else {
-                    checkOff.setChecked(false);
-                    String open = "", close = "", bStart = "", bEnd = "";
-                    if (daySchedule != null) {
-                        List<? extends ITagPart> times = daySchedule.schedule();
-                        if (times.size() == 1) {
-                            OpenCloseTime oct = (OpenCloseTime) times.get(0);
-                            open = oct.openAt.value;
-                            close = oct.closeAt.value;
-                        } else if (times.size() >= 2) {
-                            OpenCloseTime oct1 = (OpenCloseTime) times.get(0);
-                            OpenCloseTime oct2 = (OpenCloseTime) times.get(1);
-                            open = oct1.openAt.value;
-                            bStart = oct1.closeAt.value;
-                            bEnd = oct2.openAt.value;
-                            close = oct2.closeAt.value;
-                        }
-                    }
-                    editors[i][0].setText(Util.normalizeNumber(open));
-                    editors[i][1].setText(Util.normalizeNumber(close));
-                    editors[i][2].setText(Util.normalizeNumber(bStart));
-                    editors[i][3].setText(Util.normalizeNumber(bEnd));
+                    checks[i].setChecked(false);
+                    fillEditors(editors[i], daySchedule);
                 }
                 for (EditText et : editors[i]) applyCellStyles(et, et.getText().toString(), false);
             }
+
+            // 平日(Wd)用のEditTextにも値をセットしておく
+            fillEditors(new EditText[]{editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd}, moSched);
+            checkLsWdOff.setChecked(moSched == null || moSched.schedule().isEmpty());
+            for (EditText et : new EditText[]{editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd}) applyCellStyles(et, et.getText().toString(), false);
+
             return true;
         } catch (Exception e) {
             return false;
@@ -1651,30 +2236,43 @@ public class EditPoiActivity extends AppCompatActivity {
             IDaySchedule phSched = weeklyTable.get(Days.PUBLIC_HOLIDAY);
 
             List<String> weekday = schedToList(wdSched);
+            List<String> tuesday = schedToList(weeklyTable.get(Days.TUESDAY));
+            List<String> wednesday = schedToList(weeklyTable.get(Days.WEDNESDAY));
+            List<String> thursday = schedToList(weeklyTable.get(Days.THURSDAY));
+            List<String> friday = schedToList(weeklyTable.get(Days.FRIDAY));
             List<String> saturday = schedToList(saSched);
             List<String> sunday = schedToList(suSched);
             List<String> holiday = schedToList(phSched);
 
             // 火〜金のスケジュールが月曜日と一致するか確認
+            boolean isSame = true;
             for (String day : new String[]{"TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
                 IDaySchedule dSched = weeklyTable.get(Days.valueOf(day));
-                if ((wdSched == null ? null : wdSched.status()) != (dSched == null ? null : dSched.status())) return false;
-                if (!weekday.equals(schedToList(dSched))) return false;
+                if (!isSchedulesEqual(wdSched, dSched)) {
+                    isSame = false;
+                    break;
+                }
             }
 
-            // 日曜と祝日が同じかチェック
-            boolean hasPH = tag.contains("PH");
-            if (hasPH) {
-                if ((suSched == null ? null : suSched.status()) != (phSched == null ? null : phSched.status())) return false;
-                if (!sunday.equals(holiday)) return false;
+            if (!isSame) {
+                isColExpanded = true;
+                setupCollectionTableHeaders();
             }
 
             // 収集なし(off;)のチェック状態を反映
-            checkColWdOff.setChecked(wdSched != null && wdSched.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY);
+            if (isColExpanded) {
+                checkColMoOff.setChecked(wdSched != null && wdSched.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY);
+                checkColTuOff.setChecked(weeklyTable.get(Days.TUESDAY) != null && weeklyTable.get(Days.TUESDAY).status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY);
+                checkColWeOff.setChecked(weeklyTable.get(Days.WEDNESDAY) != null && weeklyTable.get(Days.WEDNESDAY).status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY);
+                checkColThOff.setChecked(weeklyTable.get(Days.THURSDAY) != null && weeklyTable.get(Days.THURSDAY).status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY);
+                checkColFrOff.setChecked(weeklyTable.get(Days.FRIDAY) != null && weeklyTable.get(Days.FRIDAY).status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY);
+            } else {
+                checkColWdOff.setChecked(wdSched != null && wdSched.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY);
+            }
             checkColSaOff.setChecked(saSched != null && saSched.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY);
             checkColPhOff.setChecked(phSched != null && phSched.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.CollectionTimeParser.DayStatus.CLOSED_DAY);
 
-            if (!hasPH) {
+            if (!tag.contains("PH")) {
                 findViewById(R.id.layout_holiday_warning).setVisibility(View.VISIBLE);
                 TextView header = findViewById(R.id.header_sun_ph);
                 if (header != null) header.setTextColor(getThemeColor(androidx.appcompat.R.attr.colorPrimary));
@@ -1685,13 +2283,27 @@ public class EditPoiActivity extends AppCompatActivity {
                 });
             }
 
-            List<String> holidayCol = hasPH ? holiday : sunday;
-            int maxRows = Math.max(weekday.size(), Math.max(saturday.size(), holidayCol.size()));
+            List<String> holidayCol = tag.contains("PH") ? holiday : sunday;
+            int maxRows = Math.max(weekday.size(), Math.max(tuesday.size(), Math.max(wednesday.size(), Math.max(thursday.size(), Math.max(friday.size(), Math.max(saturday.size(), holidayCol.size()))))));
+            
             for (int i = 0; i < maxRows; i++) {
-                String val1 = i < weekday.size() ? weekday.get(i) : "";
-                String val2 = i < saturday.size() ? saturday.get(i) : "";
-                String val3 = i < holidayCol.size() ? holidayCol.get(i) : "";
-                addNewRow(val1, val2, val3);
+                if (isColExpanded) {
+                    addNewRow(
+                        i < weekday.size() ? weekday.get(i) : "",
+                        i < tuesday.size() ? tuesday.get(i) : "",
+                        i < wednesday.size() ? wednesday.get(i) : "",
+                        i < thursday.size() ? thursday.get(i) : "",
+                        i < friday.size() ? friday.get(i) : "",
+                        i < saturday.size() ? saturday.get(i) : "",
+                        i < holidayCol.size() ? holidayCol.get(i) : ""
+                    );
+                } else {
+                    addNewRow(
+                        i < weekday.size() ? weekday.get(i) : "",
+                        i < saturday.size() ? saturday.get(i) : "",
+                        i < holidayCol.size() ? holidayCol.get(i) : ""
+                    );
+                }
             }
             return true;
         } catch (Exception e) {

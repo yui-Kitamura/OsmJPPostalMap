@@ -22,9 +22,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Locale;
+import java.util.*;
 
 import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.android.osmjppostalmap.domain.Util;
@@ -257,6 +255,12 @@ public class PoiDetailsDialog {
             populateWeeklyTable(context, table, schedule, isPostBox);
             
             rawTagText.setText("Raw: " + schedule.getRawTagValue().getOrigin() + " (v" + poi.getVer() + ")");
+        } else if (schedule.getCurrentState() == ScheduleResult.CurrentState.PARSE_ERROR) {
+            statusText.setText(schedule.getTodayStatus());
+            statusText.setTextColor(ContextCompat.getColor(context, R.color.brand_red));
+            statusText.setTypeface(null, android.graphics.Typeface.BOLD);
+            populateWeeklyTable(context, table, schedule, isPostBox);
+            rawTagText.setText("Raw: " + schedule.getRawTagValue().getOrigin() + " (v" + poi.getVer() + ")");
         } else {
             statusText.setText(R.string.status_unparseable);
             rawTagText.setText("Raw: " + poi.getTag(isPostBox ? "collection_times" : "opening_hours") + " (v" + poi.getVer() + ")");
@@ -334,30 +338,61 @@ public class PoiDetailsDialog {
     }
 
     private static void populateWeeklyTable(Context context, TableLayout table, ScheduleResult schedule, boolean isPostBox) {
-        String[][] groupDays = {
-            {"Mo", "Tu", "We", "Th", "Fr"},
-            {"Sa"},
-            {"Su", "PH"}
-        };
-        String[] groupNames = {
-            context.getString(R.string.day_weekday),
-            context.getString(R.string.day_saturday),
-            context.getString(R.string.day_holiday)
-        };
+        Days today = JpPostalUtil.getDays();
+
+        // 平日の差異チェック
+        boolean weekdayDifferent = false;
+        Map<Days, ? extends IDaySchedule> weeklyTable = schedule.getWeeklyTable();
+        if (weeklyTable != null && !weeklyTable.isEmpty()) {
+            IDaySchedule mondaySched = weeklyTable.get(Days.MONDAY);
+            for (Days d : new Days[]{Days.TUESDAY, Days.WEDNESDAY, Days.THURSDAY, Days.FRIDAY}) {
+                if (!isSchedulesEqual(mondaySched, weeklyTable.get(d))) {
+                    weekdayDifferent = true;
+                    break;
+                }
+            }
+        }
+
+        List<String[]> groupDays = new ArrayList<>();
+        List<String> groupNames = new ArrayList<>();
+
+        if (weekdayDifferent) {
+            groupDays.add(new String[]{"Mo"}); groupNames.add("月曜");
+            groupDays.add(new String[]{"Tu"}); groupNames.add("火曜");
+            groupDays.add(new String[]{"We"}); groupNames.add("水曜");
+            groupDays.add(new String[]{"Th"}); groupNames.add("木曜");
+            groupDays.add(new String[]{"Fr"}); groupNames.add("金曜");
+        } else {
+            groupDays.add(new String[]{"Mo", "Tu", "We", "Th", "Fr"});
+            groupNames.add(context.getString(R.string.day_weekday));
+        }
+        groupDays.add(new String[]{"Sa"}); groupNames.add(context.getString(R.string.day_saturday));
+        groupDays.add(new String[]{"Su", "PH"}); groupNames.add(context.getString(R.string.day_holiday));
         
         table.removeAllViews();
-        for (int i = 0; i < groupNames.length; i++) {
+        for (int i = 0; i < groupNames.size(); i++) {
+            boolean isToday = false;
+            for (String dayLabel : groupDays.get(i)) {
+                if (Days.getFromLabel(dayLabel) == today) {
+                    isToday = true;
+                    break;
+                }
+            }
+
             TableRow row = new TableRow(context);
             row.setGravity(Gravity.CENTER_VERTICAL);
             
             TextView dayView = new TextView(context);
-            dayView.setText(groupNames[i]);
+            dayView.setText(groupNames.get(i));
             dayView.setPadding(8, 4, 16, 4);
+            if (isToday) {
+                dayView.setTypeface(null, android.graphics.Typeface.BOLD);
+            }
             
             TextView timeView = new TextView(context);
             IDaySchedule daySchedule = null;
             boolean foundDay = false;
-            for (String day : groupDays[i]) {
+            for (String day : groupDays.get(i)) {
                 Days d = Days.getFromLabel(day);
                 if (schedule.getWeeklyTable().containsKey(d)) {
                     daySchedule = schedule.getWeeklyTable().get(d);
@@ -393,6 +428,9 @@ public class PoiDetailsDialog {
             timeView.setText(displayTime);
             timeView.setPadding(0, 4, 8, 4);
             timeView.setSingleLine(true);
+            if (isToday) {
+                timeView.setTypeface(null, android.graphics.Typeface.BOLD);
+            }
 
             HorizontalScrollView scrollView = new HorizontalScrollView(context);
             scrollView.setHorizontalScrollBarEnabled(false);
@@ -417,5 +455,18 @@ public class PoiDetailsDialog {
             row.addView(scrollView);
             table.addView(row);
         }
+    }
+
+    private static boolean isSchedulesEqual(IDaySchedule s1, IDaySchedule s2) {
+        if (s1 == s2) return true;
+        if (s1 == null || s2 == null) return false;
+        if (s1.status() != s2.status()) return false;
+        
+        List<String> list1 = new ArrayList<>();
+        for (Object p : s1.schedule()) list1.add(p.toString());
+        List<String> list2 = new ArrayList<>();
+        for (Object p : s2.schedule()) list2.add(p.toString());
+        
+        return list1.equals(list2);
     }
 }
