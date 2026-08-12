@@ -498,7 +498,10 @@
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp">
+                android:layout_marginBottom="8dp"
+                android:paddingLeft="4dp"
+                android:paddingRight="16dp"
+                android:clipToPadding="false">
                 <TableLayout
                     android:id="@+id/table_collection"
                     android:layout_width="wrap_content"

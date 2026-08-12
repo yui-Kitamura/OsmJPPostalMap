@@ -202,6 +202,14 @@ public class EditPoiActivity extends AppCompatActivity {
         // 3行目: コピーボタン
         TableRow rowButtons = new TableRow(this);
         rowButtons.setLayoutParams(new TableLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        
+        // 0列目 (月曜 または 平日) の下は常に空セル (コピー元なので)
+        View v0 = new View(this);
+        TableRow.LayoutParams p0 = new TableRow.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        p0.setMargins(margin, margin, margin, margin);
+        v0.setLayoutParams(p0);
+        rowButtons.addView(v0);
+        
         if (isColExpanded) {
             // 月->火, 火->水, 水->木, 木->金
             String[] targetDays = {"→火", "→水", "→木", "→金"};
@@ -211,8 +219,10 @@ public class EditPoiActivity extends AppCompatActivity {
                 btn.setOnClickListener(v -> copyColColumn(fromIdx, fromIdx + 1));
                 rowButtons.addView(btn);
             }
-            // 金の列の下には空セルか何か置く？
-            rowButtons.addView(new View(this));
+            // 金->土曜
+            Button btnFrToSa = createSmallButton("→土曜");
+            btnFrToSa.setOnClickListener(v -> copyColColumn(4, 5));
+            rowButtons.addView(btnFrToSa);
         } else {
             // 平日->土曜
             Button btnWdToSa = createSmallButton("→土曜");
@@ -225,8 +235,6 @@ public class EditPoiActivity extends AppCompatActivity {
         btnSaToPh.setOnClickListener(v -> copyColColumn(isColExpanded ? 5 : 1, isColExpanded ? 6 : 2)); // 5が土曜, 6が日祝
         rowButtons.addView(btnSaToPh);
         
-        // 最後の空セル
-        rowButtons.addView(new View(this));
         tableCollection.addView(rowButtons);
 
         // 4行目: オフチェックボックス
@@ -320,20 +328,26 @@ public class EditPoiActivity extends AppCompatActivity {
     }
 
     private void refreshCollectionTable() {
+        // 状態変更前の状態（isColExpandedは既に反転済み）
+        boolean wasExpanded = !isColExpanded;
+        
         // 現在のデータを退避
         List<String[]> data = new ArrayList<>();
         for (EditText[] row : timeRows) {
             String[] values = new String[7];
-            for (int i = 0; i < 7; i++) {
-                if (isColExpanded) {
-                    // 現在展開中ならそのまま
+            if (wasExpanded) {
+                // 展開時(7列)のデータを取得
+                for (int i = 0; i < 7; i++) {
                     values[i] = row[i].getText().toString();
-                } else {
-                    // 現在折り畳み中なら
-                    if (i == 0) values[0] = values[1] = values[2] = values[3] = values[4] = row[0].getText().toString();
-                    else if (i == 5) values[5] = row[1].getText().toString();
-                    else if (i == 6) values[6] = row[2].getText().toString();
                 }
+            } else {
+                // 折り畳み時(3列)のデータを取得
+                String wd = row[0].getText().toString();
+                String sa = row[1].getText().toString();
+                String ph = row[2].getText().toString();
+                for (int i = 0; i < 5; i++) values[i] = wd;
+                values[5] = sa;
+                values[6] = ph;
             }
             data.add(values);
         }
@@ -859,24 +873,6 @@ public class EditPoiActivity extends AppCompatActivity {
         checkLsFrOff.setOnCheckedChangeListener(ohOffListener);
         checkLsSaOff.setOnCheckedChangeListener(ohOffListener);
         checkLsPhOff.setOnCheckedChangeListener(ohOffListener);
-
-        android.widget.CompoundButton.OnCheckedChangeListener colOffListener = (buttonView, isChecked) -> {
-            int col;
-            if (buttonView == checkColWdOff) {
-                col = 0;
-            } else if (buttonView == checkColSaOff) {
-                col = 1;
-            } else {
-                col = 2;
-            }
-            for (EditText[] row : timeRows) {
-                row[col].setEnabled(!isChecked);
-                row[col].setAlpha(isChecked ? 0.5f : 1.0f);
-            }
-        };
-        checkColWdOff.setOnCheckedChangeListener(colOffListener);
-        checkColSaOff.setOnCheckedChangeListener(colOffListener);
-        checkColPhOff.setOnCheckedChangeListener(colOffListener);
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
