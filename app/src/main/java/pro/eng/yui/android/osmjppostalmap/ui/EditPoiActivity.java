@@ -212,7 +212,7 @@ public class EditPoiActivity extends AppCompatActivity {
         
         if (isColExpanded) {
             // 月->火, 火->水, 水->木, 木->金
-            String[] targetDays = {"→火", "→水", "→木", "→金"};
+            String[] targetDays = {"月→火", "火→水", "水→木", "木→金"};
             for (int i = 0; i < 4; i++) {
                 Button btn = createSmallButton(targetDays[i]);
                 final int fromIdx = i;
@@ -220,18 +220,18 @@ public class EditPoiActivity extends AppCompatActivity {
                 rowButtons.addView(btn);
             }
             // 金->土曜
-            Button btnFrToSa = createSmallButton("→土曜");
+            Button btnFrToSa = createSmallButton("金→土");
             btnFrToSa.setOnClickListener(v -> copyColColumn(4, 5));
             rowButtons.addView(btnFrToSa);
         } else {
             // 平日->土曜
-            Button btnWdToSa = createSmallButton("→土曜");
+            Button btnWdToSa = createSmallButton("平日→土曜");
             btnWdToSa.setOnClickListener(v -> copyColColumn(0, 1)); // 内部的には0が月/平日, 1が土曜
             rowButtons.addView(btnWdToSa);
         }
         
         // 土曜->日祝
-        Button btnSaToPh = createSmallButton("→日祝");
+        Button btnSaToPh = createSmallButton("土曜→日祝");
         btnSaToPh.setOnClickListener(v -> copyColColumn(isColExpanded ? 5 : 1, isColExpanded ? 6 : 2)); // 5が土曜, 6が日祝
         rowButtons.addView(btnSaToPh);
         
