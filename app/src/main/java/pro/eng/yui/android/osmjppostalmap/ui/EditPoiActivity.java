@@ -204,8 +204,9 @@ public class EditPoiActivity extends AppCompatActivity {
         rowButtons.setLayoutParams(new TableLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         if (isColExpanded) {
             // 月->火, 火->水, 水->木, 木->金
+            String[] targetDays = {"→火", "→水", "→木", "→金"};
             for (int i = 0; i < 4; i++) {
-                Button btn = createSmallButton("コピー→");
+                Button btn = createSmallButton(targetDays[i]);
                 final int fromIdx = i;
                 btn.setOnClickListener(v -> copyColColumn(fromIdx, fromIdx + 1));
                 rowButtons.addView(btn);
@@ -215,13 +216,13 @@ public class EditPoiActivity extends AppCompatActivity {
         } else {
             // 平日->土曜
             Button btnWdToSa = createSmallButton("→土曜");
-            btnWdToSa.setOnClickListener(v -> copyColColumn(0, 5)); // 内部的には0が月/平日, 5が土曜
+            btnWdToSa.setOnClickListener(v -> copyColColumn(0, 1)); // 内部的には0が月/平日, 1が土曜
             rowButtons.addView(btnWdToSa);
         }
         
         // 土曜->日祝
         Button btnSaToPh = createSmallButton("→日祝");
-        btnSaToPh.setOnClickListener(v -> copyColColumn(5, 6)); // 5が土曜, 6が日祝
+        btnSaToPh.setOnClickListener(v -> copyColColumn(isColExpanded ? 5 : 1, isColExpanded ? 6 : 2)); // 5が土曜, 6が日祝
         rowButtons.addView(btnSaToPh);
         
         // 最後の空セル
@@ -743,8 +744,9 @@ public class EditPoiActivity extends AppCompatActivity {
         findViewById(R.id.btn_oh_mo_to_tu).setOnClickListener(v -> copyOhRow(editOhMoOpen, editOhMoClose, editOhMoBreakStart, editOhMoBreakEnd, checkOhMoOff, editOhTuOpen, editOhTuClose, editOhTuBreakStart, editOhTuBreakEnd, checkOhTuOff));
         findViewById(R.id.btn_oh_tu_to_we).setOnClickListener(v -> copyOhRow(editOhTuOpen, editOhTuClose, editOhTuBreakStart, editOhTuBreakEnd, checkOhTuOff, editOhWeOpen, editOhWeClose, editOhWeBreakStart, editOhWeBreakEnd, checkOhWeOff));
         findViewById(R.id.btn_oh_we_to_th).setOnClickListener(v -> copyOhRow(editOhWeOpen, editOhWeClose, editOhWeBreakStart, editOhWeBreakEnd, checkOhWeOff, editOhThOpen, editOhThClose, editOhThBreakStart, editOhThBreakEnd, checkOhThOff));
-        findViewById(R.id.btn_oh_we_to_th).setOnClickListener(v -> copyOhRow(editOhWeOpen, editOhWeClose, editOhWeBreakStart, editOhWeBreakEnd, checkOhWeOff, editOhThOpen, editOhThClose, editOhThBreakStart, editOhThBreakEnd, checkOhThOff));
         findViewById(R.id.btn_oh_th_to_fr).setOnClickListener(v -> copyOhRow(editOhThOpen, editOhThClose, editOhThBreakStart, editOhThBreakEnd, checkOhThOff, editOhFrOpen, editOhFrClose, editOhFrBreakStart, editOhFrBreakEnd, checkOhFrOff));
+        findViewById(R.id.btn_oh_wd_to_sa).setOnClickListener(v -> copyOhRow(editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd, checkOhWdOff, editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd, checkOhSaOff));
+        findViewById(R.id.btn_oh_sa_to_ph).setOnClickListener(v -> copyOhRow(editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd, checkOhSaOff, editOhPhOpen, editOhPhClose, editOhPhBreakStart, editOhPhBreakEnd, checkOhPhOff));
 
         layoutLimitedServiceEditRoot = findViewById(R.id.layout_limited_service_edit_root);
         radioLimitedService = findViewById(R.id.radio_limited_service);
@@ -798,6 +800,8 @@ public class EditPoiActivity extends AppCompatActivity {
         findViewById(R.id.btn_ls_tu_to_we).setOnClickListener(v -> copyOhRow(editLsTuOpen, editLsTuClose, editLsTuBreakStart, editLsTuBreakEnd, checkLsTuOff, editLsWeOpen, editLsWeClose, editLsWeBreakStart, editLsWeBreakEnd, checkLsWeOff));
         findViewById(R.id.btn_ls_we_to_th).setOnClickListener(v -> copyOhRow(editLsWeOpen, editLsWeClose, editLsWeBreakStart, editLsWeBreakEnd, checkLsWeOff, editLsThOpen, editLsThClose, editLsThBreakStart, editLsThBreakEnd, checkLsThOff));
         findViewById(R.id.btn_ls_th_to_fr).setOnClickListener(v -> copyOhRow(editLsThOpen, editLsThClose, editLsThBreakStart, editLsThBreakEnd, checkLsThOff, editLsFrOpen, editLsFrClose, editLsFrBreakStart, editLsFrBreakEnd, checkLsFrOff));
+        findViewById(R.id.btn_ls_wd_to_sa).setOnClickListener(v -> copyOhRow(editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd, checkLsWdOff, editLsSaOpen, editLsSaClose, editLsSaBreakStart, editLsSaBreakEnd, checkLsSaOff));
+        findViewById(R.id.btn_ls_sa_to_ph).setOnClickListener(v -> copyOhRow(editLsSaOpen, editLsSaClose, editLsSaBreakStart, editLsSaBreakEnd, checkLsSaOff, editLsPhOpen, editLsPhClose, editLsPhBreakStart, editLsPhBreakEnd, checkLsPhOff));
         
         radioLimitedService.setOnCheckedChangeListener((group, checkedId) -> {
             tableLimitedService.setVisibility(checkedId == R.id.radio_ls_yes ? View.VISIBLE : View.GONE);
