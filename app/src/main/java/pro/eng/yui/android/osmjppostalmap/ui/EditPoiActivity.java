@@ -745,8 +745,6 @@ public class EditPoiActivity extends AppCompatActivity {
         findViewById(R.id.btn_oh_tu_to_we).setOnClickListener(v -> copyOhRow(editOhTuOpen, editOhTuClose, editOhTuBreakStart, editOhTuBreakEnd, checkOhTuOff, editOhWeOpen, editOhWeClose, editOhWeBreakStart, editOhWeBreakEnd, checkOhWeOff));
         findViewById(R.id.btn_oh_we_to_th).setOnClickListener(v -> copyOhRow(editOhWeOpen, editOhWeClose, editOhWeBreakStart, editOhWeBreakEnd, checkOhWeOff, editOhThOpen, editOhThClose, editOhThBreakStart, editOhThBreakEnd, checkOhThOff));
         findViewById(R.id.btn_oh_th_to_fr).setOnClickListener(v -> copyOhRow(editOhThOpen, editOhThClose, editOhThBreakStart, editOhThBreakEnd, checkOhThOff, editOhFrOpen, editOhFrClose, editOhFrBreakStart, editOhFrBreakEnd, checkOhFrOff));
-        findViewById(R.id.btn_oh_wd_to_sa).setOnClickListener(v -> copyOhRow(editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd, checkOhWdOff, editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd, checkOhSaOff));
-        findViewById(R.id.btn_oh_sa_to_ph).setOnClickListener(v -> copyOhRow(editOhSaOpen, editOhSaClose, editOhSaBreakStart, editOhSaBreakEnd, checkOhSaOff, editOhPhOpen, editOhPhClose, editOhPhBreakStart, editOhPhBreakEnd, checkOhPhOff));
 
         layoutLimitedServiceEditRoot = findViewById(R.id.layout_limited_service_edit_root);
         radioLimitedService = findViewById(R.id.radio_limited_service);
@@ -800,8 +798,6 @@ public class EditPoiActivity extends AppCompatActivity {
         findViewById(R.id.btn_ls_tu_to_we).setOnClickListener(v -> copyOhRow(editLsTuOpen, editLsTuClose, editLsTuBreakStart, editLsTuBreakEnd, checkLsTuOff, editLsWeOpen, editLsWeClose, editLsWeBreakStart, editLsWeBreakEnd, checkLsWeOff));
         findViewById(R.id.btn_ls_we_to_th).setOnClickListener(v -> copyOhRow(editLsWeOpen, editLsWeClose, editLsWeBreakStart, editLsWeBreakEnd, checkLsWeOff, editLsThOpen, editLsThClose, editLsThBreakStart, editLsThBreakEnd, checkLsThOff));
         findViewById(R.id.btn_ls_th_to_fr).setOnClickListener(v -> copyOhRow(editLsThOpen, editLsThClose, editLsThBreakStart, editLsThBreakEnd, checkLsThOff, editLsFrOpen, editLsFrClose, editLsFrBreakStart, editLsFrBreakEnd, checkLsFrOff));
-        findViewById(R.id.btn_ls_wd_to_sa).setOnClickListener(v -> copyOhRow(editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd, checkLsWdOff, editLsSaOpen, editLsSaClose, editLsSaBreakStart, editLsSaBreakEnd, checkLsSaOff));
-        findViewById(R.id.btn_ls_sa_to_ph).setOnClickListener(v -> copyOhRow(editLsSaOpen, editLsSaClose, editLsSaBreakStart, editLsSaBreakEnd, checkLsSaOff, editLsPhOpen, editLsPhClose, editLsPhBreakStart, editLsPhBreakEnd, checkLsPhOff));
         
         radioLimitedService.setOnCheckedChangeListener((group, checkedId) -> {
             tableLimitedService.setVisibility(checkedId == R.id.radio_ls_yes ? View.VISIBLE : View.GONE);
@@ -881,9 +877,6 @@ public class EditPoiActivity extends AppCompatActivity {
         checkColWdOff.setOnCheckedChangeListener(colOffListener);
         checkColSaOff.setOnCheckedChangeListener(colOffListener);
         checkColPhOff.setOnCheckedChangeListener(colOffListener);
-        
-        Button btnOhCopyToSa = findViewById(R.id.btn_oh_copy_to_sa);
-        Button btnOhCopyToPh = findViewById(R.id.btn_oh_copy_to_ph);
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
