@@ -173,8 +173,8 @@
                     <TextView android:text="@string/label_break_time" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
                     <TextView android:text="@string/label_off" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
                 </TableRow>
-                <TableRow android:gravity="center_vertical">
-                    <TextView android:text="@string/day_weekday" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:layout_height="match_parent"/>
+                <TableRow android:id="@+id/row_oh_wd" android:gravity="center_vertical">
+                    <TextView android:id="@+id/label_oh_wd" android:text="@string/day_weekday" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:layout_height="match_parent"/>
                     <EditText android:id="@+id/edit_oh_wd_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
                     <EditText android:id="@+id/edit_oh_wd_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
                     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
@@ -183,6 +183,74 @@
                         <EditText android:id="@+id/edit_oh_wd_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
                     </LinearLayout>
                     <CheckBox android:id="@+id/check_oh_wd_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
+                </TableRow>
+                <!-- Monday to Friday expanded rows -->
+                <TableRow android:id="@+id/row_oh_mo" android:visibility="gone" android:gravity="center_vertical">
+                    <TextView android:text="月曜" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:layout_height="match_parent"/>
+                    <EditText android:id="@+id/edit_oh_mo_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_oh_mo_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_oh_mo_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_oh_mo_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                    </LinearLayout>
+                    <CheckBox android:id="@+id/check_oh_mo_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
+                </TableRow>
+                <TableRow android:id="@+id/row_oh_tu" android:visibility="gone" android:gravity="center_vertical">
+                    <LinearLayout android:orientation="vertical" android:layout_height="match_parent" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:gravity="center">
+                        <TextView android:text="火曜" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center"/>
+                        <Button android:id="@+id/btn_oh_mo_to_tu" android:layout_width="wrap_content" android:layout_height="24dp" android:text="月曜コピー" android:textSize="7sp" android:padding="0dp" style="@style/Widget.MaterialComponents.Button.TextButton" app:backgroundTint="@null"/>
+                    </LinearLayout>
+                    <EditText android:id="@+id/edit_oh_tu_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_oh_tu_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_oh_tu_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_oh_tu_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                    </LinearLayout>
+                    <CheckBox android:id="@+id/check_oh_tu_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
+                </TableRow>
+                <TableRow android:id="@+id/row_oh_we" android:visibility="gone" android:gravity="center_vertical">
+                    <LinearLayout android:orientation="vertical" android:layout_height="match_parent" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:gravity="center">
+                        <TextView android:text="水曜" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center"/>
+                        <Button android:id="@+id/btn_oh_tu_to_we" android:layout_width="wrap_content" android:layout_height="24dp" android:text="火曜コピー" android:textSize="7sp" android:padding="0dp" style="@style/Widget.MaterialComponents.Button.TextButton" app:backgroundTint="@null"/>
+                    </LinearLayout>
+                    <EditText android:id="@+id/edit_oh_we_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_oh_we_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_oh_we_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_oh_we_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                    </LinearLayout>
+                    <CheckBox android:id="@+id/check_oh_we_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
+                </TableRow>
+                <TableRow android:id="@+id/row_oh_th" android:visibility="gone" android:gravity="center_vertical">
+                    <LinearLayout android:orientation="vertical" android:layout_height="match_parent" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:gravity="center">
+                        <TextView android:text="木曜" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center"/>
+                        <Button android:id="@+id/btn_oh_we_to_th" android:layout_width="wrap_content" android:layout_height="24dp" android:text="水曜コピー" android:textSize="7sp" android:padding="0dp" style="@style/Widget.MaterialComponents.Button.TextButton" app:backgroundTint="@null"/>
+                    </LinearLayout>
+                    <EditText android:id="@+id/edit_oh_th_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_oh_th_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_oh_th_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_oh_th_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                    </LinearLayout>
+                    <CheckBox android:id="@+id/check_oh_th_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
+                </TableRow>
+                <TableRow android:id="@+id/row_oh_fr" android:visibility="gone" android:gravity="center_vertical">
+                    <LinearLayout android:orientation="vertical" android:layout_height="match_parent" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:gravity="center">
+                        <TextView android:text="金曜" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center"/>
+                        <Button android:id="@+id/btn_oh_th_to_fr" android:layout_width="wrap_content" android:layout_height="24dp" android:text="木曜コピー" android:textSize="7sp" android:padding="0dp" style="@style/Widget.MaterialComponents.Button.TextButton" app:backgroundTint="@null"/>
+                    </LinearLayout>
+                    <EditText android:id="@+id/edit_oh_fr_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_oh_fr_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_oh_fr_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_oh_fr_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                    </LinearLayout>
+                    <CheckBox android:id="@+id/check_oh_fr_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
                 </TableRow>
                 <TableRow android:gravity="center_vertical">
                     <TextView android:text="@string/day_saturday" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:layout_height="match_parent"/>
@@ -316,8 +384,8 @@
                     <TextView android:text="@string/label_break_time" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
                     <TextView android:text="@string/label_off" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
                 </TableRow>
-                <TableRow android:gravity="center_vertical">
-                    <TextView android:text="@string/day_weekday" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:layout_height="match_parent"/>
+                <TableRow android:id="@+id/row_ls_wd" android:gravity="center_vertical">
+                    <TextView android:id="@+id/label_ls_wd" android:text="@string/day_weekday" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:layout_height="match_parent"/>
                     <EditText android:id="@+id/edit_ls_wd_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
                     <EditText android:id="@+id/edit_ls_wd_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
                     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
@@ -326,6 +394,74 @@
                         <EditText android:id="@+id/edit_ls_wd_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
                     </LinearLayout>
                     <CheckBox android:id="@+id/check_ls_wd_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
+                </TableRow>
+                <!-- Monday to Friday expanded rows -->
+                <TableRow android:id="@+id/row_ls_mo" android:visibility="gone" android:gravity="center_vertical">
+                    <TextView android:text="月曜" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:layout_height="match_parent"/>
+                    <EditText android:id="@+id/edit_ls_mo_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_ls_mo_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_ls_mo_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_ls_mo_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                    </LinearLayout>
+                    <CheckBox android:id="@+id/check_ls_mo_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
+                </TableRow>
+                <TableRow android:id="@+id/row_ls_tu" android:visibility="gone" android:gravity="center_vertical">
+                    <LinearLayout android:orientation="vertical" android:layout_height="match_parent" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:gravity="center">
+                        <TextView android:text="火曜" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center"/>
+                        <Button android:id="@+id/btn_ls_mo_to_tu" android:layout_width="wrap_content" android:layout_height="24dp" android:text="月曜コピー" android:textSize="7sp" android:padding="0dp" style="@style/Widget.MaterialComponents.Button.TextButton" app:backgroundTint="@null"/>
+                    </LinearLayout>
+                    <EditText android:id="@+id/edit_ls_tu_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_ls_tu_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_ls_tu_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_ls_tu_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                    </LinearLayout>
+                    <CheckBox android:id="@+id/check_ls_tu_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
+                </TableRow>
+                <TableRow android:id="@+id/row_ls_we" android:visibility="gone" android:gravity="center_vertical">
+                    <LinearLayout android:orientation="vertical" android:layout_height="match_parent" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:gravity="center">
+                        <TextView android:text="水曜" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center"/>
+                        <Button android:id="@+id/btn_ls_tu_to_we" android:layout_width="wrap_content" android:layout_height="24dp" android:text="火曜コピー" android:textSize="7sp" android:padding="0dp" style="@style/Widget.MaterialComponents.Button.TextButton" app:backgroundTint="@null"/>
+                    </LinearLayout>
+                    <EditText android:id="@+id/edit_ls_we_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_ls_we_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_ls_we_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_ls_we_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                    </LinearLayout>
+                    <CheckBox android:id="@+id/check_ls_we_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
+                </TableRow>
+                <TableRow android:id="@+id/row_ls_th" android:visibility="gone" android:gravity="center_vertical">
+                    <LinearLayout android:orientation="vertical" android:layout_height="match_parent" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:gravity="center">
+                        <TextView android:text="木曜" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center"/>
+                        <Button android:id="@+id/btn_ls_we_to_th" android:layout_width="wrap_content" android:layout_height="24dp" android:text="水曜コピー" android:textSize="7sp" android:padding="0dp" style="@style/Widget.MaterialComponents.Button.TextButton" app:backgroundTint="@null"/>
+                    </LinearLayout>
+                    <EditText android:id="@+id/edit_ls_th_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_ls_th_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_ls_th_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_ls_th_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                    </LinearLayout>
+                    <CheckBox android:id="@+id/check_ls_th_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
+                </TableRow>
+                <TableRow android:id="@+id/row_ls_fr" android:visibility="gone" android:gravity="center_vertical">
+                    <LinearLayout android:orientation="vertical" android:layout_height="match_parent" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:gravity="center">
+                        <TextView android:text="金曜" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center"/>
+                        <Button android:id="@+id/btn_ls_th_to_fr" android:layout_width="wrap_content" android:layout_height="24dp" android:text="木曜コピー" android:textSize="7sp" android:padding="0dp" style="@style/Widget.MaterialComponents.Button.TextButton" app:backgroundTint="@null"/>
+                    </LinearLayout>
+                    <EditText android:id="@+id/edit_ls_fr_open" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <EditText android:id="@+id/edit_ls_fr_close" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center" android:layout_margin="0.5dp"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp">
+                        <EditText android:id="@+id/edit_ls_fr_break_start" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-" android:padding="1dp"/>
+                        <EditText android:id="@+id/edit_ls_fr_break_end" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:hint="--:--" android:inputType="time" android:background="@drawable/bg_edit_time_cell" android:padding="2dp" android:textSize="18sp" android:gravity="center"/>
+                    </LinearLayout>
+                    <CheckBox android:id="@+id/check_ls_fr_off" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:minHeight="0dp" android:minWidth="0dp"/>
                 </TableRow>
                 <TableRow android:gravity="center_vertical">
                     <TextView android:text="@string/day_saturday" android:textStyle="bold" android:padding="1dp" android:textSize="10sp" android:gravity="center_vertical" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp" android:layout_height="match_parent"/>
@@ -359,88 +495,19 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <TableLayout
-                android:id="@+id/table_collection"
+            <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:stretchColumns="0,1,2"
-                android:layout_marginBottom="8dp"
-                android:padding="0.5dp"
-                android:background="@color/gray_divider">
-                <TableRow>
-                    <TextView android:text="平日" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
-                    <TextView android:text="土曜" android:gravity="center" android:textStyle="bold" android:padding="1dp" android:textSize="11sp" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
-                    <TextView
-                        android:id="@+id/header_sun_ph"
-                        android:text="日祝"
-                        android:gravity="center"
-                        android:textStyle="bold"
-                        android:padding="1dp"
-                        android:textSize="11sp"
-                        android:background="@drawable/bg_cell_header"
-                        android:layout_margin="0.5dp"/>
-                </TableRow>
-                <TableRow>
-                    <Button
-                        android:id="@+id/btn_copy_to_sat"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:text="→土曜"
-                        style="@style/Widget.MaterialComponents.Button.TextButton"
-                        android:textSize="11sp"
-                        android:padding="1dp"
-                        android:background="@drawable/bg_cell_header"
-                        app:backgroundTint="@null"
-                        android:layout_margin="0.5dp" />
-                    <Button
-                        android:id="@+id/btn_copy_to_sun"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:text="→日祝"
-                        style="@style/Widget.MaterialComponents.Button.TextButton"
-                        android:textSize="11sp"
-                        android:padding="1dp"
-                        android:background="@drawable/bg_cell_header"
-                        app:backgroundTint="@null"
-                        android:layout_margin="0.5dp" />
-                    <View android:layout_width="0dp" android:layout_height="match_parent" android:background="@drawable/bg_cell_header" android:layout_margin="0.5dp"/>
-                </TableRow>
-                <TableRow>
-                    <CheckBox
-                        android:id="@+id/check_col_wd_off"
-                        android:layout_width="wrap_content"
-                        android:layout_height="match_parent"
-                        android:text="@string/postbox_no_collection"
-                        android:textSize="10sp"
-                        android:gravity="center"
-                        android:background="@drawable/bg_cell_header"
-                        android:layout_margin="0.5dp"
-                        android:minHeight="0dp"
-                        android:minWidth="0dp"/>
-                    <CheckBox
-                        android:id="@+id/check_col_sa_off"
-                        android:layout_width="wrap_content"
-                        android:layout_height="match_parent"
-                        android:text="@string/postbox_no_collection"
-                        android:textSize="10sp"
-                        android:gravity="center"
-                        android:background="@drawable/bg_cell_header"
-                        android:layout_margin="0.5dp"
-                        android:minHeight="0dp"
-                        android:minWidth="0dp"/>
-                    <CheckBox
-                        android:id="@+id/check_col_ph_off"
-                        android:layout_width="wrap_content"
-                        android:layout_height="match_parent"
-                        android:text="@string/postbox_no_collection"
-                        android:textSize="10sp"
-                        android:gravity="center"
-                        android:background="@drawable/bg_cell_header"
-                        android:layout_margin="0.5dp"
-                        android:minHeight="0dp"
-                        android:minWidth="0dp"/>
-                </TableRow>
-            </TableLayout>
+                android:layout_marginBottom="8dp">
+                <TableLayout
+                    android:id="@+id/table_collection"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="0.5dp"
+                    android:background="@color/gray_divider">
+                    <!-- Rows will be added dynamically or modified -->
+                </TableLayout>
+            </HorizontalScrollView>
 
             <LinearLayout
                 android:id="@+id/layout_holiday_warning"
