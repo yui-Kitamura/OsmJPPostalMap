@@ -92,6 +92,7 @@ public class EditPoiActivity extends AppCompatActivity {
     private android.widget.CheckBox checkOhWdOff, checkOhMoOff, checkOhTuOff, checkOhWeOff, checkOhThOff, checkOhFrOff, checkOhSaOff, checkOhPhOff;
     private android.widget.CheckBox checkLsWdOff, checkLsMoOff, checkLsTuOff, checkLsWeOff, checkLsThOff, checkLsFrOff, checkLsSaOff, checkLsPhOff;
     private android.widget.CheckBox checkColWdOff, checkColMoOff, checkColTuOff, checkColWeOff, checkColThOff, checkColFrOff, checkColSaOff, checkColPhOff;
+    private Button btnToggleColExpansion;
     private boolean isOhExpanded = false;
     private boolean isLsExpanded = false;
     private boolean isColExpanded = false;
@@ -127,6 +128,10 @@ public class EditPoiActivity extends AppCompatActivity {
         if (tableCollection == null) return;
         tableCollection.removeAllViews();
 
+        if (btnToggleColExpansion != null) {
+            btnToggleColExpansion.setText(isColExpanded ? "平日をまとめる" : "平日を詳細入力する");
+        }
+        
         int margin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 0.5f, getResources().getDisplayMetrics());
         int padding = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1f, getResources().getDisplayMetrics());
 
@@ -145,10 +150,6 @@ public class EditPoiActivity extends AppCompatActivity {
         paramsWd.setMargins(margin, margin, margin, margin);
         paramsWd.span = isColExpanded ? 5 : 1;
         tvWd.setLayoutParams(paramsWd);
-        tvWd.setOnClickListener(v -> {
-            isColExpanded = !isColExpanded;
-            refreshCollectionTable();
-        });
         row1.addView(tvWd);
 
         TextView tvSa = new TextView(this);
@@ -325,6 +326,52 @@ public class EditPoiActivity extends AppCompatActivity {
         if (checkColFrOff != null) checkColFrOff.setOnCheckedChangeListener(colOffListener);
         checkColSaOff.setOnCheckedChangeListener(colOffListener);
         checkColPhOff.setOnCheckedChangeListener(colOffListener);
+    }
+
+    private void toggleColExpansion() {
+        if (isColExpanded) {
+            if (canSummarizeCollection()) {
+                isColExpanded = false;
+                refreshCollectionTable();
+            } else {
+                new AlertDialog.Builder(this)
+                    .setTitle("まとめられません")
+                    .setMessage("平日の入力内容が曜日ごとに異なります。内容を一致させてからまとめてください。")
+                    .setPositiveButton(android.R.string.ok, null)
+                    .show();
+            }
+        } else {
+            isColExpanded = true;
+            refreshCollectionTable();
+        }
+    }
+
+    private boolean canSummarizeCollection() {
+        if (!isColExpanded) return true;
+        
+        // チェックボックスの一致確認
+        boolean moChecked = checkColMoOff != null && checkColMoOff.isChecked();
+        boolean tuChecked = checkColTuOff != null && checkColTuOff.isChecked();
+        boolean weChecked = checkColWeOff != null && checkColWeOff.isChecked();
+        boolean thChecked = checkColThOff != null && checkColThOff.isChecked();
+        boolean frChecked = checkColFrOff != null && checkColFrOff.isChecked();
+        
+        if (moChecked != tuChecked || moChecked != weChecked || moChecked != thChecked || moChecked != frChecked) {
+            return false;
+        }
+        
+        // 各行の入力値一致確認
+        for (EditText[] row : timeRows) {
+            String mo = row[0].getText().toString();
+            String tu = row[1].getText().toString();
+            String we = row[2].getText().toString();
+            String th = row[3].getText().toString();
+            String fr = row[4].getText().toString();
+            if (!mo.equals(tu) || !mo.equals(we) || !mo.equals(th) || !mo.equals(fr)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void refreshCollectionTable() {
@@ -617,6 +664,10 @@ public class EditPoiActivity extends AppCompatActivity {
         View shapeLayout = findViewById(R.id.layout_shape_edit);
         RadioGroup radioShape = findViewById(R.id.edit_radio_shape);
         tableCollection = findViewById(R.id.table_collection);
+        btnToggleColExpansion = findViewById(R.id.btn_toggle_col_expansion);
+        if (btnToggleColExpansion != null) {
+            btnToggleColExpansion.setOnClickListener(v -> toggleColExpansion());
+        }
         setupCollectionTableHeaders();
         layoutFallback = findViewById(R.id.layout_fallback);
         textFallback = findViewById(R.id.text_fallback_value);
