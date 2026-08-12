@@ -516,8 +516,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:padding="0.5dp"
-                    android:background="@color/gray_divider"
-                    android:stretchColumns="*">
+                    android:background="@color/gray_divider">
                     <!-- Rows will be added dynamically or modified -->
                 </TableLayout>
             </HorizontalScrollView>
