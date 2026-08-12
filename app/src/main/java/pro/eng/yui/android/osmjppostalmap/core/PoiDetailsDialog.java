@@ -338,7 +338,7 @@ public class PoiDetailsDialog {
     }
 
     private static void populateWeeklyTable(Context context, TableLayout table, ScheduleResult schedule, boolean isPostBox) {
-        Days today = JpPostalUtil.getDays(LocalDate.now());
+        Days today = JpPostalUtil.getDays();
 
         // 平日の差異チェック
         boolean weekdayDifferent = false;
