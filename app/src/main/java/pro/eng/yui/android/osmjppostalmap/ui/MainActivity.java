@@ -738,8 +738,10 @@ public class MainActivity extends AppCompatActivity {
         if (isPostOffice) {
             OpeningHours tagValue = new OpeningHours(poi.getTag("opening_hours"));
             sr = parser.parse(tagValue, now, ScheduleParser.TimeType.OPENING_HOURS);
-            tagValue = new OpeningHours(poi.getTag("opening_hours:limited"));
-            lsr = parser.parse(tagValue, now, ScheduleParser.TimeType.OPENING_HOURS);
+            String lsTag = poi.getTag("opening_hours:limited_service");
+            if (lsTag != null && !lsTag.isEmpty()) {
+                lsr = parser.parse(new OpeningHours(lsTag), now, ScheduleParser.TimeType.OPENING_HOURS);
+            }
         } else {
             CollectionTimes tagValue = new CollectionTimes(poi.getTag("collection_times"));
             sr = parser.parse(tagValue, now, ScheduleParser.TimeType.COLLECTION_TIMES);
