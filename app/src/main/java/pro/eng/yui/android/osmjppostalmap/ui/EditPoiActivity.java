@@ -141,7 +141,7 @@ public class EditPoiActivity extends AppCompatActivity {
         tvWd.setPadding(padding, padding, padding, padding);
         tvWd.setTextSize(11);
         tvWd.setBackgroundResource(R.drawable.bg_cell_header);
-        TableRow.LayoutParams paramsWd = new TableRow.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT);
+        TableRow.LayoutParams paramsWd = new TableRow.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         paramsWd.setMargins(margin, margin, margin, margin);
         paramsWd.span = isColExpanded ? 5 : 1;
         tvWd.setLayoutParams(paramsWd);
@@ -158,7 +158,7 @@ public class EditPoiActivity extends AppCompatActivity {
         tvSa.setPadding(padding, padding, padding, padding);
         tvSa.setTextSize(11);
         tvSa.setBackgroundResource(R.drawable.bg_cell_header);
-        TableRow.LayoutParams paramsSa = new TableRow.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT);
+        TableRow.LayoutParams paramsSa = new TableRow.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         paramsSa.setMargins(margin, margin, margin, margin);
         tvSa.setLayoutParams(paramsSa);
         row1.addView(tvSa);
@@ -171,7 +171,7 @@ public class EditPoiActivity extends AppCompatActivity {
         tvPh.setPadding(padding, padding, padding, padding);
         tvPh.setTextSize(11);
         tvPh.setBackgroundResource(R.drawable.bg_cell_header);
-        TableRow.LayoutParams paramsPh = new TableRow.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT);
+        TableRow.LayoutParams paramsPh = new TableRow.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         paramsPh.setMargins(margin, margin, margin, margin);
         tvPh.setLayoutParams(paramsPh);
         row1.addView(tvPh);
@@ -191,7 +191,7 @@ public class EditPoiActivity extends AppCompatActivity {
                 tv.setPadding(padding, padding, padding, padding);
                 tv.setTextSize(10);
                 tv.setBackgroundResource(R.drawable.bg_cell_header);
-                TableRow.LayoutParams params = new TableRow.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT);
+                TableRow.LayoutParams params = new TableRow.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 params.setMargins(margin, margin, margin, margin);
                 tv.setLayoutParams(params);
                 row2.addView(tv);
@@ -264,7 +264,7 @@ public class EditPoiActivity extends AppCompatActivity {
         btn.setMinimumWidth(0);
         btn.setMinimumHeight(0);
         btn.setBackgroundResource(R.drawable.bg_cell_header);
-        TableRow.LayoutParams params = new TableRow.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT);
+        TableRow.LayoutParams params = new TableRow.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT);
         int margin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 0.5f, getResources().getDisplayMetrics());
         params.setMargins(margin, margin, margin, margin);
         btn.setLayoutParams(params);
@@ -280,7 +280,7 @@ public class EditPoiActivity extends AppCompatActivity {
         cb.setMinimumWidth(0);
         cb.setMinimumHeight(0);
         cb.setBackgroundResource(R.drawable.bg_cell_header);
-        TableRow.LayoutParams params = new TableRow.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT);
+        TableRow.LayoutParams params = new TableRow.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT);
         int margin = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 0.5f, getResources().getDisplayMetrics());
         params.setMargins(margin, margin, margin, margin);
         cb.setLayoutParams(params);
@@ -1938,7 +1938,7 @@ public class EditPoiActivity extends AppCompatActivity {
                          (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, getResources().getDisplayMetrics()));
             et.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
             
-            TableRow.LayoutParams params = new TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, 1.0f);
+            TableRow.LayoutParams params = new TableRow.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, TableRow.LayoutParams.WRAP_CONTENT);
             int margin = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 0.5f, getResources().getDisplayMetrics());
             params.setMargins(margin, margin, margin, margin);
             et.setLayoutParams(params);
