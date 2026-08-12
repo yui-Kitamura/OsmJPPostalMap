@@ -338,6 +338,8 @@ public class PoiDetailsDialog {
     }
 
     private static void populateWeeklyTable(Context context, TableLayout table, ScheduleResult schedule, boolean isPostBox) {
+        Days today = JpPostalUtil.getDays(LocalDate.now());
+
         // 平日の差異チェック
         boolean weekdayDifferent = false;
         Map<Days, ? extends IDaySchedule> weeklyTable = schedule.getWeeklyTable();
@@ -369,12 +371,23 @@ public class PoiDetailsDialog {
         
         table.removeAllViews();
         for (int i = 0; i < groupNames.size(); i++) {
+            boolean isToday = false;
+            for (String dayLabel : groupDays.get(i)) {
+                if (Days.getFromLabel(dayLabel) == today) {
+                    isToday = true;
+                    break;
+                }
+            }
+
             TableRow row = new TableRow(context);
             row.setGravity(Gravity.CENTER_VERTICAL);
             
             TextView dayView = new TextView(context);
             dayView.setText(groupNames.get(i));
             dayView.setPadding(8, 4, 16, 4);
+            if (isToday) {
+                dayView.setTypeface(null, android.graphics.Typeface.BOLD);
+            }
             
             TextView timeView = new TextView(context);
             IDaySchedule daySchedule = null;
@@ -415,6 +428,9 @@ public class PoiDetailsDialog {
             timeView.setText(displayTime);
             timeView.setPadding(0, 4, 8, 4);
             timeView.setSingleLine(true);
+            if (isToday) {
+                timeView.setTypeface(null, android.graphics.Typeface.BOLD);
+            }
 
             HorizontalScrollView scrollView = new HorizontalScrollView(context);
             scrollView.setHorizontalScrollBarEnabled(false);
