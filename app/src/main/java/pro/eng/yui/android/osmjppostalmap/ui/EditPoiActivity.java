@@ -132,6 +132,7 @@ public class EditPoiActivity extends AppCompatActivity {
 
         // 1行目: 大分類 (平日, 土曜, 日祝)
         TableRow row1 = new TableRow(this);
+        row1.setLayoutParams(new TableLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         
         TextView tvWd = new TextView(this);
         tvWd.setText("平日");
@@ -180,6 +181,7 @@ public class EditPoiActivity extends AppCompatActivity {
         // 2行目: 詳細分類 (月火水木金, 土, 日祝) - 展開時のみ表示
         if (isColExpanded) {
             TableRow row2 = new TableRow(this);
+            row2.setLayoutParams(new TableLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             String[] days = {"月", "火", "水", "木", "金", "土", "日祝"};
             for (String day : days) {
                 TextView tv = new TextView(this);
@@ -199,6 +201,7 @@ public class EditPoiActivity extends AppCompatActivity {
 
         // 3行目: コピーボタン
         TableRow rowButtons = new TableRow(this);
+        rowButtons.setLayoutParams(new TableLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         if (isColExpanded) {
             // 月->火, 火->水, 水->木, 木->金
             for (int i = 0; i < 4; i++) {
@@ -227,6 +230,7 @@ public class EditPoiActivity extends AppCompatActivity {
 
         // 4行目: オフチェックボックス
         TableRow rowOff = new TableRow(this);
+        rowOff.setLayoutParams(new TableLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         if (isColExpanded) {
             checkColMoOff = createColCheckBox();
             checkColTuOff = createColCheckBox();
@@ -1914,6 +1918,7 @@ public class EditPoiActivity extends AppCompatActivity {
 
     private void addNewRow(String... initialValues) {
         TableRow row = new TableRow(this);
+        row.setLayoutParams(new TableLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         int colCount = isColExpanded ? 7 : 3;
         EditText[] rowEditors = new EditText[colCount];
         
