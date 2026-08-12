@@ -1034,29 +1034,6 @@ public class EditPoiActivity extends AppCompatActivity {
                 tagLayout.setVisibility(View.VISIBLE);
             });
 
-            btnOhCopyToSa.setOnClickListener(v -> {
-                Util.applyTimeFormat(editOhWdOpen);
-                Util.applyTimeFormat(editOhWdClose);
-                Util.applyTimeFormat(editOhWdBreakStart);
-                Util.applyTimeFormat(editOhWdBreakEnd);
-                editOhSaOpen.setText(editOhWdOpen.getText());
-                editOhSaClose.setText(editOhWdClose.getText());
-                editOhSaBreakStart.setText(editOhWdBreakStart.getText());
-                editOhSaBreakEnd.setText(editOhWdBreakEnd.getText());
-                checkOhSaOff.setChecked(checkOhWdOff.isChecked());
-            });
-            btnOhCopyToPh.setOnClickListener(v -> {
-                Util.applyTimeFormat(editOhSaOpen);
-                Util.applyTimeFormat(editOhSaClose);
-                Util.applyTimeFormat(editOhSaBreakStart);
-                Util.applyTimeFormat(editOhSaBreakEnd);
-                editOhPhOpen.setText(editOhSaOpen.getText());
-                editOhPhClose.setText(editOhSaClose.getText());
-                editOhPhBreakStart.setText(editOhSaBreakStart.getText());
-                editOhPhBreakEnd.setText(editOhSaBreakEnd.getText());
-                checkOhPhOff.setChecked(checkOhSaOff.isChecked());
-            });
-
             // 変更監視用
             class OhTextWatcher implements TextWatcher {
                 private final EditText editText;
