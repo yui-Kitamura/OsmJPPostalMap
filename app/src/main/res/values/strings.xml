@@ -105,4 +105,7 @@
     <string name="available">あり</string>
     <string name="msg_no_holiday_times">祝日の時刻情報がありません</string>
     <string name="error_kana_format">ひらがなのみ入力可能です</string>
+    <string name="update_available">新しいバージョンが利用可能です</string>
+    <string name="update_downloaded">更新プログラムのダウンロードが完了しました</string>
+    <string name="update_restart">再起動</string>
 </resources>
