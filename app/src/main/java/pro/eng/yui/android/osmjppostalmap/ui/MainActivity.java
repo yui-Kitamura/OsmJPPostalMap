@@ -41,6 +41,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.IntentSenderRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -55,6 +56,15 @@ import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
 import pro.eng.yui.oss.osm.lib.jppostalcore.types.TextValue;
 import pro.eng.yui.android.osmjppostalmap.search.SearchDialog;
 import pro.eng.yui.android.osmjppostalmap.search.SearchResult;
+
+import com.google.android.play.core.appupdate.AppUpdateManager;
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory;
+import com.google.android.play.core.appupdate.AppUpdateOptions;
+import com.google.android.play.core.install.InstallStateUpdatedListener;
+import com.google.android.play.core.install.model.AppUpdateType;
+import com.google.android.play.core.install.model.InstallStatus;
+import com.google.android.play.core.install.model.UpdateAvailability;
+import com.google.android.material.snackbar.Snackbar;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -95,7 +105,11 @@ public class MainActivity extends AppCompatActivity {
     );
     private final AtomicInteger markerRenderGeneration = new AtomicInteger();
     private ActivityResultLauncher<Intent> editPoiLauncher;
+    private ActivityResultLauncher<IntentSenderRequest> updateLauncher;
     private PoiDetailsDialog currentPoiDetailsDialog;
+
+    private AppUpdateManager appUpdateManager;
+    private InstallStateUpdatedListener installStateUpdatedListener;
 
     private enum UpdateMode {
         NORMAL,           // 11海里制限あり
@@ -255,6 +269,24 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
         );
+
+        updateLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartIntentSenderForResult(),
+                result -> {
+                    if (result.getResultCode() != RESULT_OK) {
+                        // 更新フローが中断されたか失敗した
+                    }
+                }
+        );
+
+        appUpdateManager = AppUpdateManagerFactory.create(this);
+        installStateUpdatedListener = state -> {
+            if (state.installStatus() == InstallStatus.DOWNLOADED) {
+                popupSnackbarForCompleteUpdate();
+            }
+        };
+        appUpdateManager.registerListener(installStateUpdatedListener);
+        checkForAppUpdate();
 
         // 初回表示トリガー：レイアウト完了後に位置情報が確定していれば updatePois を実行する
         map.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
@@ -546,6 +578,27 @@ public class MainActivity extends AppCompatActivity {
         } else {
             startActivity(intent);
         }
+    }
+
+    private void checkForAppUpdate() {
+        appUpdateManager.getAppUpdateInfo().addOnSuccessListener(appUpdateInfo -> {
+            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+                    && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)) {
+                appUpdateManager.startUpdateFlowForResult(
+                        appUpdateInfo,
+                        updateLauncher,
+                        AppUpdateOptions.newBuilder(AppUpdateType.FLEXIBLE).build());
+            }
+        });
+    }
+
+    private void popupSnackbarForCompleteUpdate() {
+        Snackbar snackbar = Snackbar.make(
+                findViewById(R.id.main_layout),
+                R.string.update_downloaded,
+                Snackbar.LENGTH_INDEFINITE);
+        snackbar.setAction(R.string.update_restart, view -> appUpdateManager.completeUpdate());
+        snackbar.show();
     }
 
     private void scheduleUpdatePois() {
@@ -964,6 +1017,13 @@ public class MainActivity extends AppCompatActivity {
     public void onResume() {
         super.onResume();
         map.onResume();
+
+        appUpdateManager.getAppUpdateInfo().addOnSuccessListener(appUpdateInfo -> {
+            if (appUpdateInfo.installStatus() == InstallStatus.DOWNLOADED) {
+                popupSnackbarForCompleteUpdate();
+            }
+        });
+
         if (locationOverlay != null) {
             locationOverlay.enableMyLocation();
         }
@@ -1060,6 +1120,9 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (appUpdateManager != null) {
+            appUpdateManager.unregisterListener(installStateUpdatedListener);
+        }
         markerRenderGeneration.incrementAndGet();
         markerStateExecutor.shutdownNow();
         super.onDestroy();
