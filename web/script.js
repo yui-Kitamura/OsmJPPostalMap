@@ -6,6 +6,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const TILE_SERVER_URL = 'https://tile.openstreetmap.jp/{z}/{x}/{y}.png';
     const JP_POST_RED = '#E60012';
     const MAX_MARKERS = 1000;
+    const MIN_ZOOM = 7;
+    const JP_BOUNDS = L.latLngBounds([20.20, 122.70], [45.60, 154.00]);
+    const TOKYO_POST_OFFICE = [35.6801350, 139.7646546];
 
     const STATUS = {
         OPEN: { color: '#81C784', label: '営業中/収集可', symbol: '〒' },
@@ -29,8 +32,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- 1. Initialize Map ---
     map = L.map('map', {
         zoomControl: false,
-        attributionControl: false
-    }).setView([35.6812, 139.7671], 16);
+        attributionControl: false,
+        minZoom: MIN_ZOOM,
+        maxBounds: JP_BOUNDS,
+        maxBoundsViscosity: 1.0
+    }).setView(TOKYO_POST_OFFICE, 16);
 
     L.tileLayer(TILE_SERVER_URL, {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://tile.openstreetmap.jp/">OpenStreetMap Japan</a>'
@@ -998,7 +1004,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('gps-button').addEventListener('click', () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(pos => {
-                map.setView([pos.coords.latitude, pos.coords.longitude], 16);
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                if (JP_BOUNDS.contains([lat, lon])) {
+                    map.setView([lat, lon], 16);
+                } else {
+                    map.setView(TOKYO_POST_OFFICE, 16);
+                    alert('日本国外のため東京駅前を表示します');
+                }
             }, () => alert('位置情報を取得できませんでした'));
         }
     });
