@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OsmJPPostalMap - Web Viewer</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="main-container">
+        <!-- Map View -->
+        <div id="map"></div>
+
+        <!-- Limit Message -->
+        <div id="limit-message" class="hidden">表示上限数に達しています</div>
+        <div id="zoom-message" class="hidden">広域のため読込を停止しています</div>
+
+        <!-- Overlay Buttons -->
+        <div class="fab-container" style="position: absolute; top: 16px; left: 16px;">
+            <button id="search-button" class="fab-small" title="検索">
+                <svg width="24" height="24" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" fill="currentColor"/></svg>
+            </button>
+            <span class="fab-label">検索</span>
+        </div>
+        
+        <div class="top-right-buttons">
+            <div class="fab-container">
+                <span class="fab-label">フィルタ</span>
+                <button id="filter-button" class="fab-small" title="フィルタ">
+                    <!-- Dynamic clock icon will be here or fallback SVG -->
+                    <svg width="32" height="32" viewBox="0 0 48 48" id="clock-icon-svg">
+                        <circle cx="24" cy="24" r="20" fill="white" stroke="black" stroke-width="2"/>
+                        <text x="24" y="16" font-size="12" text-anchor="middle" font-weight="bold" id="clock-day-label">-</text>
+                        <line x1="24" y1="24" x2="24" y2="12" stroke="black" stroke-width="2" id="clock-hour-hand" />
+                        <line x1="24" y1="24" x2="24" y2="6" stroke="black" stroke-width="1.5" id="clock-minute-hand" />
+                        <circle cx="24" cy="24" r="2" fill="black"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="fab-container">
+                <span class="fab-label">郵便局フィルタ</span>
+                <button id="post-office-filter-button" class="fab-small" title="郵便局フィルタ">
+                    <svg width="32" height="32" viewBox="0 0 48 48">
+                        <rect x="4" y="4" width="40" height="40" fill="white" stroke="black" stroke-width="2" id="post-office-filter-rect"/>
+                        <text x="24" y="32" font-size="24" text-anchor="middle" font-weight="bold" fill="black">局</text>
+                    </svg>
+                </button>
+            </div>
+            <div class="fab-container">
+                <span class="fab-label">現在地</span>
+                <button id="gps-button" class="fab-small" title="現在地へ移動">
+                    <svg width="24" height="24" viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06a8.994 8.994 0 0 0 7.94 7.94V23h2v-2.06a8.994 8.994 0 0 0 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" fill="currentColor"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <button id="app-link-button" class="fab-small" title="Androidアプリ" style="position: absolute; bottom: 24px; right: 24px;">
+            <svg width="24" height="24" viewBox="0 0 24 24"><path d="M5 3h6v6H5V3m1 1v4h4V4H6m7-1h6v6h-6V3m1 1v4h4V4h-4M5 11h6v6H5v-6m1 1v4h4v-4H6m11 0h2v2h-2v-2m-2 2h2v2h-2v-2m2 2h2v2h-2v-2m-4 0h2v2h-2v-2m2-2h2v2h-2v-2m-2-2h2v2h-2v-2m5-3h2v2h-2V9m-2 2h2v2h-2v-2z" fill="currentColor"/></svg>
+        </button>
+
+        <div id="bottom-info">
+            <div id="scale-bar"></div>
+            <div id="last-updated">最終データ更新日時: -</div>
+            <div id="copyright">©<a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> | ©<a href="https://leafletjs.com/">Leaflet</a></div>
+            <div id="source">visit GitHub <a href="https://github.com/yui-Kitamura/OsmJPPostalMap">yui-Kitamura/OsmJPPostalMap</a> | <a href="https://yui-kitamura.github.io/OsmJpPostalMapDataSource/">DataSource</a></div>
+        </div>
+
+        <!-- Search Dialog (Modal) -->
+        <div id="search-dialog-overlay" class="overlay hidden">
+            <div class="dialog">
+                <div class="dialog-header">
+                    <h2>検索</h2>
+                </div>
+                <div class="dialog-content">
+                    <div class="search-input-container">
+                        <input type="text" id="search-input" placeholder="場所、郵便局、住所を検索..." style="flex: 1; margin-right: 8px; padding: 8px;">
+                        <button id="search-filter-open-button" class="icon-button" title="営業中のみ">
+                            <svg width="32" height="32" viewBox="0 0 48 48" id="search-clock-icon-svg">
+                                <circle cx="24" cy="24" r="20" fill="white" stroke="black" stroke-width="2"/>
+                                <text x="24" y="16" font-size="12" text-anchor="middle" font-weight="bold" id="search-clock-day-label">-</text>
+                                <line x1="24" y1="24" x2="24" y2="12" stroke="black" stroke-width="2" id="search-clock-hour-hand" />
+                                <line x1="24" y1="24" x2="24" y2="6" stroke="black" stroke-width="1.5" id="search-clock-minute-hand" />
+                                <circle cx="24" cy="24" r="2" fill="black"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="chip-group">
+                        <label class="chip"><input type="checkbox" id="check-place" checked><span>場所</span></label>
+                        <label class="chip"><input type="checkbox" id="check-post-office" checked><span>郵便局</span></label>
+                        <label class="chip"><input type="checkbox" id="check-address" checked><span>住所</span></label>
+                    </div>
+
+                    <div id="search-results-container" style="height: 300px; overflow-y: auto; margin-top: 8px; border-top: 1px solid #ccc;">
+                        <ul id="search-results-list" style="list-style: none; padding: 0;"></ul>
+                        <div id="search-loading" class="hidden" style="text-align: center; padding: 20px;">読み込み中...</div>
+                    </div>
+
+                    <div class="dialog-actions">
+                        <button id="search-dialog-close-button">閉じる</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Android App Link Dialog (Modal) -->
+        <div id="app-dialog-overlay" class="overlay hidden">
+            <div class="dialog">
+                <div class="dialog-header">
+                    <h2>Androidアプリ</h2>
+                </div>
+                <div class="dialog-content" style="text-align: center;">
+                    <p>Android版では編集機能が利用可能です。</p>
+                    <div id="qrcode-container" style="margin: 20px 0;">
+                        <!-- In real world, use a QR lib or static image -->
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://play.google.com/store/apps/details?id=pro.eng.yui.android.osmjppostalmap" alt="QR Code" width="200" height="200">
+                    </div>
+                    <a href="https://play.google.com/store/apps/details?id=pro.eng.yui.android.osmjppostalmap" target="_blank">
+                        <img src="GetItOnGooglePlay_Badge_ja.png" alt="Google Playで手に入れよう" height="60">
+                    </a>
+                    <div class="dialog-actions">
+                        <button id="app-dialog-close-button">閉じる</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- POI Details Dialog (Modal) -->
+        <div id="poi-dialog-overlay" class="overlay hidden">
+            <div id="poi-dialog" class="dialog">
+                <div class="dialog-header">
+                    <h2 id="dialog-title">タイトル</h2>
+                    <button id="dialog-open-osm" class="icon-button" title="OSMで表示">
+                        <svg width="24" height="24" viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/></svg>
+                        <div style="font-size: 8px; font-weight: bold; margin-top: -2px;">OSM</div>
+                    </button>
+                </div>
+                <div class="dialog-content">
+                    <div id="dialog-status" class="status-text">ステータス</div>
+                    <div id="dialog-next-event" class="next-event-text">次回イベント</div>
+                    
+                    <h3>スケジュール一覧</h3>
+                    <table id="dialog-weekly-table">
+                        <!-- Filled by JS -->
+                    </table>
+
+                    <div id="dialog-limited-service-layout" class="hidden">
+                        <h3>ゆうゆう窓口</h3>
+                        <div id="dialog-limited-service-status">ステータス</div>
+                        <table id="dialog-limited-service-weekly-table">
+                            <!-- Filled by JS -->
+                        </table>
+                    </div>
+
+                    <div class="secondary-info">
+                        <div id="dialog-raw-tag">raw: tag</div>
+                        <div id="dialog-check-date">最終確認日: -</div>
+                    </div>
+
+                    <h3>所在地</h3>
+                    <div id="dialog-address">住所</div>
+
+                    <div class="dialog-actions">
+                        <button id="dialog-close-button">閉じる</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="script.js"></script>
+</body>
+</html>
