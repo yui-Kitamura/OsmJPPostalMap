@@ -108,4 +108,7 @@
     <string name="update_available">新しいバージョンが利用可能です</string>
     <string name="update_downloaded">更新プログラムのダウンロードが完了しました</string>
     <string name="update_restart">再起動</string>
+    <string name="btn_confirm_no_change">変化なしを確認しました</string>
+    <string name="changeset_comment_confirm_no_change">郵便ポストの最終確認日を更新</string>
+    <string name="confirm_no_change_dialog_message">OSMに反映します。よろしいですか？</string>
 </resources>

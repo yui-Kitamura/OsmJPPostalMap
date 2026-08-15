@@ -7,6 +7,7 @@ import android.net.Uri;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.TableLayout;
@@ -25,7 +26,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import pro.eng.yui.android.osmjppostalmap.R;
+import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
 import pro.eng.yui.android.osmjppostalmap.domain.Util;
+import pro.eng.yui.android.osmjppostalmap.domain.repository.PoiRepository;
 import pro.eng.yui.android.osmjppostalmap.schedule.ScheduleParser;
 import pro.eng.yui.android.osmjppostalmap.ui.EditPoiActivity;
 import pro.eng.yui.android.osmjppostalmap.ui.MainActivity;
@@ -49,6 +52,7 @@ public class PoiDetailsDialog {
     private TableLayout table;
     private TextView rawTagText;
     private TextView checkDateText;
+    private Button confirmNoChangeButton;
     private TextView addressText;
 
     private View lsLayout;
@@ -114,6 +118,76 @@ public class PoiDetailsDialog {
         lsLayout = view.findViewById(R.id.dialog_limited_service_layout);
         lsStatus = view.findViewById(R.id.dialog_limited_service_status);
         lsTable = view.findViewById(R.id.dialog_limited_service_weekly_table);
+        confirmNoChangeButton = view.findViewById(R.id.dialog_btn_no_change);
+
+        confirmNoChangeButton.setOnClickListener(v -> {
+            int maxDist = 50;
+
+            if (currentLocation == null) {
+                new MaterialAlertDialogBuilder(context)
+                        .setTitle(R.string.error_location_not_found)
+                        .setMessage(R.string.error_location_required)
+                        .setPositiveButton(R.string.btn_close, null)
+                        .show();
+                return;
+            }
+
+            float[] results = new float[1];
+            Location.distanceBetween(currentLocation.getLatitude(), currentLocation.getLongitude(),
+                    poi.getLat(), poi.getLon(), results);
+            float distance = results[0];
+            float accuracy = currentLocation.getAccuracy();
+
+            if (distance > maxDist || accuracy > maxDist) {
+                String tooFarMsg = context.getString(R.string.error_location_required);
+                tooFarMsg += String.format("\n(現在の精度: %.1fm, 距離: %.1fm)", accuracy, distance);
+                new MaterialAlertDialogBuilder(context)
+                        .setTitle("位置情報エラー")
+                        .setMessage(tooFarMsg)
+                        .setPositiveButton(R.string.btn_close, null)
+                        .show();
+                return;
+            }
+
+            new MaterialAlertDialogBuilder(context)
+                    .setTitle(R.string.btn_confirm_no_change)
+                    .setMessage(R.string.confirm_no_change_dialog_message)
+                    .setPositiveButton("OK", (dialogInterface, i) -> {
+                        confirmNoChangeButton.setEnabled(false);
+
+                        Map<String, String> newTags = poi.getTags() != null ? new HashMap<>(poi.getTags()) : new HashMap<>();
+                        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                        newTags.put("check_date", today);
+
+                        OsmPoi updatedPoi = new OsmPoi(
+                                poi.getId(),
+                                poi.getLat(),
+                                poi.getLon(),
+                                poi.getType(),
+                                newTags,
+                                poi.getVer()
+                        );
+
+                        String comment = context.getString(R.string.changeset_comment_confirm_no_change);
+
+                        PoiRepository repository = PoiRepositoryImpl.getInstance();
+                        repository.savePoi(updatedPoi, comment, new PoiRepository.PoiSaveCallback() {
+                            @Override
+                            public void onSuccess() {
+                                if (dialog != null && dialog.isShowing()) {
+                                    dialog.dismiss();
+                                }
+                            }
+
+                            @Override
+                            public void onError(String message) {
+                                confirmNoChangeButton.post(() -> confirmNoChangeButton.setEnabled(true));
+                            }
+                        });
+                    })
+                    .setNegativeButton(R.string.cancel, null)
+                    .show();
+        });
 
         updateUI();
 
@@ -314,6 +388,12 @@ public class PoiDetailsDialog {
             checkDateText.setText(R.string.label_check_date_unknown);
         }
         checkDateText.setVisibility(View.VISIBLE);
+
+        if (isPostBox) {
+            confirmNoChangeButton.setVisibility(View.VISIBLE);
+        } else {
+            confirmNoChangeButton.setVisibility(View.GONE);
+        }
         
         String displayAddress = JpPostalUtil.getAddressText(poi.getTags());
         if (displayAddress.isEmpty()) displayAddress = context.getString(R.string.data_none);
