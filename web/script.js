@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const STATUS = {
         OPEN: { color: '#81C784', label: '営業中/収集可', symbol: '〒' },
-        EVENT_SOON: { color: '#FFF176', label: 'まもなく終了/収集', symbol: '〒' },
+        EVENT_SOON: { color: '#FFA500', label: 'まもなく終了/収集', symbol: '〒' },
         CLOSED: { color: '#808080', label: '終了/休業', symbol: '〒' },
         CLOSING_BUT_OPEN_SOON: { color: '#556B2F', label: '営業開始前', symbol: '〒' },
         ERROR: { color: '#FF5252', label: '解析エラー', symbol: '△' },
