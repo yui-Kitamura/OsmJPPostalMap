@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
         EVENT_SOON: { color: '#FFF176', label: 'まもなく終了/収集', symbol: '〒' },
         CLOSED: { color: '#808080', label: '終了/休業', symbol: '〒' },
         CLOSING_BUT_OPEN_SOON: { color: '#556B2F', label: '営業開始前', symbol: '〒' },
+        ERROR: { color: '#FF5252', label: '解析エラー', symbol: '△' },
         UNKNOWN: { color: 'transparent', label: '不明', symbol: '？' }
     };
 
@@ -26,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let markerLayer;
     let isPostOfficeFilterActive = false;
     let isOpeningOnlyFilterActive = false;
+    let isErrorFilterActive = false;
     let currentMarkerUpdateId = 0;
     let updateMarkersTimeout = null;
 
@@ -247,11 +249,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Filter POIs that match active filters
         let filtered = candidatePois.filter(poi => {
             if (!bounds.contains([poi.lat, poi.lon])) return false;
-            if (isPostOfficeFilterActive && poi.tags.amenity !== 'post_office') return false;
-            if (isOpeningOnlyFilterActive) {
-                const status = getPoiStatus(poi, now);
+            
+            const status = getPoiStatus(poi, now);
+            if (isErrorFilterActive) {
+                if (status.label !== STATUS.ERROR.label) return false;
+            } else if (isOpeningOnlyFilterActive) {
                 if (status.label !== STATUS.OPEN.label && status.label !== STATUS.EVENT_SOON.label) return false;
             }
+            
+            if (isPostOfficeFilterActive && poi.tags.amenity !== 'post_office') return false;
+            
             return true;
         });
 
@@ -307,6 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function getStatusPriority(status) {
         if (!status || !status.label) return 0;
         switch (status.label) {
+            case STATUS.ERROR.label: return 120;
             case STATUS.EVENT_SOON.label: return 100;
             case STATUS.OPEN.label: return 80;
             case STATUS.CLOSING_BUT_OPEN_SOON.label: return 60;
@@ -449,7 +457,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const hasData = Object.values(weeklyTable).some(v => 
             v !== null && (v.closed || (v.processedTimes && v.processedTimes.length > 0))
         );
-        if (!hasData) return { ...STATUS.UNKNOWN };
+        if (!hasData) return { ...STATUS.ERROR };
 
         let nextEvent = null;
         let followingEvent = null;
@@ -1018,7 +1026,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('filter-button').addEventListener('click', function() {
         isOpeningOnlyFilterActive = !isOpeningOnlyFilterActive;
-        this.style.backgroundColor = isOpeningOnlyFilterActive ? '#81C784' : 'white';
+        const svg = document.getElementById('clock-icon-svg');
+        if (svg) {
+            const circle = svg.querySelector('circle');
+            if (circle) circle.setAttribute('fill', isOpeningOnlyFilterActive ? '#81C784' : 'white');
+        }
         requestUpdateMarkers();
     });
 
@@ -1026,6 +1038,13 @@ document.addEventListener('DOMContentLoaded', function() {
         isPostOfficeFilterActive = !isPostOfficeFilterActive;
         const rect = document.getElementById('post-office-filter-rect');
         if (rect) rect.setAttribute('fill', isPostOfficeFilterActive ? '#81C784' : 'white');
+        requestUpdateMarkers();
+    });
+
+    document.getElementById('error-filter-button').addEventListener('click', function() {
+        isErrorFilterActive = !isErrorFilterActive;
+        const circle = document.getElementById('error-filter-circle');
+        if (circle) circle.setAttribute('fill', isErrorFilterActive ? '#FF5252' : 'white');
         requestUpdateMarkers();
     });
 
