@@ -60,6 +60,8 @@
     <string name="msg_fetching_area">表示範囲を取得しています...</string>
     <string name="title_address_edit">住所編集ダイアログ</string>
     <string name="msg_validation_failed">入力値検証に失敗しています。続行しますか？</string>
+    <string name="btn_continue">続行</string>
+    <string name="btn_fix">修正する</string>
     <string name="retry">やり直す</string>
     <string name="title_boundary_data">行政界データ</string>
     <string name="title_fetch_area">取得単位エリア</string>

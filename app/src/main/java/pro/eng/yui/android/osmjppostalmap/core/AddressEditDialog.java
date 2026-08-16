@@ -319,8 +319,9 @@ public class AddressEditDialog {
         AlertDialog dialog = new MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.title_address_edit)
                 .setView(view)
-                .setNegativeButton(R.string.cancel, null)
+                .setNegativeButton(R.string.btn_close, null)
                 .setPositiveButton(R.string.save, null)
+                .setCancelable(false)
                 .create();
         dialog.show();
 
@@ -348,11 +349,11 @@ public class AddressEditDialog {
             new MaterialAlertDialogBuilder(context)
                     .setMessage(context.getString(R.string.msg_validation_failed) + "\n\n"
                             + String.join("\n", invalid))
-                    .setNegativeButton(R.string.retry, null)
-                    .setPositiveButton(R.string.save, (d, which) -> {
+                    .setNegativeButton(R.string.btn_continue, (d, which) -> {
                         listener.onSaved(edited);
                         dialog.dismiss();
                     })
+                    .setPositiveButton(R.string.btn_fix, null)
                     .show();
         });
     }
