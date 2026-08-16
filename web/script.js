@@ -451,6 +451,8 @@ document.addEventListener('DOMContentLoaded', function() {
             poi._parsedSchedule = parseFullSchedule(poi);
         }
         const schedule = poi._parsedSchedule;
+        if (!schedule) return { ...STATUS.ERROR };
+        
         const weeklyTable = schedule.weeklyTable;
 
         // Check if we have ANY valid data (parsing check)
@@ -539,10 +541,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function parseTimeToMinutes(timeStr) {
-        if (!timeStr) return 0;
+        if (!timeStr) return NaN;
         const part = timeStr.trim().split(':');
+        if (part.length < 2) return NaN;
         const h = parseInt(part[0]);
-        const m = part.length > 1 ? parseInt(part[1]) : 0;
+        const m = parseInt(part[1]);
         if (isNaN(h) || isNaN(m)) return NaN;
         return h * 60 + m;
     }
@@ -716,64 +719,157 @@ document.addEventListener('DOMContentLoaded', function() {
         overlay.classList.remove('hidden');
     }
 
+    const DAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su', 'PH'];
+
     function parseFullSchedule(poi) {
         const tags = poi.tags;
-        const ohStr = tags.opening_hours || tags.collection_times;
+        const isPostBox = tags.amenity === 'post_box';
+        const ohStr = isPostBox ? tags.collection_times : tags.opening_hours;
         const weeklyTable = { 'Mo': null, 'Tu': null, 'We': null, 'Th': null, 'Fr': null, 'Sa': null, 'Su': null, 'PH': null };
         
         if (!ohStr) return { weeklyTable };
 
+        let plane = ohStr.trim();
+        if (!plane) return { weeklyTable };
+
+        if (!isPostBox && plane === '24/7') {
+            plane = "Mo-Su,PH 00:00-24:00";
+        }
+
+        const parts = plane.split(';');
+        const expandedParts = [];
+
         try {
-            const dayMap = { 'Mo': 1, 'Tu': 2, 'We': 3, 'Th': 4, 'Fr': 5, 'Sa': 6, 'Su': 0 };
-            const revDayMap = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-            const parts = ohStr.split(';');
-
-            parts.forEach(part => {
+            for (let part of parts) {
                 part = part.trim();
-                const match = part.match(/^([A-Za-z,-]+)\s+(.+)$/);
-                if (!match) return;
+                if (part === "") return null;
 
-                const daysStr = match[1];
-                const timeValue = match[2];
-                const isClosed = (timeValue === 'off');
-                const times = isClosed ? [] : timeValue.split(',').map(t => t.trim());
-                
-                // Pre-process times into numeric objects
-                const processedTimes = times.map(t => {
-                    const [start, end] = t.includes('-') ? t.split('-') : [t, null];
-                    return {
-                        start: parseTimeToMinutes(start),
-                        end: end ? parseTimeToMinutes(end) : null
-                    };
-                }).filter(t => !isNaN(t.start) && (t.end === null || !isNaN(t.end)))
-                .sort((a, b) => a.start - b.start);
+                // addDefaultDaysIfNeeded
+                if (part.match(/^\d+:\d+/) || part === 'off') {
+                    part = "Mo-Su " + part;
+                }
 
-                daysStr.split(',').forEach(dPart => {
-                    dPart = dPart.trim();
-                    if (dPart === 'PH') {
-                        weeklyTable['PH'] = { closed: isClosed, times: times, processedTimes: processedTimes };
-                    } else if (dPart.includes('-')) {
-                        const dRange = dPart.split('-');
-                        if (dRange.length === 2) {
-                            const start = dayMap[dRange[0].trim()];
-                            const end = dayMap[dRange[1].trim()];
-                            if (start !== undefined && end !== undefined) {
-                                let curr = start;
-                                for (let i = 0; i < 7; i++) {
-                                    weeklyTable[revDayMap[curr]] = { closed: isClosed, times: times, processedTimes: processedTimes };
-                                    if (curr === end) break;
-                                    curr = (curr + 1) % 7;
-                                }
-                            }
+                const spaced = part.split(/\s+/);
+                let daysPart = "";
+                let hoursPart = "";
+                let hoursStarted = false;
+
+                for (const s of spaced) {
+                    if (!s) continue;
+                    if (!hoursStarted) {
+                        const containsDay = DAY_LABELS.some(label => s.includes(label));
+                        if (containsDay) {
+                            if (daysPart) daysPart += ",";
+                            let dayStr = s;
+                            while (dayStr.endsWith(",")) dayStr = dayStr.slice(0, -1);
+                            daysPart += dayStr;
+                        } else {
+                            hoursStarted = true;
                         }
-                    } else if (weeklyTable.hasOwnProperty(dPart)) {
-                        weeklyTable[dPart] = { closed: isClosed, times: times, processedTimes: processedTimes };
                     }
-                });
-            });
-        } catch (e) {}
+                    if (hoursStarted) {
+                        if (hoursPart) hoursPart += " ";
+                        hoursPart += s;
+                    }
+                }
+
+                if (!daysPart) return null;
+
+                const dayGroups = daysPart.split(',');
+                for (let dayGroup of dayGroups) {
+                    dayGroup = dayGroup.trim();
+                    if (!dayGroup) continue;
+                    const expandedDays = expandDayRange(dayGroup);
+                    for (const day of expandedDays) {
+                        expandedParts.push(day + (hoursPart ? " " + hoursPart : ""));
+                    }
+                }
+            }
+
+            expandedParts.reverse();
+
+            for (const d of DAY_LABELS) {
+                for (const part of expandedParts) {
+                    const schedule = fetchRuleToDay(d, part, isPostBox);
+                    if (schedule) {
+                        weeklyTable[d] = schedule;
+                        break;
+                    }
+                }
+            }
+        } catch (e) {
+            return null;
+        }
         
         return { weeklyTable };
+    }
+
+    function expandDayRange(dayGroup) {
+        const result = [];
+        if (dayGroup.includes('-')) {
+            const range = dayGroup.split('-');
+            if (range.length !== 2) {
+                result.push(dayGroup);
+                return result;
+            }
+            const startDay = range[0].trim();
+            const endDay = range[1].trim();
+            let startIdx = -1;
+            let endIdx = -1;
+            for (let i = 0; i < 7; i++) {
+                if (DAY_LABELS[i] === startDay) startIdx = i;
+                if (DAY_LABELS[i] === endDay) endIdx = i;
+            }
+
+            if (startIdx !== -1 && endIdx !== -1) {
+                if (startIdx <= endIdx) {
+                    for (let i = startIdx; i <= endIdx; i++) result.push(DAY_LABELS[i]);
+                } else {
+                    for (let i = startIdx; i < 7; i++) result.push(DAY_LABELS[i]);
+                    for (let i = 0; i <= endIdx; i++) result.push(DAY_LABELS[i]);
+                }
+            } else {
+                result.push(dayGroup);
+            }
+        } else {
+            result.push(dayGroup);
+        }
+        return result;
+    }
+
+    function fetchRuleToDay(dayLabel, part, isPostBox) {
+        const spaceIdx = part.indexOf(' ');
+        if (spaceIdx === -1) throw new Error("Invalid format");
+        
+        const label = part.substring(0, spaceIdx);
+        const timePart = part.substring(spaceIdx + 1).trim();
+
+        if (dayLabel !== label) return null;
+
+        if (timePart === 'off') {
+            return { closed: true, times: ['off'], processedTimes: [] };
+        }
+
+        const times = timePart.split(',').map(t => t.trim());
+        const processedTimes = [];
+
+        for (const t of times) {
+            if (isPostBox) {
+                const val = parseTimeToMinutes(t);
+                if (isNaN(val)) throw new Error("Invalid time");
+                processedTimes.push({ start: val, end: null });
+            } else {
+                const range = t.split('-');
+                if (range.length !== 2) throw new Error("Invalid range");
+                const start = parseTimeToMinutes(range[0]);
+                const end = parseTimeToMinutes(range[1]);
+                if (isNaN(start) || isNaN(end)) throw new Error("Invalid range");
+                processedTimes.push({ start, end });
+            }
+        }
+        processedTimes.sort((a, b) => a.start - b.start);
+        
+        return { closed: false, times: times, processedTimes: processedTimes };
     }
 
     function formatNextEvent(next, following, isPostBox) {
@@ -814,8 +910,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function renderWeeklyTable(table, schedule, isPostBox) {
         table.innerHTML = '';
+        if (!schedule || !schedule.weeklyTable) return;
         const weeklyTable = schedule.weeklyTable;
-        if (!weeklyTable) return;
 
         const isSame = (s1, s2) => {
             if (!s1 || !s2) return s1 === s2;
