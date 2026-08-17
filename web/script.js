@@ -10,6 +10,54 @@ document.addEventListener('DOMContentLoaded', function() {
     const JP_BOUNDS = L.latLngBounds([20.20, 122.70], [45.60, 154.00]);
     const TOKYO_POST_OFFICE = [35.6801350, 139.7646546];
 
+    // --- State Restoration Helpers ---
+    function getInitialView() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const viewParam = urlParams.get('view');
+        if (viewParam) {
+            const parts = viewParam.split('/');
+            if (parts.length === 3) {
+                const zoom = parseInt(parts[0]);
+                const lat = parseFloat(parts[1]);
+                const lon = parseFloat(parts[2]);
+                if (!isNaN(zoom) && !isNaN(lat) && !isNaN(lon)) {
+                    return { center: [lat, lon], zoom: zoom };
+                }
+            }
+        }
+
+        try {
+            const savedView = localStorage.getItem('lastView');
+            if (savedView) {
+                const data = JSON.parse(savedView);
+                if (data.lat && data.lon && data.zoom) {
+                    return { center: [data.lat, data.lon], zoom: data.zoom };
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to load view from localStorage', e);
+        }
+
+        return { center: TOKYO_POST_OFFICE, zoom: 16 };
+    }
+
+    function saveCurrentView() {
+        if (!map) return;
+        const center = map.getCenter();
+        const zoom = map.getZoom();
+        const lat = center.lat.toFixed(7);
+        const lon = center.lng.toFixed(7);
+
+        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + `?view=${zoom}/${lat}/${lon}`;
+        window.history.replaceState({ path: newUrl }, '', newUrl);
+
+        try {
+            localStorage.setItem('lastView', JSON.stringify({ lat: parseFloat(lat), lon: parseFloat(lon), zoom: zoom }));
+        } catch (e) {
+            // Silently fail for localStorage (e.g. private mode)
+        }
+    }
+
     const STATUS = {
         OPEN: { color: '#81C784', label: '営業中/収集可', symbol: '〒' },
         EVENT_SOON: { color: '#FFA500', label: 'まもなく終了/収集', symbol: '〒' },
@@ -32,13 +80,15 @@ document.addEventListener('DOMContentLoaded', function() {
     let updateMarkersTimeout = null;
 
     // --- 1. Initialize Map ---
+    const initialView = getInitialView();
     map = L.map('map', {
         zoomControl: false,
         attributionControl: false,
         minZoom: MIN_ZOOM,
         maxBounds: JP_BOUNDS,
         maxBoundsViscosity: 1.0
-    }).setView(TOKYO_POST_OFFICE, 16);
+    }).setView(initialView.center, initialView.zoom);
+    saveCurrentView();
 
     L.tileLayer(TILE_SERVER_URL, {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://tile.openstreetmap.jp/">OpenStreetMap Japan</a>'
@@ -1095,11 +1145,16 @@ document.addEventListener('DOMContentLoaded', function() {
     let moveEndTimer = null;
     // --- 6. Event Listeners ---
     map.on('moveend', () => {
+        saveCurrentView();
         if (moveEndTimer) clearTimeout(moveEndTimer);
         moveEndTimer = setTimeout(() => {
             checkAndLoadVisibleAreas(true);
             updateScaleBar();
         }, 800); // Reduced from 1.5s for better responsiveness
+    });
+
+    map.on('zoomend', () => {
+        saveCurrentView();
     });
 
     closeBtn.addEventListener('click', () => overlay.classList.add('hidden'));
