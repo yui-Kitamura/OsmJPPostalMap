@@ -1595,7 +1595,11 @@ public class EditPoiActivity extends AppCompatActivity {
             } else if (findViewById(R.id.edit_tag_layout).getVisibility() == View.VISIBLE) {
                 // タグ直接編集が表示されている場合はその値を反映
                 String manualText = tagInput.getText() != null ? tagInput.getText().toString().trim() : "";
-                currentTags.put("opening_hours", manualText);
+                if (!manualText.isEmpty()) {
+                    currentTags.put("opening_hours", manualText);
+                } else {
+                    currentTags.remove("opening_hours");
+                }
             } else {
                 Map<Days, List<? extends ITagPart>> weeklyTable = new HashMap<>();
                 
@@ -1612,21 +1616,28 @@ public class EditPoiActivity extends AppCompatActivity {
                     android.widget.CheckBox[] checks = {checkOhMoOff, checkOhTuOff, checkOhWeOff, checkOhThOff, checkOhFrOff};
                     
                     for (int i = 0; i < 5; i++) {
-                        List<ITagPart> times = new ArrayList<>();
-                        if (!checks[i].isChecked()) {
+                        if (checks[i].isChecked()) {
+                            weeklyTable.put(days[i], new ArrayList<>());
+                        } else {
                             for (EditText et : editors[i]) Util.applyTimeFormat(et);
-                            times.addAll(formatOpeningTimeRange(
+                            List<OpenCloseTime> times = formatOpeningTimeRange(
                                 Util.normalizeNumber(editors[i][0].getText().toString().trim()),
                                 Util.normalizeNumber(editors[i][1].getText().toString().trim()),
                                 Util.normalizeNumber(editors[i][2].getText().toString().trim()),
                                 Util.normalizeNumber(editors[i][3].getText().toString().trim())
-                            ));
+                            );
+                            if (!times.isEmpty()) {
+                                weeklyTable.put(days[i], times);
+                            }
                         }
-                        weeklyTable.put(days[i], times);
                     }
                 } else {
-                    List<ITagPart> wdTimes = new ArrayList<>();
-                    if (!checkOhWdOff.isChecked()) {
+                    if (checkOhWdOff.isChecked()) {
+                        List<OpenCloseTime> wdTimes = new ArrayList<>();
+                        for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
+                            weeklyTable.put(Days.valueOf(d), wdTimes);
+                        }
+                    } else {
                         Util.applyTimeFormat(editOhWdOpen);
                         Util.applyTimeFormat(editOhWdClose);
                         Util.applyTimeFormat(editOhWdBreakStart);
@@ -1635,16 +1646,19 @@ public class EditPoiActivity extends AppCompatActivity {
                         String wdClose = Util.normalizeNumber(editOhWdClose.getText().toString().trim());
                         String wdBreakStart = Util.normalizeNumber(editOhWdBreakStart.getText().toString().trim());
                         String wdBreakEnd = Util.normalizeNumber(editOhWdBreakEnd.getText().toString().trim());
-                        wdTimes.addAll(formatOpeningTimeRange(wdOpen, wdClose, wdBreakStart, wdBreakEnd));
-                    }
-                    for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
-                        weeklyTable.put(Days.valueOf(d), wdTimes);
+                        List<OpenCloseTime> wdTimes = formatOpeningTimeRange(wdOpen, wdClose, wdBreakStart, wdBreakEnd);
+                        if (!wdTimes.isEmpty()) {
+                            for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
+                                weeklyTable.put(Days.valueOf(d), wdTimes);
+                            }
+                        }
                     }
                 }
                 
                 // 土曜
-                List<ITagPart> saTimes = new ArrayList<>();
-                if (!checkOhSaOff.isChecked()) {
+                if (checkOhSaOff.isChecked()) {
+                    weeklyTable.put(Days.SATURDAY, new ArrayList<>());
+                } else {
                     Util.applyTimeFormat(editOhSaOpen);
                     Util.applyTimeFormat(editOhSaClose);
                     Util.applyTimeFormat(editOhSaBreakStart);
@@ -1653,13 +1667,18 @@ public class EditPoiActivity extends AppCompatActivity {
                     String saClose = Util.normalizeNumber(editOhSaClose.getText().toString().trim());
                     String saBreakStart = Util.normalizeNumber(editOhSaBreakStart.getText().toString().trim());
                     String saBreakEnd = Util.normalizeNumber(editOhSaBreakEnd.getText().toString().trim());
-                    saTimes.addAll(formatOpeningTimeRange(saOpen, saClose, saBreakStart, saBreakEnd));
+                    List<OpenCloseTime> saTimes = formatOpeningTimeRange(saOpen, saClose, saBreakStart, saBreakEnd);
+                    if (!saTimes.isEmpty()) {
+                        weeklyTable.put(Days.SATURDAY, saTimes);
+                    }
                 }
-                weeklyTable.put(Days.SATURDAY, saTimes);
                 
                 // 日祝
-                List<ITagPart> phTimes = new ArrayList<>();
-                if (!checkOhPhOff.isChecked()) {
+                if (checkOhPhOff.isChecked()) {
+                    List<OpenCloseTime> phTimes = new ArrayList<>();
+                    weeklyTable.put(Days.SUNDAY, phTimes);
+                    weeklyTable.put(Days.PUBLIC_HOLIDAY, phTimes);
+                } else {
                     Util.applyTimeFormat(editOhPhOpen);
                     Util.applyTimeFormat(editOhPhClose);
                     Util.applyTimeFormat(editOhPhBreakStart);
@@ -1668,13 +1687,19 @@ public class EditPoiActivity extends AppCompatActivity {
                     String phClose = Util.normalizeNumber(editOhPhClose.getText().toString().trim());
                     String phBreakStart = Util.normalizeNumber(editOhPhBreakStart.getText().toString().trim());
                     String phBreakEnd = Util.normalizeNumber(editOhPhBreakEnd.getText().toString().trim());
-                    phTimes.addAll(formatOpeningTimeRange(phOpen, phClose, phBreakStart, phBreakEnd));
+                    List<OpenCloseTime> phTimes = formatOpeningTimeRange(phOpen, phClose, phBreakStart, phBreakEnd);
+                    if (!phTimes.isEmpty()) {
+                        weeklyTable.put(Days.SUNDAY, phTimes);
+                        weeklyTable.put(Days.PUBLIC_HOLIDAY, phTimes);
+                    }
                 }
-                weeklyTable.put(Days.SUNDAY, phTimes);
-                weeklyTable.put(Days.PUBLIC_HOLIDAY, phTimes);
 
                 String openingHours = scheduleParser.format(weeklyTable, ScheduleParser.TimeType.OPENING_HOURS);
-                currentTags.put("opening_hours", openingHours);
+                if (openingHours != null && !openingHours.isEmpty()) {
+                    currentTags.put("opening_hours", openingHours);
+                } else {
+                    currentTags.remove("opening_hours");
+                }
             }
 
             // Limited Service (Yu-Yu Window)
@@ -1696,69 +1721,83 @@ public class EditPoiActivity extends AppCompatActivity {
                     android.widget.CheckBox[] checks = {checkLsMoOff, checkLsTuOff, checkLsWeOff, checkLsThOff, checkLsFrOff};
                     
                     for (int i = 0; i < 5; i++) {
-                        List<ITagPart> times = new ArrayList<>();
-                        if (!checks[i].isChecked()) {
+                        if (checks[i].isChecked()) {
+                            lsWeeklyTable.put(days[i], new ArrayList<>());
+                        } else {
                             for (EditText et : editors[i]) Util.applyTimeFormat(et);
-                            times.addAll(formatOpeningTimeRange(
+                            List<OpenCloseTime> times = formatOpeningTimeRange(
                                 Util.normalizeNumber(editors[i][0].getText().toString().trim()),
                                 Util.normalizeNumber(editors[i][1].getText().toString().trim()),
                                 Util.normalizeNumber(editors[i][2].getText().toString().trim()),
                                 Util.normalizeNumber(editors[i][3].getText().toString().trim())
-                            ));
+                            );
+                            if (!times.isEmpty()) {
+                                lsWeeklyTable.put(days[i], times);
+                            }
                         }
-                        lsWeeklyTable.put(days[i], times);
                     }
                 } else {
-                    List<ITagPart> wdTimes = new ArrayList<>();
-                    if (!checkLsWdOff.isChecked()) {
+                    if (checkLsWdOff.isChecked()) {
+                        List<OpenCloseTime> wdTimes = new ArrayList<>();
+                        for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
+                            lsWeeklyTable.put(Days.valueOf(d), wdTimes);
+                        }
+                    } else {
                         Util.applyTimeFormat(editLsWdOpen);
                         Util.applyTimeFormat(editLsWdClose);
                         Util.applyTimeFormat(editLsWdBreakStart);
                         Util.applyTimeFormat(editLsWdBreakEnd);
-                        wdTimes.addAll(formatOpeningTimeRange(
-                            Util.normalizeNumber(editLsWdOpen.getText().toString().trim()),
-                            Util.normalizeNumber(editLsWdClose.getText().toString().trim()),
-                            Util.normalizeNumber(editLsWdBreakStart.getText().toString().trim()),
-                            Util.normalizeNumber(editLsWdBreakEnd.getText().toString().trim())
-                        ));
-                    }
-                    for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
-                        lsWeeklyTable.put(Days.valueOf(d), wdTimes);
+                        String wdOpen = Util.normalizeNumber(editLsWdOpen.getText().toString().trim());
+                        String wdClose = Util.normalizeNumber(editLsWdClose.getText().toString().trim());
+                        String wdBreakStart = Util.normalizeNumber(editLsWdBreakStart.getText().toString().trim());
+                        String wdBreakEnd = Util.normalizeNumber(editLsWdBreakEnd.getText().toString().trim());
+                        List<OpenCloseTime> wdTimes = formatOpeningTimeRange(wdOpen, wdClose, wdBreakStart, wdBreakEnd);
+                        if (!wdTimes.isEmpty()) {
+                            for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) {
+                                lsWeeklyTable.put(Days.valueOf(d), wdTimes);
+                            }
+                        }
                     }
                 }
                 
                 // 土曜
-                List<ITagPart> saTimes = new ArrayList<>();
-                if (!checkLsSaOff.isChecked()) {
+                if (checkLsSaOff.isChecked()) {
+                    lsWeeklyTable.put(Days.SATURDAY, new ArrayList<>());
+                } else {
                     Util.applyTimeFormat(editLsSaOpen);
                     Util.applyTimeFormat(editLsSaClose);
                     Util.applyTimeFormat(editLsSaBreakStart);
                     Util.applyTimeFormat(editLsSaBreakEnd);
-                    saTimes.addAll(formatOpeningTimeRange(
-                        Util.normalizeNumber(editLsSaOpen.getText().toString().trim()),
-                        Util.normalizeNumber(editLsSaClose.getText().toString().trim()),
-                        Util.normalizeNumber(editLsSaBreakStart.getText().toString().trim()),
-                        Util.normalizeNumber(editLsSaBreakEnd.getText().toString().trim())
-                    ));
+                    String saOpen = Util.normalizeNumber(editLsSaOpen.getText().toString().trim());
+                    String saClose = Util.normalizeNumber(editLsSaClose.getText().toString().trim());
+                    String saBreakStart = Util.normalizeNumber(editLsSaBreakStart.getText().toString().trim());
+                    String saBreakEnd = Util.normalizeNumber(editLsSaBreakEnd.getText().toString().trim());
+                    List<OpenCloseTime> saTimes = formatOpeningTimeRange(saOpen, saClose, saBreakStart, saBreakEnd);
+                    if (!saTimes.isEmpty()) {
+                        lsWeeklyTable.put(Days.SATURDAY, saTimes);
+                    }
                 }
-                lsWeeklyTable.put(Days.SATURDAY, saTimes);
                 
                 // 日祝
-                List<ITagPart> phTimes = new ArrayList<>();
-                if (!checkLsPhOff.isChecked()) {
+                if (checkLsPhOff.isChecked()) {
+                    List<OpenCloseTime> phTimes = new ArrayList<>();
+                    lsWeeklyTable.put(Days.SUNDAY, phTimes);
+                    lsWeeklyTable.put(Days.PUBLIC_HOLIDAY, phTimes);
+                } else {
                     Util.applyTimeFormat(editLsPhOpen);
                     Util.applyTimeFormat(editLsPhClose);
                     Util.applyTimeFormat(editLsPhBreakStart);
                     Util.applyTimeFormat(editLsPhBreakEnd);
-                    phTimes.addAll(formatOpeningTimeRange(
-                        Util.normalizeNumber(editLsPhOpen.getText().toString().trim()),
-                        Util.normalizeNumber(editLsPhClose.getText().toString().trim()),
-                        Util.normalizeNumber(editLsPhBreakStart.getText().toString().trim()),
-                        Util.normalizeNumber(editLsPhBreakEnd.getText().toString().trim())
-                    ));
+                    String phOpen = Util.normalizeNumber(editLsPhOpen.getText().toString().trim());
+                    String phClose = Util.normalizeNumber(editLsPhClose.getText().toString().trim());
+                    String phBreakStart = Util.normalizeNumber(editLsPhBreakStart.getText().toString().trim());
+                    String phBreakEnd = Util.normalizeNumber(editLsPhBreakEnd.getText().toString().trim());
+                    List<OpenCloseTime> phTimes = formatOpeningTimeRange(phOpen, phClose, phBreakStart, phBreakEnd);
+                    if (!phTimes.isEmpty()) {
+                        lsWeeklyTable.put(Days.SUNDAY, phTimes);
+                        lsWeeklyTable.put(Days.PUBLIC_HOLIDAY, phTimes);
+                    }
                 }
-                lsWeeklyTable.put(Days.SUNDAY, phTimes);
-                lsWeeklyTable.put(Days.PUBLIC_HOLIDAY, phTimes);
 
                 String lsHours = scheduleParser.format(lsWeeklyTable, ScheduleParser.TimeType.OPENING_HOURS);
                 if (lsHours != null && !lsHours.isEmpty()) {
@@ -2110,7 +2149,7 @@ public class EditPoiActivity extends AppCompatActivity {
 
             for (int i = 0; i < dayGroups.length; i++) {
                 IDaySchedule daySchedule = weeklyTable.get(dayGroups[i]);
-                if ((daySchedule == null || daySchedule.schedule().isEmpty()) && !tag.isEmpty()) {
+                if (daySchedule != null && daySchedule.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.OpeningHoursParser.DayStatus.CLOSED_DAY) {
                     checks[i].setChecked(true);
                 } else {
                     checks[i].setChecked(false);
@@ -2121,7 +2160,7 @@ public class EditPoiActivity extends AppCompatActivity {
 
             // 平日(Wd)用のEditTextにも値をセットしておく
             fillEditors(new EditText[]{editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd}, moSched);
-            checkOhWdOff.setChecked(moSched == null || moSched.schedule().isEmpty());
+            checkOhWdOff.setChecked(moSched != null && moSched.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.OpeningHoursParser.DayStatus.CLOSED_DAY);
             for (EditText et : new EditText[]{editOhWdOpen, editOhWdClose, editOhWdBreakStart, editOhWdBreakEnd}) applyCellStyles(et, et.getText().toString(), false);
 
             return true;
@@ -2204,7 +2243,7 @@ public class EditPoiActivity extends AppCompatActivity {
 
             for (int i = 0; i < dayGroups.length; i++) {
                 IDaySchedule daySchedule = weeklyTable.get(dayGroups[i]);
-                if ((daySchedule == null || daySchedule.schedule().isEmpty()) && !tag.isEmpty()) {
+                if (daySchedule != null && daySchedule.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.OpeningHoursParser.DayStatus.CLOSED_DAY) {
                     checks[i].setChecked(true);
                 } else {
                     checks[i].setChecked(false);
@@ -2213,9 +2252,8 @@ public class EditPoiActivity extends AppCompatActivity {
                 for (EditText et : editors[i]) applyCellStyles(et, et.getText().toString(), false);
             }
 
-            // 平日(Wd)用のEditTextにも値をセットしておく
             fillEditors(new EditText[]{editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd}, moSched);
-            checkLsWdOff.setChecked(moSched == null || moSched.schedule().isEmpty());
+            checkLsWdOff.setChecked(moSched != null && moSched.status() == pro.eng.yui.oss.osm.lib.jppostalcore.parser.OpeningHoursParser.DayStatus.CLOSED_DAY);
             for (EditText et : new EditText[]{editLsWdOpen, editLsWdClose, editLsWdBreakStart, editLsWdBreakEnd}) applyCellStyles(et, et.getText().toString(), false);
 
             return true;

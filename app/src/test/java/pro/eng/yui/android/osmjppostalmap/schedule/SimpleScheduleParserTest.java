@@ -734,4 +734,36 @@ public class SimpleScheduleParserTest {
         assertTrue(formatted.contains("Sa off"));
         assertFalse(formatted.contains("Su"));
     }
+
+    @Test
+    public void testFormatOpeningHoursEmptyTableReturnsEmpty() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        Map<Days, List<? extends pro.eng.yui.oss.osm.lib.jppostalcore.types.ITagPart>> weeklyTable = new java.util.HashMap<>();
+        String formatted = parser.format(weeklyTable, ScheduleParser.TimeType.OPENING_HOURS);
+        assertEquals("", formatted);
+    }
+
+    @Test
+    public void testFormatOpeningHoursWeekdayOnly() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        Map<Days, List<? extends pro.eng.yui.oss.osm.lib.jppostalcore.types.ITagPart>> weeklyTable = new java.util.HashMap<>();
+        List<OpenCloseTime> wdTimes = new java.util.ArrayList<>();
+        wdTimes.add(new OpenCloseTime("09:00", "17:00"));
+        for (Days d : new Days[]{Days.MONDAY, Days.TUESDAY, Days.WEDNESDAY, Days.THURSDAY, Days.FRIDAY}) {
+            weeklyTable.put(d, wdTimes);
+        }
+        String formatted = parser.format(weeklyTable, ScheduleParser.TimeType.OPENING_HOURS);
+        assertEquals("Mo-Fr 09:00-17:00", formatted);
+    }
+
+    @Test
+    public void testFormatOpeningHoursAllOff() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        Map<Days, List<? extends pro.eng.yui.oss.osm.lib.jppostalcore.types.ITagPart>> weeklyTable = new java.util.HashMap<>();
+        for (Days d : Days.values()) {
+            weeklyTable.put(d, new java.util.ArrayList<>());
+        }
+        String formatted = parser.format(weeklyTable, ScheduleParser.TimeType.OPENING_HOURS);
+        assertEquals("Mo-Su,PH off", formatted);
+    }
 }
