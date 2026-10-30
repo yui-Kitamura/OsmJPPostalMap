@@ -722,7 +722,19 @@ document.addEventListener('DOMContentLoaded', function() {
     function showPoiDetails(poi) {
         const tags = poi.tags;
         const isPostBox = tags.amenity === 'post_box';
-        document.getElementById('dialog-title').innerText = tags.name || (isPostBox ? '郵便ポスト' : '郵便局');
+        const titleElement = document.getElementById('dialog-title');
+        if (isPostBox) {
+            titleElement.textContent = '郵便ポスト';
+            const managementInfo = formatPostBoxManagementInfo(tags['operator:branch'], tags.ref);
+            if (managementInfo) {
+                const managementInfoElement = document.createElement('span');
+                managementInfoElement.className = 'dialog-title-management';
+                managementInfoElement.textContent = managementInfo;
+                titleElement.appendChild(managementInfoElement);
+            }
+        } else {
+            titleElement.textContent = tags.name || '郵便局';
+        }
         const status = getPoiStatus(poi, new Date());
         const statusEl = document.getElementById('dialog-status');
         statusEl.innerText = status.label;

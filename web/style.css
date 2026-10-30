@@ -234,6 +234,10 @@ body, html {
     font-weight: bold;
 }
 
+.dialog-title-management {
+    font-size: 0.8em;
+}
+
 .icon-button {
     background: transparent;
     border: none;
