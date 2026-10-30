@@ -4,6 +4,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.net.Uri;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.RelativeSizeSpan;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -88,7 +91,7 @@ public class PoiDetailsDialog {
         String name = poi.getTag("name");
         String reading = Util.getKana(poi);
         if (isPostBox) {
-            titleText.setText(R.string.amenity_postbox);
+            titleText.setText(buildPostBoxTitle(context, poi.getTag("operator:branch"), poi.getTag("ref")));
         } else if (reading != null && !reading.isEmpty()) {
             titleText.setText(Util.getRubySpannable(name, reading, titleText.getTextSize()));
         } else {
@@ -236,6 +239,27 @@ public class PoiDetailsDialog {
 
     public OsmPoi getPoi() {
         return poi;
+    }
+
+    static SpannableString buildPostBoxTitle(Context context, String operatorBranch, String ref) {
+        String title = context.getString(R.string.amenity_postbox);
+        String branch = operatorBranch == null ? "" : operatorBranch.trim();
+        String reference = ref == null ? "" : ref.trim();
+
+        String managementInfo = "";
+        if (!branch.isEmpty() && !reference.isEmpty()) {
+            managementInfo = context.getString(R.string.postbox_management_info_both, branch, reference);
+        } else if (!branch.isEmpty()) {
+            managementInfo = context.getString(R.string.postbox_management_info_single, branch);
+        } else if (!reference.isEmpty()) {
+            managementInfo = context.getString(R.string.postbox_management_info_single, reference);
+        }
+
+        SpannableString titleText = new SpannableString(title + managementInfo);
+        if (!managementInfo.isEmpty()) {
+            titleText.setSpan(new RelativeSizeSpan(0.8f), title.length(), titleText.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        return titleText;
     }
 
     private void updateUI() {

@@ -94,6 +94,8 @@
     <string name="next_event_prefix">次回</string>
     <string name="missed_event_prefix">逃した場合</string>
     <string name="amenity_postbox">郵便ポスト</string>
+    <string name="postbox_management_info_both">（%1$s：%2$s）</string>
+    <string name="postbox_management_info_single">（%1$s）</string>
     <string name="distance_meters"> (%1$dm先)</string>
     <string name="distance_kilometers"> (%1$.1fkm先)</string>
     <string name="title_edit_element">要素の編集</string>
