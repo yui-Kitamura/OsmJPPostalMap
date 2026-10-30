@@ -3,13 +3,8 @@ package pro.eng.yui.android.osmjppostalmap.core;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
-import android.graphics.Typeface;
 import android.text.Editable;
-import android.text.InputFilter;
-import android.text.SpannableString;
-import android.text.Spanned;
 import android.text.TextWatcher;
-import android.text.style.StyleSpan;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -21,7 +16,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.core.content.ContextCompat;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -118,9 +112,9 @@ public class AddressEditDialog {
                 "数値（0.5刻み・負数可、末尾の「F」「階」は任意）",
                 JpAddress::getFloor, JpAddress::setFloor,
                 (form, v) -> form.isAvailFloor(v)),
-        ROOM("addr:room", "部屋番号",
+        ROOM("addr:unit", "部屋番号",
                 "任意の文字列",
-                JpAddress::getRoom, JpAddress::setRoom,
+                JpAddress::getUnit, JpAddress::setUnit,
                 (form, v) -> form.isAvail(v));
 
         final String tagKey;
