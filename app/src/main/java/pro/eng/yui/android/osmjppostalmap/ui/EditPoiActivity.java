@@ -1240,133 +1240,169 @@ public class EditPoiActivity extends AppCompatActivity {
                 return;
             }
 
-            if (!authRepository.isLoggedIn()) {
-                // 地図メモとして保存
-                String collection;
-                String ref;
-                String aTag = targetPoi.getTag("amenity");
-                boolean isPostBoxLocal = isNew || "post_box".equals(aTag);
+            validateCollectionTimesAndConfirm(this::continueSave);
+        });
+    }
+
+    private void validateCollectionTimesAndConfirm(Runnable onValidated) {
+        if (layoutFallback.getVisibility() == View.VISIBLE
+                || (!isNew && !"post_box".equals(targetPoi.getTag("amenity")))) {
+            onValidated.run();
+            return;
+        }
+
+        android.widget.CheckBox[] offChecks = isColExpanded
+                ? new android.widget.CheckBox[]{checkColMoOff, checkColTuOff, checkColWeOff,
+                        checkColThOff, checkColFrOff, checkColSaOff, checkColPhOff}
+                : new android.widget.CheckBox[]{checkColWdOff, checkColSaOff, checkColPhOff};
+        boolean hasNonAscendingTimes = false;
+        for (int col = 0; col < offChecks.length; col++) {
+            if (offChecks[col] != null && offChecks[col].isChecked()) continue;
+            int lastMinutes = -1;
+            for (EditText[] row : timeRows) {
+                String val = Util.normalizeNumber(row[col].getText().toString().trim());
+                if (val.isEmpty()) continue;
+                if (!TIME_PATTERN.matcher(val).matches()) {
+                    showErrorBanner(String.format(getString(R.string.error_time_format), val));
+                    return;
+                }
+                int minutes = SimpleScheduleParser.parseMinutes(val);
+                if (minutes <= lastMinutes) hasNonAscendingTimes = true;
+                lastMinutes = minutes;
+            }
+        }
+
+        if (hasNonAscendingTimes) {
+            new MaterialAlertDialogBuilder(this)
+                    .setMessage(R.string.confirm_time_order_message)
+                    .setNegativeButton(R.string.back, null)
+                    .setPositiveButton(R.string.save_anyway, (d, which) -> onValidated.run())
+                    .show();
+        } else {
+            onValidated.run();
+        }
+    }
+
+    private void continueSave() {
+        if (!authRepository.isLoggedIn()) {
+            // 地図メモとして保存
+            String collection;
+            String ref;
+            String aTag = targetPoi.getTag("amenity");
+            boolean isPostBoxLocal = isNew || "post_box".equals(aTag);
 
             if (isPostBoxLocal) {
-                    if (layoutFallback.getVisibility() == View.VISIBLE) {
-                        collection = targetPoi.getTag("collection_times");
-                    } else {
-                        Map<Days, List<? extends ITagPart>> weeklyTable = new HashMap<>();
-                        int maxCol = isColExpanded ? 7 : 3;
-                        for (int col = 0; col < maxCol; col++) {
-                            android.widget.CheckBox checkColOff;
-                            if (isColExpanded) {
-                                if (col == 0) checkColOff = checkColMoOff;
-                                else if (col == 1) checkColOff = checkColTuOff;
-                                else if (col == 2) checkColOff = checkColWeOff;
-                                else if (col == 3) checkColOff = checkColThOff;
-                                else if (col == 4) checkColOff = checkColFrOff;
-                                else if (col == 5) checkColOff = checkColSaOff;
-                                else checkColOff = checkColPhOff;
-                            } else {
-                                checkColOff = (col == 0) ? checkColWdOff : (col == 1 ? checkColSaOff : checkColPhOff);
-                            }
-                            
-                            List<CollectionTime> targetList = null;
+                if (layoutFallback.getVisibility() == View.VISIBLE) {
+                    collection = targetPoi.getTag("collection_times");
+                } else {
+                    Map<Days, List<? extends ITagPart>> weeklyTable = new HashMap<>();
+                    int maxCol = isColExpanded ? 7 : 3;
+                    for (int col = 0; col < maxCol; col++) {
+                        android.widget.CheckBox checkColOff;
+                        if (isColExpanded) {
+                            if (col == 0) checkColOff = checkColMoOff;
+                            else if (col == 1) checkColOff = checkColTuOff;
+                            else if (col == 2) checkColOff = checkColWeOff;
+                            else if (col == 3) checkColOff = checkColThOff;
+                            else if (col == 4) checkColOff = checkColFrOff;
+                            else if (col == 5) checkColOff = checkColSaOff;
+                            else checkColOff = checkColPhOff;
+                        } else {
+                            checkColOff = (col == 0) ? checkColWdOff : (col == 1 ? checkColSaOff : checkColPhOff);
+                        }
 
-                            if (checkColOff != null && checkColOff.isChecked()) {
-                                targetList = new ArrayList<>(); // off;
-                            } else {
-                                int lastMinutes = -1;
-                                for (int r = 0; r < timeRows.size(); r++) {
-                                    EditText et = timeRows.get(r)[col];
-                                    Util.applyTimeFormat(et);
-                                    String val = Util.normalizeNumber(et.getText().toString().trim());
-                                    if (val.isEmpty()) continue;
-                                    if (!TIME_PATTERN.matcher(val).matches()) {
-                                        showErrorBanner(String.format(getString(R.string.error_time_format), val));
-                                        return;
-                                    }
-                                    int minutes = SimpleScheduleParser.parseMinutes(val);
-                                    if (minutes <= lastMinutes) {
-                                        showErrorBanner(getString(R.string.error_time_order));
-                                        return;
-                                    }
-                                    if (targetList == null) targetList = new ArrayList<>();
-                                    targetList.add(new CollectionTime(val));
-                                    lastMinutes = minutes;
+                        List<CollectionTime> targetList = null;
+
+                        if (checkColOff != null && checkColOff.isChecked()) {
+                            targetList = new ArrayList<>(); // off;
+                        } else {
+                            for (int r = 0; r < timeRows.size(); r++) {
+                                EditText et = timeRows.get(r)[col];
+                                Util.applyTimeFormat(et);
+                                String val = Util.normalizeNumber(et.getText().toString().trim());
+                                if (val.isEmpty()) continue;
+                                if (!TIME_PATTERN.matcher(val).matches()) {
+                                    showErrorBanner(String.format(getString(R.string.error_time_format), val));
+                                    return;
                                 }
+                                if (targetList == null) targetList = new ArrayList<>();
+                                targetList.add(new CollectionTime(val));
                             }
+                        }
 
-                            if (targetList != null) {
-                                if (isColExpanded) {
-                                    Days[] mapping = {Days.MONDAY, Days.TUESDAY, Days.WEDNESDAY, Days.THURSDAY, Days.FRIDAY, Days.SATURDAY, Days.SUNDAY};
-                                    weeklyTable.put(mapping[col], targetList);
-                                    if (col == 6) weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
+                        if (targetList != null) {
+                            if (isColExpanded) {
+                                Days[] mapping = {Days.MONDAY, Days.TUESDAY, Days.WEDNESDAY, Days.THURSDAY, Days.FRIDAY, Days.SATURDAY, Days.SUNDAY};
+                                weeklyTable.put(mapping[col], targetList);
+                                if (col == 6) weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
+                            } else {
+                                if (col == 0) {
+                                    for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"})
+                                        weeklyTable.put(Days.valueOf(d), targetList);
+                                } else if (col == 1) {
+                                    weeklyTable.put(Days.SATURDAY, targetList);
                                 } else {
-                                    if (col == 0) {
-                                        for (String d : new String[]{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"}) 
-                                            weeklyTable.put(Days.valueOf(d), targetList);
-                                    } else if (col == 1) {
-                                        weeklyTable.put(Days.SATURDAY, targetList);
-                                    } else {
-                                        weeklyTable.put(Days.SUNDAY, targetList);
-                                        weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
-                                    }
+                                    weeklyTable.put(Days.SUNDAY, targetList);
+                                    weeklyTable.put(Days.PUBLIC_HOLIDAY, targetList);
                                 }
                             }
                         }
-                        collection = scheduleParser.format(weeklyTable, ScheduleParser.TimeType.COLLECTION_TIMES);
                     }
-                    TextInputEditText branchInputLocal = findViewById(R.id.edit_branch_value);
-                    String branch = branchInputLocal.getText() != null ? branchInputLocal.getText().toString().trim() : "";
-                    TextInputEditText refInputLocal = findViewById(R.id.edit_ref_value);
-                    ref = refInputLocal.getText() != null ? refInputLocal.getText().toString().trim() : "";
-                    
-                    GeoPoint pos = marker.getPosition();
-                    String addr = JpPostalUtil.getAddressText(targetPoi.getTags());
-                    
-                    String memo = getString(R.string.memo_postbox, collection, addr, branch, ref);
-                    String specialNote = editSpecialNote.getText() != null ? editSpecialNote.getText().toString().trim() : "";
-                    if (!specialNote.isEmpty()) {
-                        memo += "\n特殊収集時刻パターン: " + specialNote;
-                    }
-                    JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name), memo, pos.getLatitude(), pos.getLongitude());
-                } else {
-                    // 郵便局の場合は営業時間
-                    collection = targetPoi.getTag("opening_hours");
-                    ref = "";
-                    
-                    GeoPoint pos = marker.getPosition();
-                    String addr = JpPostalUtil.getAddressText(targetPoi.getTags());
-                    
-                    String memo = getString(R.string.memo_postoffice, collection, addr);
-                    String specialNote = editSpecialNote.getText() != null ? editSpecialNote.getText().toString().trim() : "";
-                    if (!specialNote.isEmpty()) {
-                        memo += "\n特殊営業時間パターン: " + specialNote;
-                    }
-                    JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name), memo, pos.getLatitude(), pos.getLongitude());
+                    collection = scheduleParser.format(weeklyTable, ScheduleParser.TimeType.COLLECTION_TIMES);
                 }
+                TextInputEditText branchInputLocal = findViewById(R.id.edit_branch_value);
+                String branch = branchInputLocal.getText() != null ? branchInputLocal.getText().toString().trim() : "";
+                TextInputEditText refInputLocal = findViewById(R.id.edit_ref_value);
+                ref = refInputLocal.getText() != null ? refInputLocal.getText().toString().trim() : "";
 
-                Intent resultIntent = new Intent();
-                resultIntent.putExtra("is_note", true);
-                setResult(RESULT_OK, resultIntent);
-                finish();
-                return;
+                GeoPoint pos = marker.getPosition();
+                String addr = JpPostalUtil.getAddressText(targetPoi.getTags());
+
+                String memo = getString(R.string.memo_postbox, collection, addr, branch, ref);
+                String specialNote = editSpecialNote.getText() != null ? editSpecialNote.getText().toString().trim() : "";
+                if (!specialNote.isEmpty()) {
+                    memo += "\n特殊収集時刻パターン: " + specialNote;
+                }
+                JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name), memo, pos.getLatitude(), pos.getLongitude());
+            } else {
+                // 郵便局の場合は営業時間
+                collection = targetPoi.getTag("opening_hours");
+                ref = "";
+
+                GeoPoint pos = marker.getPosition();
+                String addr = JpPostalUtil.getAddressText(targetPoi.getTags());
+
+                String memo = getString(R.string.memo_postoffice, collection, addr);
+                String specialNote = editSpecialNote.getText() != null ? editSpecialNote.getText().toString().trim() : "";
+                if (!specialNote.isEmpty()) {
+                    memo += "\n特殊営業時間パターン: " + specialNote;
+                }
+                JpPostalUtil.callOsmCreateNote(null, getString(R.string.app_name), memo, pos.getLatitude(), pos.getLongitude());
             }
 
-            int titleRes = isNew ? R.string.confirm_add : R.string.confirm_save;
-            int msgRes = isNew ? R.string.confirm_add_message : R.string.confirm_save_message;
-            int btnRes = isNew ? R.string.add : R.string.save;
+            Intent resultIntent = new Intent();
+            resultIntent.putExtra("is_note", true);
+            setResult(RESULT_OK, resultIntent);
+            finish();
+            return;
+        }
 
-            new MaterialAlertDialogBuilder(this)
-                .setTitle(titleRes)
-                .setMessage(msgRes)
-                .setPositiveButton(btnRes, (d, which) -> {
-                    if (btnSave != null) {
-                        btnSave.setEnabled(false);
-                    }
-                    showProgress(getString(R.string.progress_starting));
-                    saveChanges();
-                })
-                .setNegativeButton(R.string.cancel, null)
-                .show();
-        });
+        int titleRes = isNew ? R.string.confirm_add : R.string.confirm_save;
+        int msgRes = isNew ? R.string.confirm_add_message : R.string.confirm_save_message;
+        int btnRes = isNew ? R.string.add : R.string.save;
+
+        new MaterialAlertDialogBuilder(this)
+            .setTitle(titleRes)
+            .setMessage(msgRes)
+            .setPositiveButton(btnRes, (d, which) -> {
+                if (btnSave != null) {
+                    btnSave.setEnabled(false);
+                }
+                showProgress(getString(R.string.progress_starting));
+                saveChanges();
+            })
+            .setNegativeButton(R.string.cancel, null)
+            .show();
     }
 
     /** 住所欄に現在の addr:* タグ由来の表示テキストを反映する。 */
@@ -1532,7 +1568,6 @@ public class EditPoiActivity extends AppCompatActivity {
                     if (checkColOff != null && checkColOff.isChecked()) {
                         targetList = new ArrayList<>(); // off;
                     } else {
-                        int lastMinutes = -1;
                         for (int r = 0; r < timeRows.size(); r++) {
                             EditText et = timeRows.get(r)[col];
                             Util.applyTimeFormat(et);
@@ -1546,16 +1581,8 @@ public class EditPoiActivity extends AppCompatActivity {
                                 return;
                             }
 
-                            int minutes = SimpleScheduleParser.parseMinutes(val);
-                            if (minutes <= lastMinutes) {
-                                showErrorBanner(getString(R.string.error_time_order));
-                                if (btnSave != null) btnSave.setEnabled(true);
-                                dismissProgress();
-                                return;
-                            }
                             if (targetList == null) targetList = new ArrayList<>();
                             targetList.add(new CollectionTime(val));
-                            lastMinutes = minutes;
                         }
                     }
 
