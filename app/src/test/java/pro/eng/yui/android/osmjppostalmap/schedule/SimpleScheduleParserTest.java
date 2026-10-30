@@ -104,6 +104,70 @@ public class SimpleScheduleParserTest {
     }
 
     @Test
+    public void testUnsortedCollectionsChooseNearestEvents() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        CollectionTimes tag = new CollectionTimes("Mo-Su 17:00,09:00,12:00");
+        ZonedDateTime now = ZonedDateTime.of(2026, 7, 21, 8, 30, 0, 0, JpPostalUtil.JST);
+        ScheduleResult result = parser.parse(tag, now.toInstant().toEpochMilli(), ScheduleParser.TimeType.COLLECTION_TIMES);
+
+        assertEquals(now.withHour(9).withMinute(0), result.getNextEvent().getTimestamp());
+        assertEquals(now.withHour(12).withMinute(0), result.getFollowingEvent().getTimestamp());
+        assertEquals(ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON, result.getCurrentState());
+        assertEquals("次回 09:00", result.getTodayStatus());
+
+        now = now.withHour(10).withMinute(0);
+        result = parser.parse(tag, now.toInstant().toEpochMilli(), ScheduleParser.TimeType.COLLECTION_TIMES);
+        assertEquals(now.withHour(12), result.getNextEvent().getTimestamp());
+        assertEquals(now.withHour(17), result.getFollowingEvent().getTimestamp());
+        assertEquals(ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON, result.getCurrentState());
+    }
+
+    @Test
+    public void testUnsortedCollectionsRollOverAfterLastCollection() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        CollectionTimes tag = new CollectionTimes("Mo-Su 17:00,09:00,12:00");
+        ZonedDateTime now = ZonedDateTime.of(2026, 7, 21, 12, 0, 0, 0, JpPostalUtil.JST);
+        ScheduleResult result = parser.parse(tag, now.toInstant().toEpochMilli(), ScheduleParser.TimeType.COLLECTION_TIMES);
+
+        assertEquals(now.withHour(17), result.getNextEvent().getTimestamp());
+        assertEquals(now.plusDays(1).withHour(9), result.getFollowingEvent().getTimestamp());
+
+        now = now.withHour(17);
+        result = parser.parse(tag, now.toInstant().toEpochMilli(), ScheduleParser.TimeType.COLLECTION_TIMES);
+        assertEquals(now.plusDays(1).withHour(9), result.getNextEvent().getTimestamp());
+        assertEquals(now.plusDays(1).withHour(12), result.getFollowingEvent().getTimestamp());
+        assertEquals(ScheduleResult.CurrentState.TODAY_FINISHED, result.getCurrentState());
+        assertEquals("本日の収集終了", result.getTodayStatus());
+    }
+
+    @Test
+    public void testUnsortedDuplicateCollectionsDoNotRepeatTheSameEvent() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        CollectionTimes tag = new CollectionTimes("Mo-Su 17:00,09:00,09:00,12:00");
+        ZonedDateTime now = ZonedDateTime.of(2026, 7, 21, 8, 0, 0, 0, JpPostalUtil.JST);
+        ScheduleResult result = parser.parse(tag, now.toInstant().toEpochMilli(), ScheduleParser.TimeType.COLLECTION_TIMES);
+
+        assertEquals(now.withHour(9), result.getNextEvent().getTimestamp());
+        assertEquals(now.withHour(12), result.getFollowingEvent().getTimestamp());
+    }
+
+    @Test
+    public void testUnsortedCollectionOrderSurvivesFormattingAndParsing() {
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        List<CollectionTime> times = List.of(new CollectionTime("17:00"), new CollectionTime("09:00"),
+                new CollectionTime("09:00"), new CollectionTime("12:00"));
+        String formatted = parser.format(Map.of(Days.TUESDAY, times), ScheduleParser.TimeType.COLLECTION_TIMES);
+        assertTrue(formatted.contains("17:00,09:00,09:00,12:00"), formatted);
+
+        ZonedDateTime now = ZonedDateTime.of(2026, 7, 21, 8, 0, 0, 0, JpPostalUtil.JST);
+        ScheduleResult result = parser.parse(new CollectionTimes(formatted), now.toInstant().toEpochMilli(),
+                ScheduleParser.TimeType.COLLECTION_TIMES);
+        List<CollectionTime> decoded = ((CollectionTimeParser.DaySchedule) result.getWeeklyTable().get(Days.TUESDAY)).schedule();
+        assertEquals(List.of(LocalTime.of(17, 0), LocalTime.of(9, 0), LocalTime.of(9, 0), LocalTime.of(12, 0)),
+                decoded.stream().map(time -> time.collectAt.getTime()).collect(java.util.stream.Collectors.toList()));
+    }
+
+    @Test
     public void testEmptyTagReturnsUnknown() {
         SimpleScheduleParser parser = new SimpleScheduleParser();
         ScheduleResult result = parser.parse(null, System.currentTimeMillis(), ScheduleParser.TimeType.OPENING_HOURS);

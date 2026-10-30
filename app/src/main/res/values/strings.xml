@@ -29,7 +29,8 @@
     <string name="confirm_add_message">OSMに新しいポストを追加しますか？</string>
     <string name="error_location_required">現地入力が必須です（精度不足または取得不可）</string>
     <string name="error_time_format">無効な時刻形式です: %1$s</string>
-    <string name="error_time_order">時刻は昇順で入力してください</string>
+    <string name="confirm_time_order_message">時刻の並び順が異なっているようです。問題ありませんか？</string>
+    <string name="save_anyway">そのまま保存する</string>
     <string name="progress_starting">処理を開始中…</string>
     <string name="progress_sending">入力内容を送信中…</string>
     <string name="msg_save_success">保存しました</string>

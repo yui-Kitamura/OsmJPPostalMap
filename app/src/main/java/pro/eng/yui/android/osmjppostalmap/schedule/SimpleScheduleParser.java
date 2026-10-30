@@ -253,13 +253,14 @@ public class SimpleScheduleParser implements ScheduleParser {
     }
 
     private ZonedDateTime findNext(ZonedDateTime current, CollectionTimeParser.DaySchedule todaySchedule){
-        if (todaySchedule.schedule().isEmpty()){ return null; }
+        LocalTime nextTime = null;
         for (CollectionTime scheduled : todaySchedule.schedule()) {
-            if (scheduled.collectAt.getTime().isAfter(current.toLocalTime())) {
-                return current.with(scheduled.collectAt.getTime());
+            LocalTime time = scheduled.collectAt.getTime();
+            if (time.isAfter(current.toLocalTime()) && (nextTime == null || time.isBefore(nextTime))) {
+                nextTime = time;
             }
         }
-        return null;
+        return nextTime == null ? null : current.with(nextTime);
     }
     
     public static int parseMinutes(String time) {
