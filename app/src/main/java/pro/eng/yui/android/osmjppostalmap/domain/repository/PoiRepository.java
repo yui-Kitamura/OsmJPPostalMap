@@ -99,7 +99,7 @@ public interface PoiRepository {
     /**
      * 新規ポストを追加する
      */
-    void addPostBox(double lat, double lon, String shape, String branch, String postboxRef, String collectionTimes, String note, java.util.Map<String, String> addressTags, PoiSaveCallback callback);
+    void addPostBox(double lat, double lon, String shape, String branch, String postboxRef, String collectionTimes, String note, java.util.Map<String, String> additionalTags, PoiSaveCallback callback);
 
     /**
      * 地図メモ（Note）を追加する

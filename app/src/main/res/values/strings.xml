@@ -31,6 +31,11 @@
     <string name="error_time_format">無効な時刻形式です: %1$s</string>
     <string name="confirm_time_order_message">時刻の並び順が異なっているようです。問題ありませんか？</string>
     <string name="save_anyway">そのまま保存する</string>
+    <string name="msg_building_name_required">建物名を入力してください</string>
+    <string name="btn_return_to_input">入力に戻る</string>
+    <string name="btn_save_without_building_name">このまま保存する</string>
+    <string name="label_indoor">室内</string>
+    <string name="memo_indoor_location">屋内にあります</string>
     <string name="progress_starting">処理を開始中…</string>
     <string name="progress_sending">入力内容を送信中…</string>
     <string name="msg_save_success">保存しました</string>

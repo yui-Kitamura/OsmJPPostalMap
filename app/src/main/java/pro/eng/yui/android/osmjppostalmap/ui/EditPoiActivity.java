@@ -50,6 +50,10 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.graphics.Insets;
 import pro.eng.yui.android.osmjppostalmap.R;
 import pro.eng.yui.android.osmjppostalmap.core.AddressEditDialog;
+import pro.eng.yui.android.osmjppostalmap.core.IndoorBuildingNameConfirmation;
+import pro.eng.yui.android.osmjppostalmap.core.IndoorBuildingNameValidation;
+import pro.eng.yui.android.osmjppostalmap.core.IndoorMapNote;
+import pro.eng.yui.android.osmjppostalmap.core.IndoorTagEditor;
 import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
 import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
 import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
@@ -673,6 +677,7 @@ public class EditPoiActivity extends AppCompatActivity {
         Util.addNumberFilter(refInput);
         View shapeLayout = findViewById(R.id.layout_shape_edit);
         RadioGroup radioShape = findViewById(R.id.edit_radio_shape);
+        android.widget.CheckBox checkIndoor = findViewById(R.id.check_indoor);
         tableCollection = findViewById(R.id.table_collection);
         btnToggleColExpansion = findViewById(R.id.btn_toggle_col_expansion);
         if (btnToggleColExpansion != null) {
@@ -970,6 +975,9 @@ public class EditPoiActivity extends AppCompatActivity {
 
         if (isPostBox) {
             shapeLayout.setVisibility(View.VISIBLE);
+            checkIndoor.setChecked(IndoorTagEditor.isIndoor(targetPoi.getTags()));
+            checkIndoor.setOnCheckedChangeListener((buttonView, isChecked) ->
+                    IndoorTagEditor.applyCheckState(targetPoi.getTags(), isChecked));
 
             for (int i = 0; i < radioShape.getChildCount(); i++) {
                 View v = radioShape.getChildAt(i);
@@ -1240,8 +1248,18 @@ public class EditPoiActivity extends AppCompatActivity {
                 return;
             }
 
-            validateCollectionTimesAndConfirm(this::continueSave);
+            validateCollectionTimesAndConfirm(() ->
+                    validateIndoorBuildingNameAndConfirm(btnAddressEdit, this::continueSave));
         });
+    }
+
+    private void validateIndoorBuildingNameAndConfirm(View addressEditButton, Runnable onValidated) {
+        if (!IndoorBuildingNameValidation.shouldConfirm(targetPoi.getTags())) {
+            onValidated.run();
+            return;
+        }
+
+        IndoorBuildingNameConfirmation.show(this, addressEditButton, onValidated);
     }
 
     private void validateCollectionTimesAndConfirm(Runnable onValidated) {
@@ -1359,6 +1377,8 @@ public class EditPoiActivity extends AppCompatActivity {
                 String addr = JpPostalUtil.getAddressText(targetPoi.getTags());
 
                 String memo = getString(R.string.memo_postbox, collection, addr, branch, ref);
+                memo = IndoorMapNote.appendIndoorLocation(memo,
+                        IndoorTagEditor.isIndoor(targetPoi.getTags()), getString(R.string.memo_indoor_location));
                 String specialNote = editSpecialNote.getText() != null ? editSpecialNote.getText().toString().trim() : "";
                 if (!specialNote.isEmpty()) {
                     memo += "\n特殊収集時刻パターン: " + specialNote;
@@ -1876,13 +1896,8 @@ public class EditPoiActivity extends AppCompatActivity {
         };
 
         if (isNew) {
-            Map<String, String> addressTags = new HashMap<>();
-            for (Map.Entry<String, String> entry : currentTags.entrySet()) {
-                if (entry.getKey().startsWith("addr:")) {
-                    addressTags.put(entry.getKey(), entry.getValue());
-                }
-            }
-            repository.addPostBox(pos.getLatitude(), pos.getLongitude(), shape, branch, ref, collection, note, addressTags, callback);
+            Map<String, String> additionalTags = IndoorTagEditor.additionalTagsForNewPoi(currentTags);
+            repository.addPostBox(pos.getLatitude(), pos.getLongitude(), shape, branch, ref, collection, note, additionalTags, callback);
         } else {
             OsmPoi updatedPoi = new OsmPoi(
                     targetPoi.getId(),
