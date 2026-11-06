@@ -1109,7 +1109,7 @@ public class PoiRepositoryImpl implements PoiRepository {
     }
 
     @Override
-    public void addPostBox(double lat, double lon, String shape, String branch, String postboxRef, String collectionTimes, String note, Map<String, String> addressTags, PoiSaveCallback callback) {
+    public void addPostBox(double lat, double lon, String shape, String branch, String postboxRef, String collectionTimes, String note, Map<String, String> additionalTags, PoiSaveCallback callback) {
         runOnExecutor("新規ポストを送信中", () -> {
             Map<String, String> csTags = new HashMap<>();
             String comment = context != null ? context.getString(pro.eng.yui.android.osmjppostalmap.R.string.changeset_comment_add_postbox) : "郵便ポストの追加";
@@ -1121,8 +1121,8 @@ public class PoiRepositoryImpl implements PoiRepository {
                 ChangeSetInfo csIdInfo = new ChangeSetInfo(csId);
 
                 Map<String, String> poiTags = new HashMap<>();
-                if (addressTags != null) {
-                    poiTags.putAll(addressTags);
+                if (additionalTags != null) {
+                    poiTags.putAll(additionalTags);
                 }
                 poiTags.put("amenity", "post_box");
                 poiTags.put("operator", "日本郵便");

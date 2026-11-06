@@ -598,27 +598,38 @@
                 android:text="形状"
                 android:layout_marginBottom="4dp" />
 
-            <RadioGroup
-                android:id="@+id/edit_radio_shape"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:gravity="center_vertical"
                 android:orientation="horizontal">
-                <RadioButton
-                    android:id="@+id/edit_shape_box"
+                <RadioGroup
+                    android:id="@+id/edit_radio_shape"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="柱上箱型" />
-                <RadioButton
-                    android:id="@+id/edit_shape_pillar"
+                    android:orientation="horizontal">
+                    <RadioButton
+                        android:id="@+id/edit_shape_box"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="柱上箱型" />
+                    <RadioButton
+                        android:id="@+id/edit_shape_pillar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="円柱" />
+                    <RadioButton
+                        android:id="@+id/edit_shape_other"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="その他" />
+                </RadioGroup>
+                <CheckBox
+                    android:id="@+id/check_indoor"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="円柱" />
-                <RadioButton
-                    android:id="@+id/edit_shape_other"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="その他" />
-            </RadioGroup>
+                    android:text="@string/label_indoor" />
+            </LinearLayout>
         </LinearLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -679,6 +690,8 @@
                 android:focusableInTouchMode="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="住所を編集"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
                 android:src="@android:drawable/ic_menu_edit" />
         </LinearLayout>
 
