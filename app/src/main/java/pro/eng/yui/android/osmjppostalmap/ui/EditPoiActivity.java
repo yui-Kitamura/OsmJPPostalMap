@@ -1,6 +1,7 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import androidx.appcompat.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -13,6 +14,7 @@ import android.util.TypedValue;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.graphics.drawable.LayerDrawable;
@@ -967,6 +969,7 @@ public class EditPoiActivity extends AppCompatActivity {
         // 住所は addr:* の集合なので専用ダイアログで編集し、結果を targetPoi のタグへ直接書き戻す。
         // saveChanges() は targetPoi.getTags() を写して送信するため、これで保存対象に乗る
         showAddress();
+        setAddressEditTouchListener(btnAddressEdit);
         btnAddressEdit.setOnClickListener(v ->
                 AddressEditDialog.show(this, JpAddress.of(targetPoi.getTags()), edited -> {
                     AddressEditDialog.applyTo(targetPoi.getTags(), edited);
@@ -1423,6 +1426,16 @@ public class EditPoiActivity extends AppCompatActivity {
             })
             .setNegativeButton(R.string.cancel, null)
             .show();
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private void setAddressEditTouchListener(View addressEditButton) {
+        addressEditButton.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                v.requestFocus();
+            }
+            return false;
+        });
     }
 
     /** 住所欄に現在の addr:* タグ由来の表示テキストを反映する。 */
