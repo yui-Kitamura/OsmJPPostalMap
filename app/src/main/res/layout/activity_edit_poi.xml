@@ -690,8 +690,6 @@
                 android:focusableInTouchMode="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="住所を編集"
-                android:focusable="true"
-                android:focusableInTouchMode="true"
                 android:src="@android:drawable/ic_menu_edit" />
         </LinearLayout>
 
