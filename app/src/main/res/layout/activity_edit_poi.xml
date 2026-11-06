@@ -675,6 +675,8 @@
                 android:id="@+id/btn_address_edit"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="住所を編集"
                 android:src="@android:drawable/ic_menu_edit" />
