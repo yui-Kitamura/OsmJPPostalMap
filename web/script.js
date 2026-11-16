@@ -998,7 +998,12 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         groups.push({ label: '土曜', days: ['Sa'] });
-        groups.push({ label: '日祝', days: ['Su', 'PH'] });
+        if (isSame(weeklyTable['Su'], weeklyTable['PH'])) {
+            groups.push({ label: '日祝', days: ['Su', 'PH'] });
+        } else {
+            groups.push({ label: '日曜', days: ['Su'] });
+            groups.push({ label: '祝日', days: ['PH'] });
+        }
 
         const now = new Date();
         const currentDayIdx = now.getDay();

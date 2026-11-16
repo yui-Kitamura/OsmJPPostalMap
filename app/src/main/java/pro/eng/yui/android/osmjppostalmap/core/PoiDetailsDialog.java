@@ -456,7 +456,7 @@ public class PoiDetailsDialog {
         if (weeklyTable != null && !weeklyTable.isEmpty()) {
             IDaySchedule mondaySched = weeklyTable.get(Days.MONDAY);
             for (Days d : new Days[]{Days.TUESDAY, Days.WEDNESDAY, Days.THURSDAY, Days.FRIDAY}) {
-                if (!isSchedulesEqual(mondaySched, weeklyTable.get(d))) {
+                if (!WeeklyScheduleGrouping.areSchedulesEqual(mondaySched, weeklyTable.get(d))) {
                     weekdayDifferent = true;
                     break;
                 }
@@ -477,7 +477,14 @@ public class PoiDetailsDialog {
             groupNames.add(context.getString(R.string.day_weekday));
         }
         groupDays.add(new String[]{"Sa"}); groupNames.add(context.getString(R.string.day_saturday));
-        groupDays.add(new String[]{"Su", "PH"}); groupNames.add(context.getString(R.string.day_holiday));
+        IDaySchedule sundaySchedule = weeklyTable == null ? null : weeklyTable.get(Days.SUNDAY);
+        IDaySchedule holidaySchedule = weeklyTable == null ? null : weeklyTable.get(Days.PUBLIC_HOLIDAY);
+        if (WeeklyScheduleGrouping.areSchedulesEqual(sundaySchedule, holidaySchedule)) {
+            groupDays.add(new String[]{"Su", "PH"}); groupNames.add(context.getString(R.string.day_holiday));
+        } else {
+            groupDays.add(new String[]{"Su"}); groupNames.add(context.getString(R.string.day_sunday));
+            groupDays.add(new String[]{"PH"}); groupNames.add(context.getString(R.string.day_public_holiday));
+        }
         
         table.removeAllViews();
         for (int i = 0; i < groupNames.size(); i++) {
@@ -567,16 +574,4 @@ public class PoiDetailsDialog {
         }
     }
 
-    private static boolean isSchedulesEqual(IDaySchedule s1, IDaySchedule s2) {
-        if (s1 == s2) return true;
-        if (s1 == null || s2 == null) return false;
-        if (s1.status() != s2.status()) return false;
-        
-        List<String> list1 = new ArrayList<>();
-        for (Object p : s1.schedule()) list1.add(p.toString());
-        List<String> list2 = new ArrayList<>();
-        for (Object p : s2.schedule()) list2.add(p.toString());
-        
-        return list1.equals(list2);
-    }
 }
