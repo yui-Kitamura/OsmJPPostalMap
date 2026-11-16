@@ -22,4 +22,9 @@
     <!-- 入力欄のplaceholder。既定のヒント色(38%)より薄くして入力済みの値と見分ける -->
     <color name="input_placeholder">#40000000</color>
     <color name="cell_bg">#FFFFFF</color>
+    <color name="modified_cell_bg">#E3F2FD</color>
+    <color name="map_zoom_button_bg">#FFFFFFFF</color>
+    <color name="map_zoom_button_bg_disabled">#FFD3D3D3</color>
+    <color name="map_zoom_button_icon">#FF000000</color>
+    <color name="map_zoom_button_icon_disabled">#FF757575</color>
 </resources>

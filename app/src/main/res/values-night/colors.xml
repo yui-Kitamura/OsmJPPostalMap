@@ -12,4 +12,9 @@
     <color name="warning_text">#FFB17E</color>
     <color name="text_secondary">#BDBDBD</color>
     <color name="cell_bg">#121212</color>
+    <color name="modified_cell_bg">#263238</color>
+    <color name="map_zoom_button_bg">#FF303030</color>
+    <color name="map_zoom_button_bg_disabled">#FF424242</color>
+    <color name="map_zoom_button_icon">#FFFFFFFF</color>
+    <color name="map_zoom_button_icon_disabled">#FFBDBDBD</color>
 </resources>
