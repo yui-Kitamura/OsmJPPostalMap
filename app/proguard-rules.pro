@@ -1,21 +1,57 @@
 # Add project specific ProGuard rules here.
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# --- General & Stack Traces ---
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# --- Retrofit & OkHttp ---
+-dontwarn okhttp3.**
+-dontwarn retrofit2.**
+-dontwarn okio.**
+-keep class retrofit2.** { *; }
+-keepclasseswithmembers class * {
+    @retrofit2.http.* <methods>;
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# --- Gson & Remote Models (DTO) ---
+-keepattributes EnclosingMethod
+-keepclassmembers class * {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+-keep class pro.eng.yui.android.osmjppostalmap.data.remote.** { *; }
+-keep class pro.eng.yui.android.osmjppostalmap.domain.model.** { *; }
+
+# --- OSMDroid ---
+-keep class org.osmdroid.** { *; }
+-dontwarn org.osmdroid.**
+
+# --- Signpost (OAuth) ---
+-keep class oauth.signpost.** { *; }
+-dontwarn oauth.signpost.**
+
+# --- jppostalcore ---
+-keep class pro.eng.yui.oss.osm.lib.jppostalcore.** { *; }
+-dontwarn pro.eng.yui.oss.osm.lib.jppostalcore.**
+-keep class info.matsudamper.jppostalcore.** { *; }
+-dontwarn info.matsudamper.jppostalcore.**
+
+# --- Android Standard Components & Custom Views ---
+-keepclassmembers class * extends android.view.View {
+    public <init>(android.content.Context);
+    public <init>(android.content.Context, android.util.AttributeSet);
+    public <init>(android.content.Context, android.util.AttributeSet, int);
+    public void set*(...);
+}
+
+-keepclassmembers class * implements java.io.Serializable {
+    static final long serialVersionUID;
+    private static final java.io.ObjectStreamField[] serialPersistentFields;
+    !static !transient <fields>;
+    private void writeObject(java.io.ObjectOutputStream);
+    private void readObject(java.io.ObjectInputStream);
+    java.lang.Object writeReplace();
+    java.lang.Object readResolve();
+}
