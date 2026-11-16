@@ -184,7 +184,13 @@ public class PoiDetailsDialog {
 
                             @Override
                             public void onError(String message) {
-                                confirmNoChangeButton.post(() -> confirmNoChangeButton.setEnabled(true));
+                                confirmNoChangeButton.post(() -> {
+                                    confirmNoChangeButton.setEnabled(true);
+                                    new MaterialAlertDialogBuilder(context)
+                                            .setMessage(message)
+                                            .setPositiveButton(R.string.btn_close, null)
+                                            .show();
+                                });
                             }
                         });
                     })

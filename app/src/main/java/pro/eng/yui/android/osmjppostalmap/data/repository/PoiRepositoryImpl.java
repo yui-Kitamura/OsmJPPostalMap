@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import pro.eng.yui.android.osmjppostalmap.BuildConfig;
 import pro.eng.yui.android.osmjppostalmap.data.local.PoiLocalDataSource;
+import pro.eng.yui.android.osmjppostalmap.data.NetworkConnectivity;
 import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateApi;
 import pro.eng.yui.android.osmjppostalmap.data.remote.DataDateResponse;
 import pro.eng.yui.android.osmjppostalmap.data.remote.OverpassApi;
@@ -1055,6 +1056,8 @@ public class PoiRepositoryImpl implements PoiRepository {
     @Override
     public void savePoi(OsmPoi poi, String comment, PoiSaveCallback callback) {
         runOnExecutor("修正を送信中", () -> {
+            if (!requireValidatedInternet(callback)) return;
+
             // 編集対象がポストまたは郵便局で、operatorが未設定なら「日本郵便」を補完する
             OsmPoi targetPoi = poi;
             String amenity = poi.getTag("amenity");
@@ -1073,13 +1076,13 @@ public class PoiRepositoryImpl implements PoiRepository {
                 );
             }
 
-            // 1. Create Changeset
-            postProgress(callback, "Changesetを作成中…");
-            ChangeSetInfo csInfo = new ChangeSetInfo(0, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, new HashMap<>());
-            long csId;
-            csId = JpPostalUtil.callOsmCreateChangeset(accessToken, csInfo).join();
-            ChangeSetInfo csInfoActive = new ChangeSetInfo(csId, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, new HashMap<>());
             try {
+                // 1. Create Changeset
+                postProgress(callback, "Changesetを作成中…");
+                ChangeSetInfo csInfo = new ChangeSetInfo(0, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, new HashMap<>());
+                long csId = JpPostalUtil.callOsmCreateChangeset(accessToken, csInfo).join();
+                ChangeSetInfo csInfoActive = new ChangeSetInfo(csId, comment, "OsmJPPostalMap Android v" + BuildConfig.VERSION_NAME, new HashMap<>());
+
                 // 編集処理
                 postProgress(callback, "入力内容を送信中…");
                 JpPostalUtil.callOsmCreateOrModifyElement(accessToken, csInfoActive, targetPoi).join();
@@ -1111,6 +1114,8 @@ public class PoiRepositoryImpl implements PoiRepository {
     @Override
     public void addPostBox(double lat, double lon, String shape, String branch, String postboxRef, String collectionTimes, String note, Map<String, String> additionalTags, PoiSaveCallback callback) {
         runOnExecutor("新規ポストを送信中", () -> {
+            if (!requireValidatedInternet(callback)) return;
+
             Map<String, String> csTags = new HashMap<>();
             String comment = context != null ? context.getString(pro.eng.yui.android.osmjppostalmap.R.string.changeset_comment_add_postbox) : "郵便ポストの追加";
             ChangeSetInfo createInfo = new ChangeSetInfo(0L, comment,
@@ -1354,6 +1359,18 @@ public class PoiRepositoryImpl implements PoiRepository {
     private void postProgress(PoiSaveCallback callback, String message) {
         loadingStatusLiveData.postValue(message);
         handler.post(() -> callback.onProgress(message));
+    }
+
+    private boolean requireValidatedInternet(PoiSaveCallback callback) {
+        if (NetworkConnectivity.hasValidatedInternet(context)) {
+            return true;
+        }
+
+        String message = context != null
+                ? context.getString(pro.eng.yui.android.osmjppostalmap.R.string.error_network_unavailable)
+                : "インターネットに接続できません。ネットワーク接続を確認して再試行してください。";
+        postError(callback, message);
+        return false;
     }
 
     @Override

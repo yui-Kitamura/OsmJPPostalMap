@@ -1421,7 +1421,6 @@ public class EditPoiActivity extends AppCompatActivity {
                 if (btnSave != null) {
                     btnSave.setEnabled(false);
                 }
-                showProgress(getString(R.string.progress_starting));
                 saveChanges();
             })
             .setNegativeButton(R.string.cancel, null)
