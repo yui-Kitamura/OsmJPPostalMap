@@ -184,6 +184,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         map = findViewById(R.id.map);
+        MapThemeUtils.applyZoomButtonTheme(map);
         gpsProgress = findViewById(R.id.gps_progress);
         ScaleBarView scaleBarView = findViewById(R.id.scale_bar);
         if (scaleBarView != null) {

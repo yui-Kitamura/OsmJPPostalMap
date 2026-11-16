@@ -624,6 +624,7 @@ public class EditPoiActivity extends AppCompatActivity {
 
         map = findViewById(R.id.edit_map);
         // 地図の初期化
+        MapThemeUtils.applyZoomButtonTheme(map);
         map.setTileSource(new XYTileSource("OSMJP", (int) MIN_ZOOM, 18, 256, ".png", 
                 new String[] { "https://tile.openstreetmap.jp/" }));
         map.setMultiTouchControls(true);
@@ -2149,7 +2150,7 @@ public class EditPoiActivity extends AppCompatActivity {
             // 入力済み
             if (isModified) {
                 // 変更あり: 薄い青背景にして目立たせる
-                background.setColor(0xFFE3F2FD);
+                background.setColor(ContextCompat.getColor(this, R.color.modified_cell_bg));
             } else {
                 background.setColor(ContextCompat.getColor(this, R.color.cell_bg));
             }
