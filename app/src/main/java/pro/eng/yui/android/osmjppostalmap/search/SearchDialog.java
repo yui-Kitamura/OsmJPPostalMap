@@ -239,19 +239,9 @@ public class SearchDialog extends DialogFragment {
         ScheduleResult schedule = res.getSchedule();
         ScheduleResult limited = res.getLimitedServiceSchedule();
 
-        // Logic from MainActivity: Opening or opening but event soon
-        boolean isOpen = false;
-        if (schedule != null) {
-            if (schedule.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
-                    schedule.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
-                isOpen = true;
-            }
-        }
+        boolean isOpen = schedule != null && schedule.isOpenForFilter(res.getType() == SearchResult.Type.POST_BOX);
         if (!isOpen && limited != null) {
-            if (limited.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
-                    limited.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
-                isOpen = true;
-            }
+            isOpen = limited.isOpenForFilter(false);
         }
         return isOpen;
     }

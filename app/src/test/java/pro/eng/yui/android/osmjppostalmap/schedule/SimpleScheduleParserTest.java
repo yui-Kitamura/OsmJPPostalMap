@@ -123,6 +123,74 @@ public class SimpleScheduleParserTest {
     }
 
     @Test
+    public void testUpcomingCollectionMoreThanAnHourAwayIsIncludedOnlyForPostBoxes() {
+        ZonedDateTime now = ZonedDateTime.of(2026, 7, 21, 10, 0, 0, 0, JpPostalUtil.JST);
+        ScheduleResult result = parseCollection("Tu 11:01", now);
+
+        assertEquals(ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON, result.getCurrentState());
+        assertTrue(result.isOpenForFilter(true));
+        assertFalse(result.isOpenForFilter(false));
+    }
+
+    @Test
+    public void testUpcomingCollectionWithinAnHourIsIncluded() {
+        ZonedDateTime now = ZonedDateTime.of(2026, 7, 21, 10, 0, 0, 0, JpPostalUtil.JST);
+
+        ScheduleResult within59Minutes = parseCollection("Tu 10:59", now);
+        assertEquals(ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON, within59Minutes.getCurrentState());
+        assertTrue(within59Minutes.isOpenForFilter(true));
+
+        ScheduleResult within60Minutes = parseCollection("Tu 11:00", now);
+        assertEquals(ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON, within60Minutes.getCurrentState());
+        assertTrue(within60Minutes.isOpenForFilter(true));
+    }
+
+    @Test
+    public void testTomorrowCollectionIsNotIncluded() {
+        ZonedDateTime now = ZonedDateTime.of(2026, 7, 21, 10, 0, 0, 0, JpPostalUtil.JST);
+        ScheduleResult result = parseCollection("We 11:01", now);
+
+        assertEquals(now.plusDays(1).withHour(11).withMinute(1), result.getNextEvent().getTimestamp());
+        assertFalse(result.isOpenForFilter(true));
+    }
+
+    @Test
+    public void testOpeningBeforeBusinessHoursIsNotIncludedForPostBoxes() {
+        ZonedDateTime now = ZonedDateTime.of(2026, 7, 21, 10, 0, 0, 0, JpPostalUtil.JST);
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        ScheduleResult result = parser.parse(new OpeningHours("Tu 11:00-17:00"), now.toInstant().toEpochMilli(),
+                ScheduleParser.TimeType.OPENING_HOURS);
+
+        assertEquals(ScheduleResult.CurrentState.CLOSING_BUT_OPEN_SOON, result.getCurrentState());
+        assertFalse(result.isOpenForFilter(true));
+        assertFalse(result.isOpenForFilter(false));
+    }
+
+    @Test
+    public void testFinishedOffUnknownAndInvalidCollectionsAreNotIncluded() {
+        ZonedDateTime now = ZonedDateTime.of(2026, 7, 21, 10, 0, 0, 0, JpPostalUtil.JST);
+        for (String tag : new String[]{"Tu 09:00; We 11:01", "Tu off; We 11:01", "", "invalid"}) {
+            assertFalse(parseCollection(tag, now).isOpenForFilter(true), tag);
+        }
+    }
+
+    @Test
+    public void testOpenAndClosingSoonPostOfficesAreStillIncluded() {
+        ZonedDateTime now = ZonedDateTime.of(2026, 7, 21, 10, 0, 0, 0, JpPostalUtil.JST);
+        SimpleScheduleParser parser = new SimpleScheduleParser();
+        for (String tag : new String[]{"Tu 09:00-17:00", "Tu 09:00-10:30"}) {
+            ScheduleResult result = parser.parse(new OpeningHours(tag), now.toInstant().toEpochMilli(),
+                    ScheduleParser.TimeType.OPENING_HOURS);
+            assertTrue(result.isOpenForFilter(false), tag);
+        }
+    }
+
+    private ScheduleResult parseCollection(String tag, ZonedDateTime now) {
+        return new SimpleScheduleParser().parse(new CollectionTimes(tag), now.toInstant().toEpochMilli(),
+                ScheduleParser.TimeType.COLLECTION_TIMES);
+    }
+
+    @Test
     public void testUnsortedCollectionsRollOverAfterLastCollection() {
         SimpleScheduleParser parser = new SimpleScheduleParser();
         CollectionTimes tag = new CollectionTimes("Mo-Su 17:00,09:00,12:00");
