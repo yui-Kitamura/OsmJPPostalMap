@@ -86,6 +86,8 @@
     <string name="day_weekday">平日</string>
     <string name="day_saturday">土曜</string>
     <string name="day_holiday">日祝</string>
+    <string name="day_sunday">日曜</string>
+    <string name="day_public_holiday">祝日</string>
     <string name="postbox_no_collection">収集なし</string>
     <string name="postoffice_closed">休業</string>
     <string name="status_unparseable">解析不可</string>
