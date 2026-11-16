@@ -113,16 +113,14 @@ public class MainViewModel extends ViewModel {
 
                     ScheduleResult res = parser.parse(tagValue, now, timeType);
 
-                    boolean isOpen = (res.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
-                        res.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON);
+                    boolean isOpen = res.isOpenForFilter(!isPostOffice);
 
                     // 郵便局の場合、ゆうゆう窓口もチェック
                     if (!isOpen && isPostOffice) {
                         String lsTag = poi.getTag("opening_hours:limited_service");
                         if (lsTag != null && !lsTag.isEmpty()) {
                             ScheduleResult lsRes = parser.parse(new OpeningHours(lsTag), now, ScheduleParser.TimeType.OPENING_HOURS);
-                            if (lsRes.getCurrentState() == ScheduleResult.CurrentState.OPENING ||
-                                    lsRes.getCurrentState() == ScheduleResult.CurrentState.OPENING_BUT_EVENT_SOON) {
+                            if (lsRes.isOpenForFilter(false)) {
                                 isOpen = true;
                             }
                         }

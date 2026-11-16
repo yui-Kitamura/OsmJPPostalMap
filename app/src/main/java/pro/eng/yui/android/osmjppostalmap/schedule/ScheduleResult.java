@@ -77,6 +77,13 @@ public class ScheduleResult {
     /** UI用状態ラベル */
     public String getTodayStatus() { return todayStatus; }
     public CurrentState getCurrentState() { return currentState; }
+    public boolean isOpenForFilter(boolean isPostBox) {
+        if (currentState == CurrentState.OPENING || currentState == CurrentState.OPENING_BUT_EVENT_SOON) {
+            return true;
+        }
+        return isPostBox && currentState == CurrentState.CLOSING_BUT_OPEN_SOON &&
+                nextEvent != null && nextEvent.getType() == EventType.COLLECTION;
+    }
     public Map<Days, ? extends IDaySchedule> getWeeklyTable() { return weeklyTable; }
     public TextValue getRawTagValue() { return rawTagValue; }
 }

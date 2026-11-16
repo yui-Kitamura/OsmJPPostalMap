@@ -304,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (isErrorFilterActive) {
                 if (status.label !== STATUS.ERROR.label) return false;
             } else if (isOpeningOnlyFilterActive) {
-                if (status.label !== STATUS.OPEN.label && status.label !== STATUS.EVENT_SOON.label) return false;
+                if (!window.isOpenForFilter(poi, status, STATUS)) return false;
             }
             
             if (isPostOfficeFilterActive && poi.tags.amenity !== 'post_office') return false;
@@ -1107,7 +1107,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (match && isSearchOpenOnly) {
                 const status = getPoiStatus(poi, now);
-                if (status.label !== STATUS.OPEN.label && status.label !== STATUS.EVENT_SOON.label) match = false;
+                if (!window.isOpenForFilter(poi, status, STATUS)) match = false;
             }
 
             return match;
