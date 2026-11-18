@@ -210,11 +210,11 @@ public class SettingsActivity extends AppCompatActivity {
         Call<ResponseBody> call;
         if (CLIENT_SECRET == null || CLIENT_SECRET.isEmpty()) {
 
-            call = JpPostalUtil.getOsmApi().getAccessTokenPublic(
+            call = JpPostalUtil.getOsmOAuthApi().getAccessTokenPublic(
                     CLIENT_ID, code, "authorization_code", REDIRECT_URI
             );
         } else {
-            call = JpPostalUtil.getOsmApi().getAccessToken(
+            call = JpPostalUtil.getOsmOAuthApi().getAccessToken(
                     CLIENT_ID, CLIENT_SECRET, code, "authorization_code", REDIRECT_URI
             );
         }
