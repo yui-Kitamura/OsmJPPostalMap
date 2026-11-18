@@ -1,17 +1,6 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
 import android.content.Intent;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import okhttp3.ResponseBody;
-import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
-import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
-import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
-import pro.eng.yui.oss.osm.lib.jppostalcore.api.osm.OsmApi;
-import java.util.List;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
@@ -21,18 +10,30 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import androidx.core.graphics.Insets;
 import androidx.lifecycle.ViewModelProvider;
-import pro.eng.yui.android.osmjppostalmap.R;
-import pro.eng.yui.android.osmjppostalmap.BuildConfig;
-import pro.eng.yui.android.osmjppostalmap.core.PrefRefreshDialog;
-import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
-import pro.eng.yui.android.osmjppostalmap.data.repository.SettingsRepository;
 import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import okhttp3.ResponseBody;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.osmdroid.tileprovider.modules.SqlTileWriter;
+import pro.eng.yui.android.osmjppostalmap.BuildConfig;
+import pro.eng.yui.android.osmjppostalmap.R;
+import pro.eng.yui.android.osmjppostalmap.core.PrefRefreshDialog;
+import pro.eng.yui.android.osmjppostalmap.data.remote.OsmOAuthApi;
+import pro.eng.yui.android.osmjppostalmap.data.repository.AuthRepository;
+import pro.eng.yui.android.osmjppostalmap.data.repository.PoiRepositoryImpl;
+import pro.eng.yui.android.osmjppostalmap.data.repository.SettingsRepository;
+import pro.eng.yui.android.osmjppostalmap.domain.model.PrefMeta;
+import pro.eng.yui.oss.osm.lib.jppostalcore.JpPostalUtil;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+import java.util.List;
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -210,11 +211,11 @@ public class SettingsActivity extends AppCompatActivity {
         Call<ResponseBody> call;
         if (CLIENT_SECRET == null || CLIENT_SECRET.isEmpty()) {
 
-            call = JpPostalUtil.getOsmApi().getAccessTokenPublic(
+            call = OsmOAuthApi.create().getAccessTokenPublic(
                     CLIENT_ID, code, "authorization_code", REDIRECT_URI
             );
         } else {
-            call = JpPostalUtil.getOsmApi().getAccessToken(
+            call = OsmOAuthApi.create().getAccessToken(
                     CLIENT_ID, CLIENT_SECRET, code, "authorization_code", REDIRECT_URI
             );
         }
