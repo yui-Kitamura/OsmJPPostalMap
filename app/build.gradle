@@ -22,7 +22,7 @@ def getGitCommitHash = { ->
 android {
     namespace 'pro.eng.yui.android.osmjppostalmap'
     compileSdk {
-        version = release(36) {
+        version = release(37) {
             minorApiLevel = 1
         }
     }
@@ -30,7 +30,7 @@ android {
     defaultConfig {
         applicationId "pro.eng.yui.android.osmjppostalmap"
         minSdk 26
-        targetSdk 36
+        targetSdk 37
         versionCode 60
         versionName "3.5.14"
 
