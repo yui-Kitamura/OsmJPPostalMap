@@ -31,8 +31,8 @@ android {
         applicationId "pro.eng.yui.android.osmjppostalmap"
         minSdk 26
         targetSdk 37
-        versionCode 60
-        versionName "3.5.14"
+        versionCode 61
+        versionName "3.5.15"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "VERSION_NAME", "\"${versionName}\""
