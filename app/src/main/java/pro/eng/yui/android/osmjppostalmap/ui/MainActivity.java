@@ -218,6 +218,7 @@ public class MainActivity extends AppCompatActivity {
         // OSM JP Tile Server
         map.setTileSource(new XYTileSource("OSMJP", (int) MIN_ZOOM, 20, 256, ".png",
                 new String[] { "https://tile.openstreetmap.jp/" }));
+        MapThemeUtils.applyTileColorFilter(map);
         map.setMultiTouchControls(true);
         map.setScrollableAreaLimitDouble(JAPAN_BOUNDS);
         map.setMinZoomLevel(MIN_ZOOM);

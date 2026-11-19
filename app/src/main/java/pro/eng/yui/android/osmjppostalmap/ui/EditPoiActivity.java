@@ -627,6 +627,7 @@ public class EditPoiActivity extends AppCompatActivity {
         MapThemeUtils.applyZoomButtonTheme(map);
         map.setTileSource(new XYTileSource("OSMJP", (int) MIN_ZOOM, 18, 256, ".png", 
                 new String[] { "https://tile.openstreetmap.jp/" }));
+        MapThemeUtils.applyTileColorFilter(map);
         map.setMultiTouchControls(true);
         map.setMinZoomLevel(MIN_ZOOM);
         GeoPoint startPoint = new GeoPoint(initialLat, initialLon);

@@ -1,8 +1,10 @@
 package pro.eng.yui.android.osmjppostalmap.ui;
 
 import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.ColorFilter;
 import android.graphics.Paint;
 import android.util.TypedValue;
 
@@ -10,6 +12,7 @@ import androidx.core.content.ContextCompat;
 
 import org.osmdroid.views.CustomZoomButtonsDisplay;
 import org.osmdroid.views.MapView;
+import org.osmdroid.views.overlay.TilesOverlay;
 
 import pro.eng.yui.android.osmjppostalmap.R;
 
@@ -33,6 +36,16 @@ final class MapThemeUtils {
                 createZoomButton(context, true, disabledBackground, disabledIcon),
                 createZoomButton(context, false, background, icon),
                 createZoomButton(context, false, disabledBackground, disabledIcon));
+    }
+
+    static void applyTileColorFilter(MapView mapView) {
+        mapView.getOverlayManager().getTilesOverlay().setColorFilter(getTileColorFilter(mapView.getContext()));
+        mapView.invalidate();
+    }
+
+    static ColorFilter getTileColorFilter(Context context) {
+        int nightMode = context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        return nightMode == Configuration.UI_MODE_NIGHT_YES ? TilesOverlay.INVERT_COLORS : null;
     }
 
     static int getZoomButtonSizePx(Context context) {

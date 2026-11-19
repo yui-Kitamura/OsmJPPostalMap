@@ -5,6 +5,7 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ColorFilter;
 import android.view.ContextThemeWrapper;
 import android.view.MotionEvent;
 import android.util.TypedValue;
@@ -19,12 +20,14 @@ import org.junit.runner.RunWith;
 import org.osmdroid.views.CustomZoomButtonsController;
 import org.osmdroid.views.CustomZoomButtonsDisplay;
 import org.osmdroid.views.MapView;
+import org.osmdroid.views.overlay.TilesOverlay;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 import pro.eng.yui.android.osmjppostalmap.R;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(AndroidJUnit4.class)
@@ -40,6 +43,12 @@ public class MapThemeUtilsTest {
     public void modifiedTimeCellColorsRemainReadableInBothThemes() {
         assertCellContrast(Configuration.UI_MODE_NIGHT_NO);
         assertCellContrast(Configuration.UI_MODE_NIGHT_YES);
+    }
+
+    @Test
+    public void tileColorsAreInvertedOnlyInDarkTheme() {
+        assertTileColorFilter(Configuration.UI_MODE_NIGHT_NO, null);
+        assertTileColorFilter(Configuration.UI_MODE_NIGHT_YES, TilesOverlay.INVERT_COLORS);
     }
 
     private void assertZoomControlsForNightMode(int nightMode) {
@@ -122,6 +131,27 @@ public class MapThemeUtilsTest {
         assertTrue(modifiedBackground != regularBackground);
         assertTrue(modifiedBackground != emptyBackground);
         assertTrue(regularBackground != emptyBackground);
+    }
+
+    private void assertTileColorFilter(int nightMode, ColorFilter expectedFilter) {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            Context context = themedContext(nightMode);
+            MapView mapView = new MapView(context);
+            ColorFilter[] appliedFilter = new ColorFilter[1];
+            TilesOverlay overlay = new TilesOverlay(mapView.getTileProvider(), context) {
+                @Override
+                public void setColorFilter(ColorFilter filter) {
+                    super.setColorFilter(filter);
+                    appliedFilter[0] = filter;
+                }
+            };
+            mapView.getOverlayManager().setTilesOverlay(overlay);
+            overlay.setColorFilter(expectedFilter == null ? TilesOverlay.INVERT_COLORS : null);
+
+            MapThemeUtils.applyTileColorFilter(mapView);
+            assertSame(expectedFilter, appliedFilter[0]);
+            mapView.onDetach();
+        });
     }
 
     private Context themedContext(int nightMode) {
