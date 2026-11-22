@@ -16,6 +16,11 @@ OpenStreetMapベースの日本郵便マップ表示・編集アプリ for Andro
 
 みんなで情報を持ち寄り、より正確で便利な日本郵便マップを作り上げましょう！
 
+## ウェブビュワー案内
+[https://osm-jp-postal.yui-kitamura.eng.pro/](https://osm-jp-postal.yui-kitamura.eng.pro/?view=16/35.6679569/138.5678422)   
+ブラウザでアプリと同様に「地図データの閲覧」ができます。  
+※各ノードを選択したダイアログからOSMにもジャンプできます
+
 ## JavaRepositoryとしてのreadme
 
 このプロジェクトは、Androidプラットフォーム向けのJavaで開発されたOpenStreetMapクライアントです。
